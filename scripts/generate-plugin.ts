@@ -1,4 +1,11 @@
-#!/usr/bin/env ts-node
+#!/usr/bin/env ts-node --esm
+// Ensure this script is run under ts-node
+const isTsNode = process.argv[0].includes('ts-node');
+if (!isTsNode) {
+  console.error('Error: please invoke with ts-node, e.g. `npx ts-node scripts/generate-plugin.ts` or via `npm run generate:plugin`');
+  process.exit(1);
+}
+
 import fs from 'fs';
 import path from 'path';
 import Ajv from 'ajv';
@@ -18,7 +25,7 @@ interface PluginManifest {
 }
 
 async function promptManifest(): Promise<PluginManifest> {
-  const questions: inquirer.QuestionCollection = [
+  const questions = [
     { name: 'name', message: 'Plugin name', type: 'input', validate: (v: any) => v ? true : 'Required' },
     { name: 'version', message: 'Version', type: 'input', default: '1.0.0' },
     { name: 'apiVersion', message: 'API Version', type: 'input', default: '2.0.0' },
