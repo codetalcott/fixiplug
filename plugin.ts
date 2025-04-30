@@ -527,7 +527,7 @@ export class PluginManager {
    */
   public async execute<T extends PluginContext>(hookType: PluginHook, context: T): Promise<T> {
     const measure = PerformanceTracker.startMeasure(`PluginManager.execute.${hookType}`);
-    let currentContext = { ...context };
+    let currentContext = context;
     
     // Create a sorted list of plugins based on priority
     const prioritizedPlugins = Array.from(this.plugins.values())

@@ -1,0 +1,41 @@
+import { createPlugin, PluginHook, RequestPluginContext } from '../plugin';
+
+export const CachePlugin = createPlugin({
+  name: 'cache',
+  version: '1.0.0',
+  apiVersion: '2.0.0',
+  priority: 90,
+  description: 'Caches GET responses with configurable TTL',
+  author: 'Fixi Team',
+
+  config: {
+    ttl: 5 * 60 * 1000,
+    cacheableMethods: ['GET'] as string[]
+  },
+
+  cache: new Map<string, { timestamp: number; data: any }>(),
+
+  beforeRequest(ctx: RequestPluginContext) {
+    const key = `${ctx.config.method || 'GET'}-${ctx.config.url}`;
+    const entry = this.cache.get(key);
+    if (entry && Date.now() - entry.timestamp < this.config.ttl) {
+      // short-circuit by attaching cached response
+      (ctx as any).response = entry.data;
+      (ctx as any)._skipFetch = true;
+    }
+    return ctx.config;
+  },
+
+  afterResponse(ctx: RequestPluginContext) {
+    const skip = (ctx as any)._skipFetch;
+    if (!skip && ctx.response?.ok && this.config.cacheableMethods.includes(ctx.config.method || 'GET')) {
+      const key = `${ctx.config.method || 'GET'}-${ctx.config.url}`;
+      this.cache.set(key, { timestamp: Date.now(), data: ctx.response });
+    }
+    return ctx.response!;
+  },
+
+  getCache(key: string) {
+    return this.cache.get(key);
+  }
+});
