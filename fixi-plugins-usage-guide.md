@@ -751,7 +751,14 @@ You can define a `plugin-manifest.json` alongside a `plugin-manifest.schema.json
 Run the built-in CLI to scaffold a new plugin stub under `plugins/`:
 
 ```bash
-npm run generate:plugin path/to/plugin-manifest.json
+# via npm script (preferred)
+npm run generate:plugin -- <path/to/plugin-manifest.json>
+# or for interactive prompts
+npm run generate:plugin -- --interactive
+
+# direct invocation
+npx ts-node scripts/generate-plugin.ts <path/to/plugin-manifest.json>
+npx ts-node scripts/generate-plugin.ts --interactive
 ```
 
 This will validate your manifest against the JSON schema and emit a TypeScript file with all hook placeholders.  

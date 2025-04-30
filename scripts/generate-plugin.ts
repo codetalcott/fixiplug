@@ -19,16 +19,16 @@ interface PluginManifest {
 
 async function promptManifest(): Promise<PluginManifest> {
   const questions: inquirer.QuestionCollection = [
-    { name: 'name', message: 'Plugin name', type: 'input', validate: v => v ? true : 'Required' },
+    { name: 'name', message: 'Plugin name', type: 'input', validate: (v: any) => v ? true : 'Required' },
     { name: 'version', message: 'Version', type: 'input', default: '1.0.0' },
     { name: 'apiVersion', message: 'API Version', type: 'input', default: '2.0.0' },
-    { name: 'main', message: 'Entry file (relative)', type: 'input', default: answers => `plugins/${answers.name}.ts` },
+    { name: 'main', message: 'Entry file (relative)', type: 'input', default: (answers: any) => `plugins/${answers.name}.ts` },
     { name: 'priority', message: 'Priority (integer)', type: 'number', default: 0 },
-    { name: 'dependencies', message: 'Dependencies (comma-separated)', type: 'input', filter: v => v.split(',').map(s => s.trim()).filter(Boolean) },
+    { name: 'dependencies', message: 'Dependencies (comma-separated)', type: 'input', filter: (v: string) => v.split(',').map((s: string) => s.trim()).filter(Boolean) },
     { name: 'description', message: 'Description', type: 'input' },
     { name: 'author', message: 'Author', type: 'input' },
-    { name: 'timeouts', message: 'Timeouts (json)', type: 'input', default: '{}', filter: v => JSON.parse(v) },
-    { name: 'circuitBreaker', message: 'CircuitBreaker (json)', type: 'input', default: '{}', filter: v => JSON.parse(v) }
+    { name: 'timeouts', message: 'Timeouts (json)', type: 'input', default: '{}', filter: (v: string) => JSON.parse(v) },
+    { name: 'circuitBreaker', message: 'CircuitBreaker (json)', type: 'input', default: '{}', filter: (v: string) => JSON.parse(v) }
   ];
   const answers = await inquirer.prompt(questions);
   return answers as PluginManifest;

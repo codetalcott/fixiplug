@@ -2,9 +2,12 @@
   "extends": "../tsconfig.json",
   "compilerOptions": {
     "composite": true,
-    "rootDir": "src",
+    "rootDir": "..",
     "outDir": "dist",
     "declaration": true
   },
-  "include": ["src"]
+  "include": [
+    "src",
+    "../plugin.ts"
+  ]
 }
