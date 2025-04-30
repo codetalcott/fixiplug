@@ -13,6 +13,7 @@ This guide demonstrates how to implement the Improved Fixi Plugin System in real
 - [Best Practices](#best-practices)
 - [Common Patterns](#common-patterns)
 - [Migration from Original Fixi](#migration-from-original-fixi)
+- [Plugin Manifest & Generator](#plugin-manifest--generator)
 
 ## Installation
 
@@ -742,6 +743,20 @@ const LoggingPlugin = createPlugin({
 
 fx.registerPlugin(LoggingPlugin);
 ```
+
+## Plugin Manifest & Generator
+
+You can define a `plugin-manifest.json` alongside a `plugin-manifest.schema.json` in your project root to describe metadata (name, version, apiVersion, entry point, priority, dependencies, etc.) for each plugin.  
+
+Run the built-in CLI to scaffold a new plugin stub under `plugins/`:
+
+```bash
+npm run generate:plugin path/to/plugin-manifest.json
+```
+
+This will validate your manifest against the JSON schema and emit a TypeScript file with all hook placeholders.  
+
+Use this manifest and generator in AI prompts to ensure any generated plugin matches your system’s metadata requirements and file conventions.
 
 ---
 

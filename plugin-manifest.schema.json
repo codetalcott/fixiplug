@@ -1,0 +1,40 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Fixi Plugin Manifest",
+  "description": "Schema for describing plugin metadata for the Fixi plugin system.",
+  "type": "object",
+  "properties": {
+    "name": { "type": "string", "description": "Unique plugin identifier." },
+    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-.+)?$", "description": "Semver version of the plugin." },
+    "apiVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-.+)?$", "description": "Semver API version this plugin targets." },
+    "main": { "type": "string", "description": "Entry point file path for the plugin." },
+    "priority": { "type": "integer", "minimum": 0, "description": "Execution priority; higher values run first." },
+    "dependencies": {
+      "type": "array",
+      "items": { "type": "string" },
+      "description": "List of other plugins this one depends on."
+    },
+    "description": { "type": "string" },
+    "author": { "type": "string" },
+    "timeouts": {
+      "type": "object",
+      "description": "Timeout settings per hook in milliseconds.",
+      "patternProperties": {
+        "^(beforeRequest|afterResponse|domMutated|initialize|destroy|error)$": { "type": "integer", "minimum": 0 }
+      },
+      "additionalProperties": false
+    },
+    "circuitBreaker": {
+      "type": "object",
+      "description": "Circuit breaker configuration.",
+      "properties": {
+        "failureThreshold": { "type": "integer", "minimum": 1 },
+        "resetTimeout": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["failureThreshold", "resetTimeout"],
+      "additionalProperties": false
+    }
+  },
+  "required": ["name", "version", "apiVersion", "main"],
+  "additionalProperties": false
+}
