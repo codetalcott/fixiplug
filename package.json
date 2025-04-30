@@ -1,17 +1,19 @@
 {
   "scripts": {
     "test": "jest",
-    "generate:plugin": "ts-node scripts/generate-plugin.ts"
+    "generate:plugin": "ts-node scripts/generate-plugin.ts",
+    "build-bundle": "ts-node scripts/build-bundle.ts"
   },
   "devDependencies": {
-    "typescript": "^5.8.3",
-    "jest": "^29.5.0",
-    "ts-jest": "^29.1.0",
-    "@types/jest": "^29.5.0",
-    "ts-node": "^10.9.1",
-    "ajv": "^8.12.0",
-    "inquirer": "^9.2.0",
     "@types/inquirer": "^9.0.0",
-    "jest-environment-jsdom": "^29.5.0"
+    "@types/jest": "^29.5.0",
+    "ajv": "^8.12.0",
+    "esbuild": "^0.25.3",
+    "inquirer": "^9.3.7",
+    "jest": "^29.5.0",
+    "jest-environment-jsdom": "^29.5.0",
+    "ts-jest": "^29.1.0",
+    "ts-node": "^10.9.1",
+    "typescript": "^5.8.3"
   }
 }

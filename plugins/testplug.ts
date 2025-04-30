@@ -1,7 +1,7 @@
-import { createPlugin, FixiPlugin, PluginHook, RequestPluginContext, DomPluginContext } from '../plugin';
+import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext, DomPluginContext } from '../plugin';
 
 // Plugin generated from manifest interactive input
-export default createPlugin<FixiPlugin>({
+export default createPlugin<FixiPlugs>({
   name: 'testplug',
   version: '1.0.0',
   apiVersion: 'latest',

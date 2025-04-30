@@ -1,5 +1,5 @@
 // Core plugin types and enums
-export { PluginHook, PluginContext, RequestPluginContext, DomPluginContext, FixiPlugin } from '../../plugin';
+export { PluginHook, PluginContext, RequestPluginContext, DomPluginContext, FixiPlugs } from '../../plugin';
 
 // Helper utilities
 /**

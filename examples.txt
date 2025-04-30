@@ -1,4 +1,4 @@
-      // Create a fake response
+// Create a fake response
       const fakeResponse = {
         ok: true,
         status: 202, // Accepted
@@ -680,8 +680,8 @@ export const ProgressPlugin = createPlugin({
  */
 export function createFixiWithPlugins() {
   // Import the core Fixi library and plugin system
-  // import { Fixi } from './fixi';
-  // import { createPluginSystem } from './fixi-plugins';
+  // import Fixi from './fixi.js';         // ESM runtime requires .js extension
+  // import { createPluginSystem } from './plugin.js';
   
   // Create a standard Fixi instance
   const fixi = new Fixi({
@@ -758,7 +758,7 @@ export function createFixiWithPlugins() {
  * Improved Fixi Plugin System, demonstrating best practices and patterns.
  */
 
-import { createPlugin, FixiPlugin, PluginHook, RequestPluginContext, DomPluginContext } from './fixi-plugins';
+import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext, DomPluginContext } from './fixi-plugins';
 import { Fixi, FxResponse, HttpError } from './fixi';
 
 /* ============================

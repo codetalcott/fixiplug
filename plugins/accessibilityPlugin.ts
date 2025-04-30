@@ -1,6 +1,6 @@
-import { createPlugin, FixiPlugin, DomPluginContext } from '../plugin';
+import { createPlugin, FixiPlugs, DomPluginContext } from '../plugin';
 
-export const AccessibilityPlugin = createPlugin<FixiPlugin>({
+export const AccessibilityPlugin = createPlugin<FixiPlugs>({
   name: 'a11y',
   version: '1.0.0',
   apiVersion: '2.0.0',

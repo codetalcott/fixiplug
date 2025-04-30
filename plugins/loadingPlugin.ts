@@ -1,6 +1,6 @@
-import { createPlugin, FixiPlugin, PluginHook, RequestPluginContext } from '../plugin';
+import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext } from '../plugin';
 
-export const LoadingPlugin = createPlugin<FixiPlugin>({
+export const LoadingPlugin = createPlugin<FixiPlugs>({
   name: 'loading',
   version: '1.0.0',
   apiVersion: '2.0.0',

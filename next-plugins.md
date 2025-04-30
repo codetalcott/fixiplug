@@ -357,7 +357,7 @@
 ** 11. WebTransport Plugin
 
 ```javascript
-import { createPlugin, FixiPlugin, PluginHook, RequestPluginContext } from '../plugin';
+import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext } from '../plugin';
 
 /**
  * WebTransportSession represents an active WebTransport connection
@@ -421,7 +421,7 @@ export interface StreamOptions {
  * This plugin works alongside traditional HTTP requests, adding capabilities
  * for real-time streaming data, datagrams, and long-lived connections.
  */
-export const WebTransportPlugin = createPlugin<FixiPlugin>({
+export const WebTransportPlugin = createPlugin<FixiPlugs>({
   name: 'webtransport',
   version: '1.0.0',
   apiVersion: '2.0.0',

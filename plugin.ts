@@ -125,7 +125,7 @@ export interface DomPluginContext extends PluginContext {
 /** 
  * Enhanced plugin definition interface with performance and reliability features
  */
-export interface FixiPlugin {
+export interface FixiPlugs {
   /** Unique plugin name */
   name: string;
   
@@ -197,7 +197,7 @@ export interface FixiPlugin {
 export interface PluginDefinition {
   name: string;
   dependencies?: string[];
-  load: () => Promise<FixiPlugin>;
+  load: () => Promise<FixiPlugs>;
 }
 
 /** Plugin health metrics */
@@ -224,7 +224,7 @@ export interface PluginHealthMetrics {
  */
 export class PluginManager {
   /** Map of active plugins */
-  private plugins: Map<string, FixiPlugin> = new Map();
+  private plugins: Map<string, FixiPlugs> = new Map();
   
   /** Map of plugin definitions for lazy loading */
   private pendingPlugins: Map<string, PluginDefinition> = new Map();
@@ -260,7 +260,7 @@ export class PluginManager {
    * Register a new plugin
    * @returns true if registration succeeded, false otherwise
    */
-  public register(plugin: FixiPlugin): boolean {
+  public register(plugin: FixiPlugs): boolean {
     // Validate plugin API version compatibility
     if (!this.isVersionCompatible(plugin.apiVersion)) {
       this.logger.error(
@@ -322,7 +322,7 @@ export class PluginManager {
    * Load a plugin that was registered for lazy loading
    * @returns The loaded plugin or undefined if loading failed
    */
-  public async loadPlugin(name: string): Promise<FixiPlugin | undefined> {
+  public async loadPlugin(name: string): Promise<FixiPlugs | undefined> {
     if (this.plugins.has(name)) {
       return this.plugins.get(name);
     }
@@ -447,14 +447,14 @@ export class PluginManager {
   /**
    * Get a registered plugin by name
    */
-  public get<T extends FixiPlugin = FixiPlugin>(pluginName: string): T | undefined {
+  public get<T extends FixiPlugs = FixiPlugs>(pluginName: string): T | undefined {
     return this.plugins.get(pluginName) as T | undefined;
   }
 
   /**
    * Get all registered plugins
    */
-  public getAll(): FixiPlugin[] {
+  public getAll(): FixiPlugs[] {
     return Array.from(this.plugins.values());
   }
 
@@ -788,7 +788,7 @@ export class FixiWithPlugins {
    * Register a plugin
    * @returns this instance for chaining
    */
-  public registerPlugin(plugin: FixiPlugin): this {
+  public registerPlugin(plugin: FixiPlugs): this {
     this.pluginManager.register(plugin);
     return this;
   }
@@ -806,7 +806,7 @@ export class FixiWithPlugins {
    * Load a plugin that was registered for lazy loading
    * @returns The loaded plugin or undefined if loading failed
    */
-  public async loadPlugin(name: string): Promise<FixiPlugin | undefined> {
+  public async loadPlugin(name: string): Promise<FixiPlugs | undefined> {
     return this.pluginManager.loadPlugin(name);
   }
 
@@ -936,7 +936,7 @@ export class FixiWithPlugins {
  * @param plugin The plugin configuration
  * @returns The plugin instance
  */
-export function createPlugin<T extends FixiPlugin>(plugin: T): T {
+export function createPlugin<T extends FixiPlugs>(plugin: T): T {
   return plugin;
 }
 
@@ -947,7 +947,7 @@ export interface PluginSystemOptions {
   /**
    * Initial plugins to register
    */
-  plugins?: FixiPlugin[];
+  plugins?: FixiPlugs[];
   
   /**
    * Initial plugin definitions to register for lazy loading

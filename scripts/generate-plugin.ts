@@ -98,10 +98,10 @@ async function main() {
   const outputDir = path.dirname(outputPath);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const stub = `import { createPlugin, FixiPlugin, PluginHook, RequestPluginContext, DomPluginContext } from '../plugin';
+  const stub = `import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext, DomPluginContext } from '../plugin';
 
 // Plugin generated from manifest ${manifestFile ? path.basename(manifestFile) : 'interactive input'}
-export default createPlugin<FixiPlugin>({
+export default createPlugin<FixiPlugs>({
   name: '${manifest.name}',
   version: '${manifest.version}',
   apiVersion: '${manifest.apiVersion}',
