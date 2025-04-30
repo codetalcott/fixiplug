@@ -6,7 +6,7 @@
   "properties": {
     "name": { "type": "string", "description": "Unique plugin identifier." },
     "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-.+)?$", "description": "Semver version of the plugin." },
-    "apiVersion": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-.+)?$", "description": "Semver API version this plugin targets." },
+    "apiVersion": { "type": "string", "pattern": "^(?:latest|\\d+\\.\\d+\\.\\d+(?:-.+)?$)", "description": "Semver API version this plugin targets or 'latest'." },
     "main": { "type": "string", "description": "Entry point file path for the plugin." },
     "priority": { "type": "integer", "minimum": 0, "description": "Execution priority; higher values run first." },
     "dependencies": {

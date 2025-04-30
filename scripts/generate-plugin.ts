@@ -24,20 +24,37 @@ interface PluginManifest {
 
 async function promptManifest(): Promise<PluginManifest> {
   const inquirer = (await import('inquirer')).default;
-  const questions = [
-    { name: 'name', message: 'Plugin name (unique identifier)', type: 'input', validate: (v: any) => v ? true : 'Required' },
-    { name: 'version', message: 'Plugin version (semver)', type: 'input', default: '1.0.0' },
-    { name: 'apiVersion', message: 'API version to target (e.g. core version)', type: 'input', default: '2.0.0' },
-    { name: 'main', message: 'Entry file path (relative, e.g. plugins/<name>.ts)', type: 'input', default: (answers: any) => `plugins/${answers.name}.ts` },
-    { name: 'priority', message: 'Execution priority (higher runs first)', type: 'number', default: 0 },
-    { name: 'dependencies', message: 'Dependencies (comma-separated plugin names)', type: 'input', default: '', filter: (v: string) => v.split(',').map((s: string) => s.trim()).filter(Boolean) },
-    { name: 'description', message: 'Short description of plugin', type: 'input', default: '' },
-    { name: 'author', message: 'Author name', type: 'input', default: '' },
-    { name: 'timeouts', message: 'Hook timeouts in ms (JSON object)', type: 'input', default: '{}', filter: (v: string) => JSON.parse(v) },
-    { name: 'circuitBreaker', message: 'Circuit breaker settings (JSON object)', type: 'input', default: '{}', filter: (v: string) => JSON.parse(v) }
-  ];
-  const answers = await inquirer.prompt(questions);
-  return answers as PluginManifest;
+  // Step 1: ask minimal info
+  const { name } = await inquirer.prompt([{ name: 'name', message: 'Plugin name (unique identifier)', type: 'input', validate: (v: any) => v ? true : 'Required' }]);
+  // Build default manifest
+  const defaultManifest: PluginManifest = {
+    name,
+    version: '1.0.0',
+    apiVersion: 'latest',
+    main: `plugins/${name}.ts`,
+    priority: 0,
+    dependencies: [],
+    description: '',
+    author: '',
+    timeouts: {}
+  };
+  // Confirm or customize
+  const { useDefaults } = await inquirer.prompt([
+    { name: 'useDefaults', message: 'Use defaults? (choose N to customize)', type: 'confirm', default: true }
+  ]);
+  if (useDefaults) {
+    return defaultManifest;
+  }
+  // User chose to customize: open defaultManifest in editor
+  const { edited } = await inquirer.prompt([
+    { name: 'edited', message: 'Edit plugin manifest JSON:', type: 'editor', default: JSON.stringify(defaultManifest, null, 2) }
+  ]);
+  try {
+    return JSON.parse(edited) as PluginManifest;
+  } catch (e) {
+    console.error('Error parsing JSON:', e);
+    process.exit(1);
+  }
 }
 
 async function main() {
@@ -126,6 +143,10 @@ export default createPlugin<FixiPlugin>({
 
   fs.writeFileSync(outputPath, stub, 'utf8');
   console.info(`Plugin stub created at ${outputPath}`);
+  console.info('Next, fill out the generated template with your plugin logic.');
+  console.info('Then import and register your plugin in your application, for example:');
+  console.info(`  import MyPlugin from '${path.relative(process.cwd(), outputPath).replace(/\\\\/g,'/')}';`);
+  console.info('  fx.registerPlugin(MyPlugin);');
 }
 
 main().catch(err => {
