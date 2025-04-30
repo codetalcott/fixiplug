@@ -2,7 +2,7 @@
 /**
  * Improved Fixi Plugin System
  * 
- * A high-performance, composable plugin system for extending the Improved-Fixi Library (v9)
+ * A high-performance, composable plugin system for extending the fixi Library (v9)
  * without modifying its source code. This implementation focuses on speed, reliability,
  * and developer experience.
  * 

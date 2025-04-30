@@ -680,8 +680,8 @@ export const ProgressPlugin = createPlugin({
  */
 export function createFixiWithPlugins() {
   // Import the core Fixi library and plugin system
-  // import { Fixi } from './improv-fixi';
-  // import { createPluginSystem } from './improved-fixi-plugins';
+  // import { Fixi } from './fixi';
+  // import { createPluginSystem } from './fixi-plugins';
   
   // Create a standard Fixi instance
   const fixi = new Fixi({
@@ -758,8 +758,8 @@ export function createFixiWithPlugins() {
  * Improved Fixi Plugin System, demonstrating best practices and patterns.
  */
 
-import { createPlugin, FixiPlugin, PluginHook, RequestPluginContext, DomPluginContext } from './improved-fixi-plugins';
-import { Fixi, FxResponse, HttpError } from './improv-fixi';
+import { createPlugin, FixiPlugin, PluginHook, RequestPluginContext, DomPluginContext } from './fixi-plugins';
+import { Fixi, FxResponse, HttpError } from './fixi';
 
 /* ============================
    Analytics Plugin
