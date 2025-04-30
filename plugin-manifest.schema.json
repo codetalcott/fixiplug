@@ -4,35 +4,68 @@
   "description": "Schema for describing plugin metadata for the Fixi plugin system.",
   "type": "object",
   "properties": {
-    "name": { "type": "string", "description": "Unique plugin identifier." },
-    "version": { "type": "string", "pattern": "^\\d+\\.\\d+\\.\\d+(-.+)?$", "description": "Semver version of the plugin." },
-    "apiVersion": { "type": "string", "pattern": "^(?:latest|\\d+\\.\\d+\\.\\d+(?:-.+)?$)", "description": "Semver API version this plugin targets or 'latest'." },
-    "main": { "type": "string", "description": "Entry point file path for the plugin." },
-    "priority": { "type": "integer", "minimum": 0, "description": "Execution priority; higher values run first." },
+    "name": {
+      "type": "string",
+      "pattern": "^[A-Za-z][A-Za-z0-9_-]*$",
+      "description": "Unique plugin identifier. Must start with a letter and contain only letters, numbers, hyphens or underscores."
+    },
+    "version": {
+      "type": "string",
+      "pattern": "^\\d+\\.\\d+\\.\\d+(?:-[\\w.-]+)?$",
+      "description": "Semver version of the plugin.",
+      "examples": ["1.0.0", "2.1.3-beta.1"]
+    },
+    "apiVersion": {
+      "type": "string",
+      "pattern": "^(?:latest|\\d+\\.\\d+\\.\\d+(?:-[\\w.-]+)?)$",
+      "description": "Semver API version this plugin targets, or 'latest'.",
+      "examples": ["latest", "2.0.0"]
+    },
+    "main": {
+      "type": "string",
+      "description": "Entry‑point file path (relative) where your plugin stub lives, e.g. \"plugins/myPlugin.ts\".",
+      "examples": ["plugins/myPlugin.ts"]
+    },
+    "priority": {
+      "type": "integer",
+      "minimum": 0,
+      "description": "Execution priority; higher values run earlier."
+    },
     "dependencies": {
       "type": "array",
       "items": { "type": "string" },
-      "description": "List of other plugins this one depends on."
+      "description": "List of other plugin names this one depends on."
     },
-    "description": { "type": "string" },
-    "author": { "type": "string" },
+    "description": {
+      "type": "string",
+      "description": "Short human‑readable description of the plugin."
+    },
+    "author": {
+      "type": "string",
+      "description": "Author or maintainer of the plugin."
+    },
     "timeouts": {
       "type": "object",
-      "description": "Timeout settings per hook in milliseconds.",
+      "description": "Optional hook timeouts in milliseconds.",
       "patternProperties": {
-        "^(beforeRequest|afterResponse|domMutated|initialize|destroy|error)$": { "type": "integer", "minimum": 0 }
+        "^(initialize|beforeRequest|afterResponse|domMutated|error|destroy)$": {
+          "type": "integer",
+          "minimum": 0
+        }
       },
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [{ "beforeRequest": 1000, "afterResponse": 500 }]
     },
     "circuitBreaker": {
       "type": "object",
-      "description": "Circuit breaker configuration.",
+      "description": "Optional circuit breaker settings.",
       "properties": {
         "failureThreshold": { "type": "integer", "minimum": 1 },
         "resetTimeout": { "type": "integer", "minimum": 0 }
       },
       "required": ["failureThreshold", "resetTimeout"],
-      "additionalProperties": false
+      "additionalProperties": false,
+      "examples": [{ "failureThreshold": 3, "resetTimeout": 60000 }]
     }
   },
   "required": ["name", "version", "apiVersion", "main"],
