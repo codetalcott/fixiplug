@@ -1,0 +1,18 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "module": "esnext",
+    "moduleResolution": "node",
+    "allowJs": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "strict": true,
+    "outDir": "dist"
+  },
+  "include": [
+    "./**/*.ts",
+    "./tests/**/*.ts",
+    "./fixi.js",
+    "./fixi.d.ts"
+  ]
+}
