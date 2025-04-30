@@ -1,4 +1,4 @@
-#!/usr/bin/env ts-node --esm
+#!/usr/bin/env ts-node
 // Ensure this script is run under ts-node
 const isTsNode = process.argv[0].includes('ts-node');
 if (!isTsNode) {
@@ -6,10 +6,8 @@ if (!isTsNode) {
   process.exit(1);
 }
 
-import fs from 'fs';
-import path from 'path';
-import Ajv from 'ajv';
-import inquirer from 'inquirer';
+const fs = require('fs');
+const path = require('path');
 
 interface PluginManifest {
   name: string;
@@ -25,17 +23,18 @@ interface PluginManifest {
 }
 
 async function promptManifest(): Promise<PluginManifest> {
+  const inquirer = (await import('inquirer')).default;
   const questions = [
-    { name: 'name', message: 'Plugin name', type: 'input', validate: (v: any) => v ? true : 'Required' },
-    { name: 'version', message: 'Version', type: 'input', default: '1.0.0' },
-    { name: 'apiVersion', message: 'API Version', type: 'input', default: '2.0.0' },
-    { name: 'main', message: 'Entry file (relative)', type: 'input', default: (answers: any) => `plugins/${answers.name}.ts` },
-    { name: 'priority', message: 'Priority (integer)', type: 'number', default: 0 },
-    { name: 'dependencies', message: 'Dependencies (comma-separated)', type: 'input', filter: (v: string) => v.split(',').map((s: string) => s.trim()).filter(Boolean) },
-    { name: 'description', message: 'Description', type: 'input' },
-    { name: 'author', message: 'Author', type: 'input' },
-    { name: 'timeouts', message: 'Timeouts (json)', type: 'input', default: '{}', filter: (v: string) => JSON.parse(v) },
-    { name: 'circuitBreaker', message: 'CircuitBreaker (json)', type: 'input', default: '{}', filter: (v: string) => JSON.parse(v) }
+    { name: 'name', message: 'Plugin name (unique identifier)', type: 'input', validate: (v: any) => v ? true : 'Required' },
+    { name: 'version', message: 'Plugin version (semver)', type: 'input', default: '1.0.0' },
+    { name: 'apiVersion', message: 'API version to target (e.g. core version)', type: 'input', default: '2.0.0' },
+    { name: 'main', message: 'Entry file path (relative, e.g. plugins/<name>.ts)', type: 'input', default: (answers: any) => `plugins/${answers.name}.ts` },
+    { name: 'priority', message: 'Execution priority (higher runs first)', type: 'number', default: 0 },
+    { name: 'dependencies', message: 'Dependencies (comma-separated plugin names)', type: 'input', default: '', filter: (v: string) => v.split(',').map((s: string) => s.trim()).filter(Boolean) },
+    { name: 'description', message: 'Short description of plugin', type: 'input', default: '' },
+    { name: 'author', message: 'Author name', type: 'input', default: '' },
+    { name: 'timeouts', message: 'Hook timeouts in ms (JSON object)', type: 'input', default: '{}', filter: (v: string) => JSON.parse(v) },
+    { name: 'circuitBreaker', message: 'Circuit breaker settings (JSON object)', type: 'input', default: '{}', filter: (v: string) => JSON.parse(v) }
   ];
   const answers = await inquirer.prompt(questions);
   return answers as PluginManifest;
@@ -61,6 +60,7 @@ async function main() {
 
   // Validate manifest against schema
   const schema = JSON.parse(fs.readFileSync(path.resolve(__dirname, '../plugin-manifest.schema.json'), 'utf8'));
+  const { default: Ajv } = await import('ajv');
   const ajv = new Ajv();
   const validate = ajv.compile(schema);
   if (!validate(manifest)) {

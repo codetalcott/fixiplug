@@ -1,10 +1,7 @@
 {
   "scripts": {
     "test": "jest",
-    "generate:plugin": "ts-node --esm scripts/generate-plugin.ts"
-  },
-  "ts-node": {
-    "esm": true
+    "generate:plugin": "ts-node scripts/generate-plugin.ts"
   },
   "devDependencies": {
     "typescript": "^5.8.3",
