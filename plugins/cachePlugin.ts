@@ -6,7 +6,7 @@ export const CachePlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 90,
   description: 'Caches GET responses with configurable TTL',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
 
   config: {
     ttl: 5 * 60 * 1000,

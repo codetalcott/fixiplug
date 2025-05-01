@@ -427,7 +427,7 @@ export const WebTransportPlugin = createPlugin<FixiPlugs>({
   apiVersion: '2.0.0',
   priority: 50,
   description: 'Provides WebTransport API integration for real-time bidirectional communication',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
   
   // Default configuration
   config: {

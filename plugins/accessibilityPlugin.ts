@@ -6,7 +6,7 @@ export const AccessibilityPlugin = createPlugin<FixiPlugs>({
   apiVersion: '2.0.0',
   priority: 70,
   description: 'Enhances accessibility for dynamic content updates',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
 
   config: {
     liveRegionId: 'fx-live-region',

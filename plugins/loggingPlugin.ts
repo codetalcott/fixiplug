@@ -8,7 +8,7 @@ export const LoggingPlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 100, // Highest priority to capture everything
   description: 'Provides comprehensive logging and metrics',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
   
   // Logging configuration
   config: {

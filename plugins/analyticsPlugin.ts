@@ -6,7 +6,7 @@ export const AnalyticsPlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 100,
   description: 'Tracks custom events for AJAX interactions',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
 
   events: [] as Array<{ event: string; properties: any }>,
 

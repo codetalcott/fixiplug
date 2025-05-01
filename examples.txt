@@ -183,7 +183,7 @@ export const LoggingPlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 100, // Highest priority to capture everything
   description: 'Provides comprehensive logging and metrics',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
   
   // Logging configuration
   config: {
@@ -391,7 +391,7 @@ export const ProgressPlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 90,
   description: 'Shows loading indicators for requests',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
   
   // Configuration options
   config: {
@@ -774,7 +774,7 @@ export const AnalyticsPlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 100, // High priority to ensure it runs first for accurate timing
   description: 'Tracks AJAX request performance metrics',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
   
   // Track metrics for different request types
   metrics: {
@@ -952,7 +952,7 @@ export const CachePlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 90, // High priority to check cache before request is made
   description: 'Implements client-side caching for GET requests',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
   
   // Default TTL of 5 minutes
   ttl: 5 * 60 * 1000,
@@ -1229,7 +1229,7 @@ export const SanitizerPlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 20,
   description: 'Sanitizes HTML content before insertion into the DOM',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
   
   // Custom sanitizer function
   sanitizerFn: null as ((html: string) => string) | null,
@@ -1305,7 +1305,7 @@ export const ErrorHandlerPlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 10,
   description: 'Provides global error handling for AJAX requests',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
   
   // Map of status codes to handlers
   statusHandlers: new Map<number, ErrorHandler>(),
@@ -1422,7 +1422,7 @@ export const CsrfPlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 80,
   description: 'Manages CSRF token refresh and inclusion in requests',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
   
   // CSRF token header name
   headerName: 'X-CSRF-Token',
@@ -1530,7 +1530,7 @@ export const OfflinePlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 95, // Very high priority to intercept before other plugins
   description: 'Provides offline support by queuing requests when offline',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
   
   // Offline configuration
   config: {

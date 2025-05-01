@@ -6,7 +6,7 @@ export const OfflinePlugin = createPlugin({
   apiVersion: '2.0.0',
   priority: 95,
   description: 'Queues requests when offline and retries on reconnect',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
 
   queue: [] as RequestPluginContext[],
 

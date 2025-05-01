@@ -6,7 +6,7 @@ export const LoadingPlugin = createPlugin<FixiPlugs>({
   apiVersion: '2.0.0',
   priority: 90,
   description: 'Toggles a loading indicator class on the body during requests',
-  author: 'Fixi Team',
+  author: 'Team Fixi',
 
   config: {
     loadingClass: 'fx-loading'
