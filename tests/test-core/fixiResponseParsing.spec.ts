@@ -26,7 +26,7 @@ describe('Fixi Response Parsing', () => {
     // reset lastCfg to ensure fresh capture
     lastCfg = null;
     // capture cfg in fx:after event
-    button.addEventListener('fx:after', e => { lastCfg = e.detail.cfg; });
+    button.addEventListener('fx:after', (e) => { lastCfg = (e as CustomEvent).detail.cfg; });
   });
 
   it('sets cfg.text from response.text()', async () => {

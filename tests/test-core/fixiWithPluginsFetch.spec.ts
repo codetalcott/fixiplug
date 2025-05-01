@@ -1,6 +1,9 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { FixiWithPlugins, createPlugin, PluginHook, RequestPluginContext } from '../plugin';
-
+import { 
+  createPlugin, 
+  FixiWithPlugins, 
+  RequestPluginContext 
+} from '../../src/hub'
 describe('FixiWithPlugins Enhanced Fetch', () => {
   let fixi: any;
   let proxy: FixiWithPlugins;
@@ -28,18 +31,18 @@ describe('FixiWithPlugins Enhanced Fetch', () => {
       beforeRequest(ctx: RequestPluginContext) {
         calls.push('before'); return ctx.config;
       },
-      afterResponse(ctx) {
+      afterResponse(ctx: RequestPluginContext) {
         calls.push('after'); return ctx.response!;
       }
     });
     proxy.registerPlugin(tracker);
 
-    const response = await proxy.fetch({ url: '/test' });
+    const response = await proxy.fetch({ url: '/test', action: '/test', method: 'GET' });
     expect(calls).toEqual(['before', 'after']);
     
     // Verify that fetch was called, ensuring our mock is properly set up
     expect(fixi.fetch).toHaveBeenCalledTimes(1);
-    expect(fixi.fetch).toHaveBeenCalledWith({ url: '/test' });
+    expect(fixi.fetch).toHaveBeenCalledWith({ url: '/test', action: '/test', method: 'GET' });
     expect(response.ok).toBe(true);
   });
 
@@ -55,7 +58,7 @@ describe('FixiWithPlugins Enhanced Fetch', () => {
     });
     proxy.registerPlugin(errorPlug);
 
-    await expect(proxy.fetch({ url: '/error' })).rejects.toThrow('network fail');
+    await expect(proxy.fetch({ url: '/error', action: '/error', method: 'GET' })).rejects.toThrow('network fail');
     expect(errors.length).toBe(1);
     expect(errors[0].message).toBe('network fail');
   });

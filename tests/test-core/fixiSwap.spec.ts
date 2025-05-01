@@ -46,7 +46,7 @@ describe('Fixi Swap Logic', () => {
     let cfgRef: any;
     // capture config and override swap
     button.addEventListener('fx:config', e => {
-      cfgRef = e.detail.cfg;
+      cfgRef = (e as CustomEvent).detail.cfg;
       cfgRef.swap = (cfg: any) => { cfg.target.textContent = 'fn-swap'; };
     });
     window.fetch = () => Promise.resolve({ ok: true, text: () => Promise.resolve('ignored') } as any);

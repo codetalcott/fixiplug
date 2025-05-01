@@ -7,6 +7,7 @@ import { PRESETS } from './blueprints';
 import fs from 'fs';
 import path from 'path';
 import { reportBundleStats } from './toolbox';
+import { BundleOptions } from './types';
 
 // Implementation of interactive CLI
 
@@ -22,7 +23,11 @@ program
       process.exit(1);
     }
     try {
-      const result = await createBundle(presetOpts);
+      const result = await createBundle({
+        ...presetOpts,
+        format: presetOpts.format as BundleOptions['format'],
+        target: 'target' in presetOpts ? (presetOpts.target as BundleOptions['target']) : undefined,
+      });
       reportBundleStats(result);
     } catch (err) {
       console.error('Error creating bundle:', err);
