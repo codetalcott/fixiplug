@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import '../fixi.js'; // register element behavior
+import '../../src/core/fixi.js'; // register element behavior
 
 describe('Fixi Response Parsing', () => {
   let button: HTMLButtonElement;

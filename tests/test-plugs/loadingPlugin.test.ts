@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext } from '../hub';
-import { LoadingPlugin } from '../plugins/loadingPlugin';
+import { PluginManager, PluginHook, RequestPluginContext } from '../../src/hub';
+import { LoadingPlugin } from '../../src/plugs/loadingPlugin';
 
 describe('LoadingPlugin', () => {
   let manager: PluginManager;
@@ -12,7 +12,7 @@ describe('LoadingPlugin', () => {
     const fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn() };
     manager = new PluginManager(fixi);
     manager.register(LoadingPlugin);
-    callCtx = { fixi, config: { url: '/test', method: 'GET' } } as RequestPluginContext;
+    callCtx = { fixi, config: { action: '/test', method: 'GET' } } as RequestPluginContext;
   });
 
   test('adds loading class before request', async () => {

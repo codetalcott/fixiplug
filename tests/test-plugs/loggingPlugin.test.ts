@@ -1,12 +1,12 @@
-import { vi, describe, it, expect } from 'vitest';
-import { PluginManager, PluginHook } from '../hub';
-import { LoggingPlugin } from '../plugins/loggingPlugin';
+import { describe, it, expect, beforeEach, afterEach, vi, SpyInstance, Mock } from 'vitest';
+import { PluginManager, PluginHook } from '../../src/hub';
+import { LoggingPlugin } from '../../src/plugs/loggingPlugin';
 
 describe('LoggingPlugin', () => {
   let manager: PluginManager;
   let fixi: any;
-  let consoleInfoSpy: vi.SpyInstance;
-  let consoleErrorSpy: vi.SpyInstance;
+  let consoleInfoSpy: SpyInstance;
+  let consoleErrorSpy: SpyInstance;
 
   beforeEach(() => {
     // Stub Fixi with minimal interface
@@ -23,7 +23,7 @@ describe('LoggingPlugin', () => {
     consoleErrorSpy.mockRestore();
   });
 
-  test('increments metrics on beforeRequest and afterResponse', async () => {
+  it('increments metrics on beforeRequest and afterResponse', async () => {
     const ctx = { fixi, config: { url: '/test', method: 'GET' } };
     // BEFORE_REQUEST
     const before = await manager.execute(PluginHook.BEFORE_REQUEST, ctx);
@@ -46,9 +46,9 @@ describe('LoggingPlugin', () => {
     expect(metrics.requestsByEndpoint['/test'].count).toBe(1);
   });
 
-  test('logs errors on onError hook', async () => {
+  it('logs errors on onError hook', async () => {
     // Prepare plugin for error
-    (fixi.fetch as vi.Mock).mockRejectedValue(new Error('fail'));
+    (fixi.fetch as Mock).mockRejectedValue(new Error('fail'));
     const ctx = { fixi, config: { url: '/err', method: 'POST' } };
 
     // Simulate error

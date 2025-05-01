@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import '../fixi.js';
+import '../../src/core/fixi.js';
 
 describe('Fixi Swap Logic', () => {
   let button: HTMLElement;

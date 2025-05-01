@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
-import '../fixi.js';
+import '../../src/core/fixi.js';
 
 describe('Fixi AbortController Handling', () => {
   let button: HTMLButtonElement;
@@ -14,8 +14,8 @@ describe('Fixi AbortController Handling', () => {
     document.body.appendChild(button);
     document.dispatchEvent(new Event('DOMContentLoaded'));
     originalFetch = window.fetch;
-    button.addEventListener('fx:config', e => { lastCfg = e.detail.cfg; });
-    button.addEventListener('fx:error', e => { lastError = e.detail.error; });
+    button.addEventListener('fx:config', (e: Event) => { lastCfg = (e as CustomEvent).detail.cfg; });
+    button.addEventListener('fx:error', (e: Event) => { lastError = (e as CustomEvent).detail.error; });
   });
 
   afterEach(() => {
@@ -26,8 +26,8 @@ describe('Fixi AbortController Handling', () => {
 
   it('aborts fetch when cfg.abort is called and dispatches fx:error', async () => {
     // stub fetch to respect signal
-    window.fetch = (_url: string, cfg: any) => new Promise((_res, rej) => {
-      cfg.signal.addEventListener('abort', () => rej(new DOMException('Aborted', 'AbortError')));
+    window.fetch = (_url: RequestInfo | URL, init?: RequestInit) => new Promise((_res, rej) => {
+      init?.signal?.addEventListener('abort', () => rej(new DOMException('Aborted', 'AbortError')));
     });
 
     // trigger click to populate lastCfg

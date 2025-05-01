@@ -1,6 +1,6 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext } from '../hub';
-import { CachePlugin } from '../plugins/cachePlugin';
+import { vi, describe, it, expect, beforeEach, Mock } from 'vitest';
+import { PluginManager, PluginHook, RequestPluginContext } from '../../src/hub';
+import { CachePlugin } from '../../src/plugs/cachePlugin';
 
 describe('CachePlugin', () => {
   let manager: PluginManager;
@@ -36,7 +36,7 @@ describe('CachePlugin', () => {
     // Prime cache
     await manager.execute(PluginHook.AFTER_RESPONSE, ctx1);
     // Spy fetch to detect calls
-    (fixi.fetch as vi.Mock).mockImplementation(() => Promise.resolve({}));
+    (fixi.fetch as Mock).mockImplementation(() => Promise.resolve({}));
 
     // Next beforeRequest
     const ctx2: RequestPluginContext = { fixi, config: { url, method }, response: undefined } as any;

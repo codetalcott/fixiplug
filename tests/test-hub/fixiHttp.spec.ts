@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import '../fixi.js'; // side-effect registers global fx behavior
+import '../../src/core/fixi.js'; // side-effect registers global fx behavior
 
 describe('Fixi Core HTTP Wrappers', () => {
   let button: HTMLButtonElement;
@@ -34,19 +34,19 @@ describe('Fixi Core HTTP Wrappers', () => {
     await Promise.resolve();
 
     expect(spy).toHaveBeenCalled();
-    const [url, cfg] = spy.mock.calls[0];
-    expect(url.startsWith('/api/data')).toBe(true);
+    const [url, cfg] = spy.mock.calls[0] || [];
+    expect(url.toString().startsWith('/api/data')).toBe(true);
     // body should be null for GET
-    expect(cfg.body).toBeNull();
-    expect(cfg.method).toBe('GET');
+    expect(cfg?.body).toBeNull();
+    expect(cfg?.method).toBe('GET');
     // header injection
-    expect(cfg.headers['FX-Request']).toBe('true');
+    expect((cfg?.headers as Record<string, string>)?. ['FX-Request']).toBe('true');
   });
 
   it('uses POST wrapper: sends FormData body and headers', async () => {
     // set method to POST
     button.setAttribute('fx-method', 'POST');
-    document.dispatchEvent(new Event('fx:process', { target: button }));
+    document.dispatchEvent(new CustomEvent('fx:process', { detail: { target: button } }));
 
     const fakeResponse = { ok: true, text: () => Promise.resolve('ok') };
     const spy = vi.spyOn(window, 'fetch').mockResolvedValue(fakeResponse as any);
@@ -55,10 +55,10 @@ describe('Fixi Core HTTP Wrappers', () => {
     await Promise.resolve();
 
     expect(spy).toHaveBeenCalled();
-    const [url, cfg] = spy.mock.calls[0];
-    expect(cfg.method).toBe('POST');
-    expect(cfg.body instanceof FormData).toBe(true);
-    expect(cfg.headers['FX-Request']).toBe('true');
+    const [url, cfg] = spy.mock.calls[0] || [];
+    expect(cfg?.method).toBe('POST');
+    expect(cfg?.body instanceof FormData).toBe(true);
+    expect((cfg?.headers as Record<string, string>)['FX-Request']).toBe('true');
   });
 
   it('handles fetch error and dispatches fx:error event', async () => {
@@ -67,10 +67,11 @@ describe('Fixi Core HTTP Wrappers', () => {
     vi.spyOn(window, 'fetch').mockRejectedValue(err);
 
     let caught = false;
-    let errorDetail = null;
-    button.addEventListener('fx:error', (e: any) => { 
+    let errorDetail: { error: Error } | null = null;
+    button.addEventListener('fx:error', (e) => { 
+      const customEvent = e as CustomEvent<{ error: Error }>;
       caught = true; 
-      errorDetail = e.detail;
+      errorDetail = customEvent.detail;
     });
 
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
@@ -78,6 +79,6 @@ describe('Fixi Core HTTP Wrappers', () => {
     await new Promise(r => setTimeout(r, 10));
 
     expect(caught).toBe(true);
-    expect(errorDetail.error).toBe(err);
+    expect(errorDetail!.error).toBe(err);
   });
 });

@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext } from '../hub';
-import { AnalyticsPlugin } from '../plugins/analyticsPlugin';
+import { PluginManager, PluginHook, RequestPluginContext } from '../../src/hub';
+import { AnalyticsPlugin } from '../../src/plugs/analyticsPlugin';
 
 describe('AnalyticsPlugin', () => {
   let manager: PluginManager;

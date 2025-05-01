@@ -1,6 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext } from '../hub';
-import { OfflinePlugin } from '../plugins/offlinePlugin';
+import { PluginManager, PluginHook, RequestPluginContext } from '../../src/hub';
+import { OfflinePlugin } from '../../src/plugs/offlinePlugin';
 
 describe('OfflinePlugin', () => {
   let manager: PluginManager;
@@ -15,7 +15,7 @@ describe('OfflinePlugin', () => {
     // Force offline
     Object.defineProperty(navigator, 'onLine', { value: false, configurable: true });
 
-    ctx = { fixi, config: { url: '/test', method: 'GET' } } as RequestPluginContext;
+    ctx = { fixi, config: { url: '/test', method: 'GET', action: 'test' } } as RequestPluginContext;
     // Clear queue
     (OfflinePlugin as any).queue.length = 0;
   });
