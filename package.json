@@ -4,15 +4,15 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "test": "vitest",
+    "test": "vitest run --coverage",
     "generate:plugin": "ts-node scripts/generate-plugin.ts",
     "build-bundle": "ts-node scripts/build-bundle.ts"
   },
   "devDependencies": {
-    "vite-tsconfig-paths": "^4.0.0",
     "@types/inquirer": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "^7.18.0",
     "@typescript-eslint/parser": "^7.18.0",
+    "@vitest/coverage-v8": "^0.34.6",
     "@vitest/ui": "^0.34.0",
     "ajv": "^8.12.0",
     "esbuild": "^0.25.3",
@@ -20,9 +20,11 @@
     "eslint-config-prettier": "^9.0.0",
     "eslint-plugin-prettier": "^4.2.1",
     "inquirer": "^9.3.7",
+    "jsdom": "^26.1.0",
     "ts-node": "^10.9.1",
     "typescript": "^5.8.3",
     "vite": "^5.0.0",
+    "vite-tsconfig-paths": "^4.0.0",
     "vitest": "^0.34.0"
   }
 }

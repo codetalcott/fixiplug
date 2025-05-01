@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, describe, it, expect } from 'vitest';
 import { PluginManager, PluginHook } from '../plugin';
 import { LoggingPlugin } from '../plugins/loggingPlugin';
 

@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, describe, it, expect } from 'vitest';
 import { generatePluginId, delay, safeJsonFetch } from '../plugin-sdk/src/index';
 
 describe('Plugin SDK Utilities', () => {

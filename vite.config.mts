@@ -10,8 +10,23 @@ export default defineConfig({
     reporters: ['default', 'html'],
     coverage: {
       enabled: true,
+      provider: 'v8',            // use v8 for coverage
       reporter: ['text', 'html'],
-      all: true
+      all: true,
+      exclude: [
+        'plugin.ts',
+        'scripts/**',
+        'examples.txt',
+        'html/**',
+        'plugin-manifest.schema.json',
+        'fixi.d.ts',
+        'dist/**',
+        'node_modules/**'
+      ],
+      statements: 60,
+      branches: 60,
+      functions: 60,
+      lines: 60
     }
   }
 });

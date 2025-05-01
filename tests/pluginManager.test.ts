@@ -1,4 +1,4 @@
-import { vi } from 'vitest';
+import { vi, describe, it, expect } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext } from '../plugin';
 
 describe('PluginManager', () => {
