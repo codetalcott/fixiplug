@@ -8,8 +8,9 @@ import { configDefaults } from 'vitest/config';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-export default defineConfig({
-  root: 'html',
+export default defineConfig(({ mode }) => ({
+  // Use project root when running tests so TS in src/ is transformed
+  root: mode === 'test' ? '.' : 'html',
   build: {
     outDir: '../dist',
     emptyOutDir: true
@@ -18,7 +19,10 @@ export default defineConfig({
     tsconfigPaths({ projects: [path.resolve(__dirname, 'tsconfig.json')], ignoreConfigErrors: true })
   ],
   test: {
-    root: '.',               // project root for tests
+    // transform TS files with esbuild before running tests
+    transform: { '^.+\\.[jt]s$': 'esbuild' },
+    // ensure tests and all src TS get transformed for both web and SSR contexts
+    transformMode: { web: [/\.[jt]s$/], ssr: [/\.[jt]s$/] },
     globals: true,
     environment: 'jsdom',
     include: ['tests/**/*.{test,spec}.ts'],
@@ -43,4 +47,4 @@ export default defineConfig({
       lines: 60
     }
   }
-});
+}));
