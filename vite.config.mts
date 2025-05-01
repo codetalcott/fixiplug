@@ -2,8 +2,14 @@ import { defineConfig } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 
 export default defineConfig({
+  root: 'html',
+  build: {
+    outDir: '../dist',
+    emptyOutDir: true
+  },
   plugins: [tsconfigPaths()],
   test: {
+    root: '../',
     globals: true,
     environment: 'jsdom',
     include: ['tests/**/*.{test,spec}.ts'],

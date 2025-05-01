@@ -11,9 +11,9 @@
     "outDir": "dist"
   },
   "include": [
-    "./**/*.ts",
-    "./tests/**/*.ts",
-    "./fixi.js",
-    "./fixi.d.ts"
+    "src/core/**/*",
+    "src/hub/**/*",
+    "src/plugs/**/*",
+    "tests/**/*"
   ]
 }

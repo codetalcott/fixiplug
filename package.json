@@ -1,4 +1,18 @@
 {
+  "name": "fixihub",
+  "version": "2.0.0",
+  "main": "./dist/fixi.js",
+  "module": "./dist/fixi.esm.js",
+  "exports": {
+    ".": {
+      "import": "./dist/fixi.esm.js",
+      "require": "./dist/fixi.cjs.js"
+    },
+    "./plugin": {
+      "import": "./dist/fixi.plugin.esm.js",
+      "require": "./dist/fixi.plugin.cjs.js"
+    }
+  },
   "type": "module",
   "scripts": {
     "dev": "vite",

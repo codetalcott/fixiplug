@@ -20,7 +20,7 @@
  * Version: 2.0.0
  */
 
-import Fixi, { HttpMethod, RequestConfig, FxResponse, SwapMethod, HttpError, DOMObserver, LogLevel } from './fixi.js';
+import { Fixi, RequestConfig, FxResponse } from '../core/fixi.js';
 
 /* ============================
    Performance Measurement
@@ -131,7 +131,8 @@ export interface FixiPlugs {
   
   /** Plugin version */
   version: string;
-    
+  
+  
   /** 
    * Execution priority (higher numbers execute first) 
    * Default: 0
