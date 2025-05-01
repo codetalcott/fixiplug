@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../hub';
+import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../../src/hub';
 
 describe('Lazy Loading', () => {
   it('does not register plugin until loadPlugin is called', async () => {
@@ -21,8 +21,8 @@ describe('Lazy Loading', () => {
     const loaded = await manager.loadPlugin('lazyPlugin');
     expect(loaded?.name).toBe('lazyPlugin');
 
-    const ctx = { config: { url: '/test' } } as RequestPluginContext;
-    await manager.execute(PluginHook.BEFORE_REQUEST, { fixi: manager['fixi'], ...ctx });
+    const ctx = { fixi: manager['fixi'], config: { url: '/test' } as { url: string; processed?: string } };
+    await manager.execute(PluginHook.BEFORE_REQUEST, ctx);
     expect(ctx.config.processed).toBe('lazy');
   });
 

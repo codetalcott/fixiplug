@@ -2,6 +2,7 @@ import { defineConfig } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import { configDefaults } from 'vitest/config';
 
 // Determine __dirname in ES module
 const __filename = fileURLToPath(import.meta.url);

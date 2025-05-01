@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PluginManager, createPlugin, PluginHook, RequestPluginContext } from '../hub';
+import { PluginManager, createPlugin, PluginHook, RequestPluginContext } from '../../src/hub';
 
 describe('Error Fallbacks', () => {
   it('uses configured fallbacks when hooks throw errors', async () => {
@@ -17,7 +17,18 @@ describe('Error Fallbacks', () => {
       }
     });
     manager.register(plugin);
-    const ctx = { config: { url: '/test' } } as RequestPluginContext;
+    const ctx = { 
+      config: { url: '/test', action: 'test', method: 'GET' }, 
+      fixi: { 
+        fetch: () => Promise.resolve({ 
+          ok: true, 
+          status: 200, 
+          headers: new Headers(), 
+          json: () => Promise.resolve({}), 
+          text: () => Promise.resolve('') 
+        }) 
+      } 
+    } as unknown as RequestPluginContext;
     await manager.execute(PluginHook.BEFORE_REQUEST, ctx);
     expect(ctx.config.processed).toBe('fallback');
   });

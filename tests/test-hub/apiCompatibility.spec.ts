@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PluginManager, createPlugin } from '../hub';
+import { PluginManager, createPlugin } from '../../src/hub';
 
 describe('API Version Compatibility', () => {
   const dummyFixi = { configure: () => ({ config: { logger: console } }), fetch: () => Promise.resolve({}) };

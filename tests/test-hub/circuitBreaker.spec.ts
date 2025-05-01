@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../hub';
+import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../../src/hub';
 
 describe('Circuit Breaker Lifecycle', () => {
   let manager: PluginManager;

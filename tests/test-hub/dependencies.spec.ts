@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PluginManager, createPlugin, PluginHook, RequestPluginContext } from '../hub';
+import { PluginManager, createPlugin, PluginHook, RequestPluginContext } from '../../src/hub';
 
 describe('Plugin Dependencies', () => {
   it('rejects plugins with missing dependencies', () => {

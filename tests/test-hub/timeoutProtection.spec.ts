@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../hub';
+import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../../src/hub';
 
 describe('Timeout Protection', () => {
   let manager: PluginManager;
@@ -27,7 +27,7 @@ describe('Timeout Protection', () => {
       }
     });
     manager.register(slowPlugin);
-    const ctx = { fixi, config: { url: '/test' } } as RequestPluginContext;
+    const ctx = { fixi, config: { url: '/test', action: 'GET', method: 'GET' } } as RequestPluginContext;
 
     const p = manager.execute(PluginHook.BEFORE_REQUEST, ctx);
     vi.advanceTimersByTime(1500);

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../hub';
+import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../../src/hub';
 
 describe('Plugin Health Monitoring', () => {
   let manager: PluginManager;
@@ -19,7 +19,7 @@ describe('Plugin Health Monitoring', () => {
     });
     manager.register(plugin);
 
-    const ctx = { fixi, config: { url: '/test' } } as RequestPluginContext;
+    const ctx = { fixi, config: { url: '/test', action: 'test', method: 'GET' } } as RequestPluginContext;
     await manager.execute(PluginHook.BEFORE_REQUEST, ctx);
     await manager.execute(PluginHook.BEFORE_REQUEST, ctx);
 
@@ -37,7 +37,7 @@ describe('Plugin Health Monitoring', () => {
     });
     manager.register(plugin);
 
-    const ctx = { fixi, config: { url: '/test' } } as RequestPluginContext;
+    const ctx = { fixi, config: { url: '/test', action: 'test', method: 'GET' } } as RequestPluginContext;
     await manager.execute(PluginHook.BEFORE_REQUEST, ctx);
 
     manager.resetHealthMetrics('healthPlugin');

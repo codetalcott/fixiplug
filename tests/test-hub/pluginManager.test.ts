@@ -1,5 +1,5 @@
 import { vi, describe, it, expect } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext } from '../hub';
+import { PluginManager, PluginHook, RequestPluginContext } from '../../src/hub';
 
 describe('PluginManager', () => {
   let manager: PluginManager;
@@ -22,7 +22,7 @@ describe('PluginManager', () => {
       },
     });
 
-    const ctx = { fixi, config: { url: '/test' } } as RequestPluginContext;
+    const ctx = { fixi, config: { url: '/test', action: 'get', method: 'GET' } } as RequestPluginContext;
     const result = await manager.execute(PluginHook.BEFORE_REQUEST, ctx) as RequestPluginContext;
     expect(result.config.modified).toBe(true);
   });
@@ -33,15 +33,15 @@ describe('PluginManager', () => {
       version: '1.0.0',
       
       afterResponse: (ctx: RequestPluginContext) => {
-        ctx.response = { ...ctx.response, processed: true };
+        ctx.response = { ...ctx.response, processed: true } as any;
         return ctx.response!;
       },
     });
 
-    const res = { data: 123 };
-    const ctx = { fixi, config: { url: '/test' }, response: res } as RequestPluginContext;
+    const res = { data: 123, ok: true, status: 200, headers: new Headers(), json: () => Promise.resolve({ data: 123 }), text: () => Promise.resolve('') };
+    const ctx = { fixi, config: { url: '/test', action: 'get', method: 'GET' }, response: res } as RequestPluginContext;
     const result = await manager.execute(PluginHook.AFTER_RESPONSE, ctx) as RequestPluginContext;
-    expect(result.response.processed).toBe(true);
+    expect((result.response as any).processed).toBe(true);
   });
 
   test('plugins execute in priority order', async () => {
@@ -67,7 +67,7 @@ describe('PluginManager', () => {
       },
     });
 
-    const ctx = { fixi, config: {} } as RequestPluginContext;
+    const ctx = { fixi, config: { action: 'get', method: 'GET' } } as RequestPluginContext;
     await manager.execute(PluginHook.BEFORE_REQUEST, ctx);
     expect(calls).toEqual(['high', 'low']);
   });

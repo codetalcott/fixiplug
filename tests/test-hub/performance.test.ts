@@ -1,5 +1,5 @@
 import { vi, describe, it, expect } from 'vitest';
-import { PluginManager, PluginHook } from '../hub';
+import { PluginManager, PluginHook } from '../../src/hub';
 
 describe('Plugin Performance', () => {
   it('measures average execution time for empty plugin set', async () => {
