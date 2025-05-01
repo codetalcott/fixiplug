@@ -2,10 +2,32 @@
 
 import { program } from 'commander';
 import inquirer from 'inquirer';
-import { createBundle, BundleOptions } from './bundler';
-import { PRESETS } from './presets';
+import { createBundle } from './builder';
+import { PRESETS } from './blueprints';
 import fs from 'fs';
 import path from 'path';
+import { reportBundleStats } from './toolbox';
 
 // Implementation of interactive CLI
-// ...
+
+// CLI setup for bundling
+program
+  .name('fixi-assembly')
+  .description('CLI for creating Fixi.js bundles')
+  .argument('[preset]', 'bundle preset to use', 'recommended')
+  .action(async (preset: string) => {
+    const presetOpts = PRESETS[preset as keyof typeof PRESETS];
+    if (!presetOpts) {
+      console.error(`Unknown preset: ${preset}`);
+      process.exit(1);
+    }
+    try {
+      const result = await createBundle(presetOpts);
+      reportBundleStats(result);
+    } catch (err) {
+      console.error('Error creating bundle:', err);
+      process.exit(1);
+    }
+  });
+
+program.parse(process.argv);

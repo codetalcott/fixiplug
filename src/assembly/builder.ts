@@ -5,7 +5,7 @@ import path from 'path';
 import zlib from 'zlib';  
 
 import { BundleOptions, BundleResult } from './types';
-
+import { getAllAvailablePlugins, createEntryFile, generateBanner, calculateBundleStats } from './toolbox';
 
 export async function createBundle(options: Partial<BundleOptions>): Promise<BundleResult> {
   // Merge with defaults
