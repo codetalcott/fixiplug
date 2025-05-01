@@ -1,4 +1,4 @@
-import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext, DomPluginContext } from '../plugin';
+import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext, DomPluginContext } from '../hub';
 
 // Plugin generated from manifest interactive input
 export default createPlugin<FixiPlugs>({

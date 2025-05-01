@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../plugin';
+import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../hub';
 
 describe('Timeout Protection', () => {
   let manager: PluginManager;

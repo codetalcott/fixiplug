@@ -1,5 +1,5 @@
 import { vi, describe, it, expect } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext } from '../plugin';
+import { PluginManager, PluginHook, RequestPluginContext } from '../hub';
 
 describe('PluginManager', () => {
   let manager: PluginManager;

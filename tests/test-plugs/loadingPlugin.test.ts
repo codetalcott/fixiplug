@@ -1,5 +1,5 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext } from '../plugin';
+import { PluginManager, PluginHook, RequestPluginContext } from '../hub';
 import { LoadingPlugin } from '../plugins/loadingPlugin';
 
 describe('LoadingPlugin', () => {

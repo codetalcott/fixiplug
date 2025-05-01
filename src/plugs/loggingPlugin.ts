@@ -1,4 +1,4 @@
-import { createPlugin, PluginHook, RequestPluginContext } from '../plugin';
+import { createPlugin, PluginHook, RequestPluginContext } from '../hub';
 
 type LogLevel = 'debug' | 'info' | 'warn' | 'error';
 

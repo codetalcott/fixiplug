@@ -1,5 +1,5 @@
 import { vi, describe, it, expect } from 'vitest';
-import { PluginManager, PluginHook } from '../plugin';
+import { PluginManager, PluginHook } from '../hub';
 import { LoggingPlugin } from '../plugins/loggingPlugin';
 
 describe('LoggingPlugin', () => {

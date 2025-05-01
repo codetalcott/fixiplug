@@ -1,4 +1,4 @@
-import { createPlugin, FixiPlugs, DomPluginContext } from '../plugin';
+import { createPlugin, FixiPlugs, DomPluginContext } from '../hub';
 
 export const AccessibilityPlugin = createPlugin<FixiPlugs>({
   name: 'a11y',

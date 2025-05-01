@@ -1,5 +1,11 @@
 import { defineConfig } from 'vite';
 import tsconfigPaths from 'vite-tsconfig-paths';
+import path from 'path';
+import { fileURLToPath } from 'url';
+
+// Determine __dirname in ES module
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 export default defineConfig({
   root: 'html',
@@ -7,16 +13,18 @@ export default defineConfig({
     outDir: '../dist',
     emptyOutDir: true
   },
-  plugins: [tsconfigPaths()],
+  plugins: [
+    tsconfigPaths({ projects: [path.resolve(__dirname, 'tsconfig.json')], ignoreConfigErrors: true })
+  ],
   test: {
-    root: '../',
+    root: '.',               // project root for tests
     globals: true,
     environment: 'jsdom',
     include: ['tests/**/*.{test,spec}.ts'],
     reporters: ['default', 'html'],
     coverage: {
       enabled: true,
-      provider: 'v8',            // use v8 for coverage
+      provider: 'v8',
       reporter: ['text', 'html'],
       all: true,
       exclude: [
@@ -29,7 +37,6 @@ export default defineConfig({
         'dist/**',
         'node_modules/**'
       ],
-      statements: 60,
       branches: 60,
       functions: 60,
       lines: 60

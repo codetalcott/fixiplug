@@ -1,4 +1,4 @@
-import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext } from '../plugin';
+import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext } from '../hub';
 
 export const LoadingPlugin = createPlugin<FixiPlugs>({
   name: 'loading',

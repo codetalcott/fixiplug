@@ -1,6 +1,6 @@
 
 import { describe, it, expect } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../plugin';
+import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../hub';
 
 describe('Lazy Loading', () => {
   it('does not register plugin until loadPlugin is called', async () => {

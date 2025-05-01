@@ -1,4 +1,4 @@
-import { createPlugin, RequestPluginContext } from '../plugin';
+import { createPlugin, RequestPluginContext } from '../hub';
 
 export const AnalyticsPlugin = createPlugin({
   name: 'analytics',

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { PluginManager, createPlugin, PluginHook, RequestPluginContext } from '../plugin';
+import { PluginManager, createPlugin, PluginHook, RequestPluginContext } from '../hub';
 
 describe('Error Fallbacks', () => {
   it('uses configured fallbacks when hooks throw errors', async () => {

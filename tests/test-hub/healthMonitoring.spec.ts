@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../plugin';
+import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../hub';
 
 describe('Plugin Health Monitoring', () => {
   let manager: PluginManager;
