@@ -1,4 +1,4 @@
-import { vi, describe, it, expect } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext } from '../plugin';
 import { AnalyticsPlugin } from '../plugins/analyticsPlugin';
 

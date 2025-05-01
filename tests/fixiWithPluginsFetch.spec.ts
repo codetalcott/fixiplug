@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { FixiWithPlugins, createPlugin, PluginHook, RequestPluginContext } from '../plugin';
 
 describe('FixiWithPlugins Enhanced Fetch', () => {
