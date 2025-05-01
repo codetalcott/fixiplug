@@ -5,7 +5,7 @@ describe('Error Fallbacks', () => {
   it('uses configured fallbacks when hooks throw errors', async () => {
     const manager = new PluginManager({ configure: () => ({ config: { logger: console } }), fetch: () => Promise.resolve({}) } as any);
     const plugin = createPlugin({
-      name: 'fallbackTest', version: '1.0.0', apiVersion: '2.0.0',
+      name: 'fallbackTest', version: '1.0.0', 
       beforeRequest(ctx: RequestPluginContext) {
         throw new Error('fail');
       },

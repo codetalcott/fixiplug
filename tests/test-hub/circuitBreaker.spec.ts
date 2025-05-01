@@ -12,7 +12,7 @@ describe('Circuit Breaker Lifecycle', () => {
     fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn().mockResolvedValue({ ok: true }) };
     manager = new PluginManager(fixi);
     testPlugin = createPlugin({
-      name: 'circuitTest', version: '1.0.0', apiVersion: '2.0.0',
+      name: 'circuitTest', version: '1.0.0', 
       circuitBreaker: { failureThreshold: 2, resetTimeout: 5000 },
       callCount: 0,
       beforeRequest(ctx) {

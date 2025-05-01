@@ -12,7 +12,7 @@ describe('Plugin Health Monitoring', () => {
 
   it('tracks totalCalls and errors for a plugin hook', async () => {
     const plugin = createPlugin({
-      name: 'healthPlugin', version: '1.0.0', apiVersion: '2.0.0',
+      name: 'healthPlugin', version: '1.0.0', 
       beforeRequest(ctx: RequestPluginContext) {
         return ctx.config;
       }
@@ -30,7 +30,7 @@ describe('Plugin Health Monitoring', () => {
 
   it('resets health metrics when resetHealthMetrics is called', async () => {
     const plugin = createPlugin({
-      name: 'healthPlugin', version: '1.0.0', apiVersion: '2.0.0',
+      name: 'healthPlugin', version: '1.0.0', 
       beforeRequest(ctx: RequestPluginContext) {
         return ctx.config;
       }

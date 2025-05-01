@@ -4,7 +4,6 @@ import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext, DomPluginCon
 export default createPlugin<FixiPlugs>({
   name: 'testplug',
   version: '1.0.0',
-  apiVersion: 'latest',
   priority: 0,
   dependencies: [],
   

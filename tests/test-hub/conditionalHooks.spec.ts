@@ -5,7 +5,7 @@ describe('Conditional Hook Execution', () => {
   it('skips hook when condition is false and runs when true', async () => {
     const manager = new PluginManager({ configure: () => ({ config: { logger: console } }), fetch: () => Promise.resolve({}) } as any);
     const conditional = createPlugin({
-      name: 'conditional', version: '1.0.0', apiVersion: '2.0.0',
+      name: 'conditional', version: '1.0.0', 
       conditions: {
         [PluginHook.BEFORE_REQUEST]: (ctx: RequestPluginContext) => !!ctx.config.enablePlugin
       },

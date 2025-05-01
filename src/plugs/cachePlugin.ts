@@ -3,7 +3,7 @@ import { createPlugin, PluginHook, RequestPluginContext } from '../plugin';
 export const CachePlugin = createPlugin({
   name: 'cache',
   version: '1.0.0',
-  apiVersion: '2.0.0',
+  
   priority: 90,
   description: 'Caches GET responses with configurable TTL',
   author: 'Team Fixi',

@@ -131,8 +131,7 @@ export interface FixiPlugs {
   
   /** Plugin version */
   version: string;
-  
-  
+    
   /** 
    * Execution priority (higher numbers execute first) 
    * Default: 0

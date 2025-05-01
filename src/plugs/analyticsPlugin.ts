@@ -3,7 +3,7 @@ import { createPlugin, RequestPluginContext } from '../plugin';
 export const AnalyticsPlugin = createPlugin({
   name: 'analytics',
   version: '1.0.0',
-  apiVersion: '2.0.0',
+  
   priority: 100,
   description: 'Tracks custom events for AJAX interactions',
   author: 'Team Fixi',

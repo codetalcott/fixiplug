@@ -3,7 +3,7 @@ import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext } from '../pl
 export const LoadingPlugin = createPlugin<FixiPlugs>({
   name: 'loading',
   version: '1.0.0',
-  apiVersion: '2.0.0',
+  
   priority: 90,
   description: 'Toggles a loading indicator class on the body during requests',
   author: 'Team Fixi',

@@ -12,7 +12,6 @@ const path = require('path');
 interface PluginManifest {
   name: string;
   version: string;
-  apiVersion: string;
   main: string;
   priority?: number;
   dependencies?: string[];
@@ -30,7 +29,6 @@ async function promptManifest(): Promise<PluginManifest> {
   const defaultManifest: PluginManifest = {
     name,
     version: '1.0.0',
-    apiVersion: 'latest',
     main: `plugins/${name}.ts`,
     priority: 0,
     dependencies: [],
@@ -104,7 +102,6 @@ async function main() {
 export default createPlugin<FixiPlugs>({
   name: '${manifest.name}',
   version: '${manifest.version}',
-  apiVersion: '${manifest.apiVersion}',
   ${manifest.priority !== undefined ? `priority: ${manifest.priority},` : ''}
   ${manifest.dependencies ? `dependencies: ${JSON.stringify(manifest.dependencies)},` : ''}
   ${manifest.description ? `description: '${manifest.description}',` : ''}

@@ -18,7 +18,7 @@ describe('Timeout Protection', () => {
 
   it('aborts slow plugin hooks after timeout and records an error', async () => {
     const slowPlugin = createPlugin({
-      name: 'slowPlugin', version: '1.0.0', apiVersion: '2.0.0',
+      name: 'slowPlugin', version: '1.0.0', 
       timeouts: { [PluginHook.BEFORE_REQUEST]: 1000 },
       async beforeRequest(ctx: RequestPluginContext) {
         await new Promise(r => setTimeout(r, 5000));
