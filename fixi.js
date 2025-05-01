@@ -61,14 +61,19 @@
 					cfg.target.insertAdjacentHTML(cfg.swap, cfg.text)
 				else if(cfg.swap in cfg.target)
 					cfg.target[cfg.swap] = cfg.text
-				else throw cfg.swap
+				else
+					throw send(elt, "error", {cfg, error:new Error(`Invalid swap: ${cfg.swap}`)}) || cfg.swap
 			}
-			if (cfg.transition)
-				await cfg.transition(doSwap).finished
-			else
-				await doSwap()
-			send(elt, "swapped", {cfg})
-			if (!document.contains(elt)) send(document, "swapped", {cfg})
+			try {
+				if (cfg.transition)
+					await cfg.transition(doSwap).finished
+				else
+					await doSwap()
+				send(elt, "swapped", {cfg})
+				if (!document.contains(elt)) send(document, "swapped", {cfg})
+			} catch (error) {
+				send(elt, "error", {cfg, error})
+			}
 		}
 		elt.__fixi.evt = attr(elt, "fx-trigger", elt.matches("form") ? "submit" : elt.matches("input:not([type=button]),select,textarea") ? "change" : "click")
 		elt.addEventListener(elt.__fixi.evt, elt.__fixi, options)

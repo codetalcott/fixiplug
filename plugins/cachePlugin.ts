@@ -21,15 +21,15 @@ export const CachePlugin = createPlugin({
     if (entry && Date.now() - entry.timestamp < this.config.ttl) {
       // Attach the cached response directly to ctx
       ctx.response = entry.data;
-      (ctx as any)._skipFetch = true;
-      return { ...ctx.config, _cached: true };
+      // Set a flag to skip the fetch operation
+      return { ...ctx.config, _cached: true, _skipFetch: true };
     }
     return ctx.config;
   },
 
   afterResponse(ctx: RequestPluginContext) {
     // If we've already set a cached response in beforeRequest, just return it
-    if ((ctx.config as any)._cached) {
+    if (ctx.config._cached) {
       return ctx.response!;
     }
     

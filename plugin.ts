@@ -730,12 +730,12 @@ export class FixiWithPlugins {
    * Enhance the fetch method via monkey patching to inject plugin processing
    */
   private enhanceFetch(): void {
-    const originalFetch = this.fixi.fetch.bind(this.fixi);
-    
-    // Store the original method to ensure we can test it
+    // Store a reference to the original fetch method
+    const originalFetch = this.fixi.fetch;
     const fixiInstance = this.fixi;
     
-    this.fixi.fetch = async (config: RequestConfig): Promise<FxResponse> => {
+    // Replace the fetch method with our enhanced version that preserves the spy functionality
+    this.fixi.fetch = async function enhancedFetch(config: RequestConfig): Promise<FxResponse> {
       try {
         // Plugin pre-processing
         const pluginContext: RequestPluginContext = {
@@ -749,8 +749,15 @@ export class FixiWithPlugins {
         ) as RequestPluginContext;
         
         try {
+          // Check if a plugin has set the _skipFetch flag (e.g., cache hit)
+          if (context.config._skipFetch && context.response) {
+            // If _skipFetch is true and we have a response, return it without calling fetch
+            return context.response;
+          }
+          
           // Call original fetch with possibly modified config
-          const result = await originalFetch(context.config);
+          // Using apply to preserve the spy functionality
+          const result = await originalFetch.apply(fixiInstance, [context.config]);
           
           // Plugin post-processing
           const responseContext: RequestPluginContext = {
@@ -779,7 +786,7 @@ export class FixiWithPlugins {
       } catch (error) {
         throw error;
       }
-    };
+    }.bind(this); // Bind 'this' to preserve the context
   }
 
   /**
