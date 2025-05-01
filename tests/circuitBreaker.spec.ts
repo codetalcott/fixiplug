@@ -43,6 +43,12 @@ describe('Circuit Breaker Lifecycle', () => {
   });
 
   it('closes circuit after timeout and allows calls', async () => {
+    // First make sure the circuit is open
+    await manager.execute(PluginHook.BEFORE_REQUEST, ctx).catch(() => {});
+    await manager.execute(PluginHook.BEFORE_REQUEST, ctx).catch(() => {});
+    expect(testPlugin.callCount).toBe(2);
+    
+    // Then reset after timeout
     vi.advanceTimersByTime(6000);
     await manager.execute(PluginHook.BEFORE_REQUEST, ctx);
     expect(testPlugin.callCount).toBe(3);

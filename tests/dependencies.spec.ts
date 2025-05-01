@@ -3,7 +3,10 @@ import { PluginManager, createPlugin, PluginHook, RequestPluginContext } from '.
 
 describe('Plugin Dependencies', () => {
   it('rejects plugins with missing dependencies', () => {
-    const manager = new PluginManager({} as any);
+    const manager = new PluginManager({ 
+      configure: () => ({ config: { logger: console } }),
+      fetch: () => Promise.resolve({})
+    } as any);
     const dependent = createPlugin({
       name: 'dependent', version: '1.0.0', apiVersion: '2.0.0',
       dependencies: ['missing'],

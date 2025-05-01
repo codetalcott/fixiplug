@@ -527,7 +527,7 @@ export class PluginManager {
    */
   public async execute<T extends PluginContext>(hookType: PluginHook, context: T): Promise<T> {
     const measure = PerformanceTracker.startMeasure(`PluginManager.execute.${hookType}`);
-    let currentContext = context;
+    let currentContext = { ...context };
     
     // Create a sorted list of plugins based on priority
     const prioritizedPlugins = Array.from(this.plugins.values())
@@ -594,8 +594,6 @@ export class PluginManager {
           } else {
             ctx.config = await plugin.beforeRequest(ctx);
           }
-          
-          currentContext = ctx;
         } 
         else if (hookType === PluginHook.AFTER_RESPONSE && plugin.afterResponse) {
           const ctx = currentContext as RequestPluginContext;
@@ -616,7 +614,6 @@ export class PluginManager {
               ctx.response = await plugin.afterResponse(ctx);
             }
           }
-          currentContext = ctx;
         } 
         else if (hookType === PluginHook.DOM_MUTATED && plugin.onDomMutated) {
           plugin.onDomMutated(currentContext as DomPluginContext);
@@ -666,6 +663,11 @@ export class PluginManager {
           }
         } else {
           this.logger.error(`Error executing ${hookType} hook in plugin "${plugin.name}":`, error);
+          
+          // If no fallback and a hook throws, propagate the error
+          if (!plugin.circuitBreaker) {
+            throw error;
+          }
         }
       } finally {
         const duration = pluginMeasure();
@@ -730,11 +732,14 @@ export class FixiWithPlugins {
   private enhanceFetch(): void {
     const originalFetch = this.fixi.fetch.bind(this.fixi);
     
+    // Store the original method to ensure we can test it
+    const fixiInstance = this.fixi;
+    
     this.fixi.fetch = async (config: RequestConfig): Promise<FxResponse> => {
       try {
         // Plugin pre-processing
         const pluginContext: RequestPluginContext = {
-          fixi: this.fixi,
+          fixi: fixiInstance,
           config
         };
         
@@ -749,7 +754,7 @@ export class FixiWithPlugins {
           
           // Plugin post-processing
           const responseContext: RequestPluginContext = {
-            fixi: this.fixi,
+            fixi: fixiInstance,
             config: context.config,
             response: result
           };
@@ -763,7 +768,7 @@ export class FixiWithPlugins {
         } catch (error) {
           // Error handling with plugins
           const errorContext: RequestPluginContext = {
-            fixi: this.fixi,
+            fixi: fixiInstance,
             config: context.config,
             error: error instanceof Error ? error : new Error('Unknown error')
           };

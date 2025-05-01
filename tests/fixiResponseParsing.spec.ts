@@ -22,6 +22,8 @@ describe('Fixi Response Parsing', () => {
       arrayBuffer: () => Promise.resolve(new TextEncoder().encode('hi').buffer),
       formData: () => Promise.resolve(new FormData())
     };
+    // reset lastCfg to ensure fresh capture
+    lastCfg = null;
     // capture cfg in fx:after event
     button.addEventListener('fx:after', e => { lastCfg = e.detail.cfg; });
   });
@@ -29,14 +31,23 @@ describe('Fixi Response Parsing', () => {
   it('sets cfg.text from response.text()', async () => {
     window.fetch = () => Promise.resolve(fakeResponse);
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    await new Promise(r => setTimeout(r, 0));
+    
+    // Wait until lastCfg is populated with the response
+    await new Promise(r => setTimeout(r, 50));
+    
+    expect(lastCfg).not.toBeNull();
     expect(lastCfg.text).toBe('plain text');
   });
 
   it('exposes response.json, blob, arrayBuffer, formData methods', async () => {
     window.fetch = () => Promise.resolve(fakeResponse);
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    await new Promise(r => setTimeout(r, 0));
+    
+    // Wait until lastCfg is populated with the response
+    await new Promise(r => setTimeout(r, 50));
+    
+    expect(lastCfg).not.toBeNull();
+    expect(lastCfg.response).toBeDefined();
 
     // ensure parser methods exist and work
     await expect(lastCfg.response.json()).resolves.toEqual({ a: 1 });

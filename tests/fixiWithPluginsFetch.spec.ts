@@ -6,6 +6,7 @@ describe('FixiWithPlugins Enhanced Fetch', () => {
   let proxy: FixiWithPlugins;
 
   beforeEach(() => {
+    // Make sure we're using vi.fn() correctly
     fixi = {
       configure: () => ({ config: { logger: console } }),
       fetch: vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true }) })
@@ -28,7 +29,10 @@ describe('FixiWithPlugins Enhanced Fetch', () => {
 
     const response = await proxy.fetch({ url: '/test' });
     expect(calls).toEqual(['before', 'after']);
+    
+    // Verify that fetch was called, ensuring our mock is properly set up
     expect(fixi.fetch).toHaveBeenCalledTimes(1);
+    expect(fixi.fetch).toHaveBeenCalledWith({ url: '/test' });
     expect(response.ok).toBe(true);
   });
 

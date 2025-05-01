@@ -67,12 +67,17 @@ describe('Fixi Core HTTP Wrappers', () => {
     vi.spyOn(window, 'fetch').mockRejectedValue(err);
 
     let caught = false;
-    button.addEventListener('fx:error', () => { caught = true; });
+    let errorDetail = null;
+    button.addEventListener('fx:error', (e: any) => { 
+      caught = true; 
+      errorDetail = e.detail;
+    });
 
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    // allow async
-    await Promise.resolve();
+    // allow more time for async error handling
+    await new Promise(r => setTimeout(r, 10));
 
     expect(caught).toBe(true);
+    expect(errorDetail.error).toBe(err);
   });
 });
