@@ -4,12 +4,14 @@ import fs from 'fs';
 import path from 'path';
 import zlib from 'zlib';  
 
+import { BundleOptions, BundleResult } from './types';
+
 
 export async function createBundle(options: Partial<BundleOptions>): Promise<BundleResult> {
   // Merge with defaults
   const config: BundleOptions = {
     format: options.format || 'esm',
-    plugins: options.plugins || 'none',
+    plugs: options.plugs || 'none',
     minify: options.minify ?? true,
     sourcemap: options.sourcemap ?? true,
     treeshake: options.treeshake ?? true,
@@ -20,9 +22,9 @@ export async function createBundle(options: Partial<BundleOptions>): Promise<Bun
   
   // Determine plugins to include
   const pluginsToInclude: string[] = 
-    config.plugins === 'none' ? [] :
-    config.plugins === 'all' ? getAllAvailablePlugins() :
-    Array.isArray(config.plugins) ? config.plugins : [];
+    config.plugs === 'none' ? [] :
+    config.plugs === 'all' ? getAllAvailablePlugins() :
+    Array.isArray(config.plugs) ? config.plugs : [];
   
   // Create entry file
   const entryFile = await createEntryFile(pluginsToInclude, config);
