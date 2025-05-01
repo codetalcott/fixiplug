@@ -1,6 +1,4 @@
-/**
- * @jest-environment jsdom
- */
+import { vi } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext } from '../plugin';
 import { OfflinePlugin } from '../plugins/offlinePlugin';
 
@@ -10,7 +8,7 @@ describe('OfflinePlugin', () => {
 
   beforeEach(() => {
     // Minimal Fixi stub
-    const fixi = { configure: () => ({ config: { logger: console } }), fetch: jest.fn() };
+    const fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn() };
     manager = new PluginManager(fixi);
     manager.register(OfflinePlugin);
 

@@ -1,6 +1,4 @@
-/**
- * @jest-environment jsdom
- */
+import { vi } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext } from '../plugin';
 import { AnalyticsPlugin } from '../plugins/analyticsPlugin';
 
@@ -9,7 +7,7 @@ describe('AnalyticsPlugin', () => {
   let fixi: any;
 
   beforeEach(() => {
-    fixi = { configure: () => ({ config: { logger: console } }), fetch: jest.fn() };
+    fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn() };
     manager = new PluginManager(fixi);
     manager.register(AnalyticsPlugin);
     // Reset events

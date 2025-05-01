@@ -1,7 +1,7 @@
 # FixiPlugs: Fixi Plugin System (pre-alpha)
 <!-- Badges -->
-[![npm version](https://img.shields.io/npm/v/fixi-plugins.svg)](https://www.npmjs.com/package/fixi-plugins)  
-[![Build Status](https://github.com/your-org/fixiplug/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/fixiplug/actions/workflows/ci.yml)  
+<!-- [![npm version](https://img.shields.io/npm/v/fixi-plugins.svg)](https://www.npmjs.com/package/fixi-plugins)  
+[![Build Status](https://github.com/your-org/fixiplug/actions/workflows/ci.yml/badge.svg)](https://github.com/your-org/fixiplug/actions/workflows/ci.yml)   -->
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 
 FixiPlugs aims to be a high-performance, composable plugin system for the tiny Fixi HTTP library. It enables developers to extend and customize behavior (caching, offline support, analytics, accessibility, loading indicators, etc.) without modifying the core library.

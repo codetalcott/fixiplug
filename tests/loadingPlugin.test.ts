@@ -1,6 +1,4 @@
-/**
- * @jest-environment jsdom
- */
+import { vi } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext } from '../plugin';
 import { LoadingPlugin } from '../plugins/loadingPlugin';
 
@@ -11,7 +9,7 @@ describe('LoadingPlugin', () => {
   beforeEach(() => {
     // Set up jsdom body
     document.body.innerHTML = '<div></div>';
-    const fixi = { configure: () => ({ config: { logger: console } }), fetch: jest.fn() };
+    const fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn() };
     manager = new PluginManager(fixi);
     manager.register(LoadingPlugin);
     callCtx = { fixi, config: { url: '/test', method: 'GET' } } as RequestPluginContext;

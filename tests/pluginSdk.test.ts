@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { generatePluginId, delay, safeJsonFetch } from '../plugin-sdk/src/index';
 
 describe('Plugin SDK Utilities', () => {
@@ -15,12 +16,12 @@ describe('Plugin SDK Utilities', () => {
 
   describe('safeJsonFetch', () => {
     afterEach(() => {
-      jest.resetAllMocks();
+      vi.resetAllMocks();
     });
 
     test('resolves JSON on successful fetch', async () => {
       const mockJson = { a: 1 };
-      (global as any).fetch = jest.fn().mockResolvedValue({
+      (global as any).fetch = vi.fn().mockResolvedValue({
         ok: true,
         status: 200,
         statusText: 'OK',
@@ -32,7 +33,7 @@ describe('Plugin SDK Utilities', () => {
     });
 
     test('throws error on non-ok response', async () => {
-      (global as any).fetch = jest.fn().mockResolvedValue({
+      (global as any).fetch = vi.fn().mockResolvedValue({
         ok: false,
         status: 404,
         statusText: 'Not Found',

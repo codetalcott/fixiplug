@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext } from '../plugin';
 import { CachePlugin } from '../plugins/cachePlugin';
 
@@ -8,7 +9,7 @@ describe('CachePlugin', () => {
   const method = 'GET';
 
   beforeEach(() => {
-    fixi = { configure: () => ({ config: { logger: console } }), fetch: jest.fn() };
+    fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn() };
     manager = new PluginManager(fixi);
     manager.register(CachePlugin);
     // Ensure cache is empty
@@ -35,7 +36,7 @@ describe('CachePlugin', () => {
     // Prime cache
     await manager.execute(PluginHook.AFTER_RESPONSE, ctx1);
     // Spy fetch to detect calls
-    (fixi.fetch as jest.Mock).mockImplementation(() => Promise.resolve({}));
+    (fixi.fetch as vi.Mock).mockImplementation(() => Promise.resolve({}));
 
     // Next beforeRequest
     const ctx2: RequestPluginContext = { fixi, config: { url, method }, response: undefined } as any;

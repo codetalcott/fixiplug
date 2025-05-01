@@ -1,3 +1,4 @@
+import { vi } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext } from '../plugin';
 
 describe('PluginManager', () => {
@@ -6,7 +7,7 @@ describe('PluginManager', () => {
 
   beforeEach(() => {
     // Minimal Fixi stub
-    fixi = { configure: () => ({ config: { logger: console } }), fetch: jest.fn() };
+    fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn() };
     manager = new PluginManager(fixi);
   });
 

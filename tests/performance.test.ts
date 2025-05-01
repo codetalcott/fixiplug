@@ -1,9 +1,10 @@
+import { vi } from 'vitest';
 import { PluginManager, PluginHook } from '../plugin';
 
 describe('Plugin Performance', () => {
   it('measures average execution time for empty plugin set', async () => {
     // Minimal Fixi stub
-    const fixi = { configure: () => ({ config: { logger: console } }), fetch: jest.fn() };
+    const fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn() };
     const manager = new PluginManager(fixi);
 
     const reps = 500;

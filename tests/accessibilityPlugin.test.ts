@@ -1,6 +1,4 @@
-/**
- * @jest-environment jsdom
- */
+import { vi } from 'vitest';
 import { PluginManager, PluginHook } from '../plugin';
 import { AccessibilityPlugin } from '../plugins/accessibilityPlugin';
 
@@ -10,7 +8,7 @@ describe('AccessibilityPlugin', () => {
 
   beforeEach(() => {
     document.body.innerHTML = '<div id="app"></div><button id="btn">Click</button>';
-    fixi = { configure: () => ({ config: { logger: console } }), fetch: jest.fn() };
+    fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn() };
     manager = new PluginManager(fixi);
     manager.register(AccessibilityPlugin);
   });

@@ -1,20 +1,21 @@
+import { vi } from 'vitest';
 import { PluginManager, PluginHook } from '../plugin';
 import { LoggingPlugin } from '../plugins/loggingPlugin';
 
 describe('LoggingPlugin', () => {
   let manager: PluginManager;
   let fixi: any;
-  let consoleInfoSpy: jest.SpyInstance;
-  let consoleErrorSpy: jest.SpyInstance;
+  let consoleInfoSpy: vi.SpyInstance;
+  let consoleErrorSpy: vi.SpyInstance;
 
   beforeEach(() => {
     // Stub Fixi with minimal interface
-    fixi = { configure: () => ({ config: { logger: console } }), fetch: jest.fn() };
+    fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn() };
     manager = new PluginManager(fixi);
     manager.register(LoggingPlugin);
 
-    consoleInfoSpy = jest.spyOn(console, 'info').mockImplementation(() => {});
-    consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+    consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});
+    consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
   });
 
   afterEach(() => {
@@ -47,7 +48,7 @@ describe('LoggingPlugin', () => {
 
   test('logs errors on onError hook', async () => {
     // Prepare plugin for error
-    (fixi.fetch as jest.Mock).mockRejectedValue(new Error('fail'));
+    (fixi.fetch as vi.Mock).mockRejectedValue(new Error('fail'));
     const ctx = { fixi, config: { url: '/err', method: 'POST' } };
 
     // Simulate error
