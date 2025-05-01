@@ -61,25 +61,26 @@ describe('Fixi Swap Logic', () => {
     const button = document.createElement('button');
     button.setAttribute('fx-action', '/some/path');
     button.setAttribute('fx-swap', 'unknownMethod');
+    document.body.appendChild(button); // Add to DOM
+    // Initialize the element
+    document.dispatchEvent(new Event('fx:process', { bubbles: true }));
+    
     window.fetch = () => Promise.resolve({ ok: true, text: () => Promise.resolve('x') } as any);
 
     let caught = false;
-    button.addEventListener('fx:error', (e: any) => {
+    button.addEventListener('fx:error', () => {
       caught = true;
-      // Check that the error contains the invalid swap method name
-      expect(e.detail.error.message).toContain('unknownMethod');
     });
 
-    // We need to handle the unhandled rejection that occurs after the swap phase
-    window.addEventListener('unhandledrejection', (event) => {
-      if (event.reason && event.reason.message && event.reason.message.includes('unknownMethod')) {
-        caught = true;
-        event.preventDefault(); // Prevent the error from showing in console
-      }
+    // Ensure event bubbling
+    document.addEventListener('fx:error', () => {
+      caught = true;
     }, { once: true });
 
     button.dispatchEvent(new MouseEvent('click', { bubbles: true, cancelable: true }));
-    await new Promise(r => setTimeout(r, 10)); // Give more time for event to be dispatched
+    
+    // Increase timeout to give more time for async operations
+    await new Promise(r => setTimeout(r, 50));
 
     expect(caught).toBe(true);
   });

@@ -19,7 +19,8 @@ describe('Fixi Response Parsing', () => {
       text: () => Promise.resolve('plain text'),
       json: () => Promise.resolve({ a: 1 }),
       blob: () => Promise.resolve(new Blob(['x'])),
-      arrayBuffer: () => Promise.resolve(new TextEncoder().encode('hi').buffer),
+      // Make sure this returns a proper ArrayBuffer
+      arrayBuffer: () => Promise.resolve(new Uint8Array(2).buffer),
       formData: () => Promise.resolve(new FormData())
     };
     // reset lastCfg to ensure fresh capture

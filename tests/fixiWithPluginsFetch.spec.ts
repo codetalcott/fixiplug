@@ -6,11 +6,18 @@ describe('FixiWithPlugins Enhanced Fetch', () => {
   let proxy: FixiWithPlugins;
 
   beforeEach(() => {
-    // Make sure we're using vi.fn() correctly
+    // Create a proper spy mock for fetch
     fixi = {
       configure: () => ({ config: { logger: console } }),
-      fetch: vi.fn().mockResolvedValue({ ok: true, status: 200, json: async () => ({ success: true }) })
+      fetch: vi.fn()
     };
+    // Set up the mock to return a successful response
+    fixi.fetch.mockResolvedValue({ 
+      ok: true, 
+      status: 200, 
+      json: async () => ({ success: true }) 
+    });
+    
     proxy = new FixiWithPlugins(fixi);
   });
 

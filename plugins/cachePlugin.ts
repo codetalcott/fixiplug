@@ -19,7 +19,7 @@ export const CachePlugin = createPlugin({
     const key = `${ctx.config.method || 'GET'}-${ctx.config.url}`;
     const entry = this.cache.get(key);
     if (entry && Date.now() - entry.timestamp < this.config.ttl) {
-      // short-circuit by attaching cached response
+      // Attach the cached response directly to ctx
       ctx.response = entry.data;
       (ctx as any)._skipFetch = true;
       return { ...ctx.config, _cached: true };
