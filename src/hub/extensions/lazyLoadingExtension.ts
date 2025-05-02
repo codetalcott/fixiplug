@@ -1,5 +1,4 @@
-import { PluginManagerExtension, PluginManager, PluginDefinition } from '../types';
-import type { FixiPlugs } from '../types';
+import { PluginManagerExtension, PluginManager, PluginDefinition, FixiPlugs } from '..';
 
 /**
  * Extension that provides lazy loading functionality

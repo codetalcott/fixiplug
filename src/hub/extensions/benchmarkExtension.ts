@@ -1,3 +1,5 @@
+import { PluginManagerExtension, PluginManager, PluginHook, PluginContext, FixiPlugs } from '..';
+
 /**
  * Extension for benchmarking plugin performance
  * 

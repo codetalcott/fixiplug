@@ -1,5 +1,4 @@
-import { PluginManagerExtension, PluginManager, PluginHook, PluginContext } from '../types';
-import type { FixiPlugs } from '../types';
+import { PluginManagerExtension, PluginManager, PluginHook, PluginContext, FixiPlugs } from '..';
 
 /**
  * Extension that handles conditional hook execution

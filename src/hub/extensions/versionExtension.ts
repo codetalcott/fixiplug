@@ -1,5 +1,4 @@
-import { PluginManagerExtension, PluginManager } from '../types';
-import type { FixiPlugs } from '../types';
+import { PluginManagerExtension, PluginManager, FixiPlugs } from '..';
 
 /**
  * Extension that provides API version compatibility checking

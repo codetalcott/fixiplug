@@ -1,3 +1,6 @@
+// filepath: /Users/williamtalcott/fixiplug/src/hub/extensions/memoryLeakProtectionExtension.ts
+import { PluginManagerExtension, PluginManager, FixiPlugs } from '..';
+
 /**
  * Extension for memory leak protection
  * 

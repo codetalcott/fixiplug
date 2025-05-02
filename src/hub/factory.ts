@@ -5,17 +5,19 @@
  * with various configurations.
  */
 
-import { PluginManager } from './types';
+import { FixiWithPlugins } from './fixiWithPlugins';
+import { PluginManagerOptions, FixiPlugs, PluginManagerExtension } from './types';
 import { Fixi } from '../core/fixi';
-import { StandardExtensions, createPluginManager } from './extensions';
+import { StandardExtensions } from './extensions';
 
 // Cache of extensions for performance optimization
-let extensionCache: any[] | null = null;
+let extensionCache: PluginManagerExtension[] | null = null;
 
 /**
- * Create and cache all extensions for reuse
+ * Create and cache all standard extensions for reuse
+ * @returns Array of instantiated extensions
  */
-function getAllExtensions(): any[] {
+function getAllExtensions(): PluginManagerExtension[] {
   if (extensionCache) return extensionCache;
   
   const extensions = Object.values(StandardExtensions)
@@ -27,9 +29,10 @@ function getAllExtensions(): any[] {
 }
 
 /**
- * Get essential extensions for performance mode
+ * Get essential extensions for performance-focused scenarios
+ * @returns Array of performance-critical extensions
  */
-function getPerformanceExtensions(): any[] {
+function getPerformanceExtensions(): PluginManagerExtension[] {
   return [
     new StandardExtensions.BenchmarkExtension(),
     new StandardExtensions.TimeoutExtension(),
@@ -39,10 +42,15 @@ function getPerformanceExtensions(): any[] {
 
 /**
  * Creates a FixiWithPlugins instance with all available extensions
+ * 
+ * @param fixi - Optional Fixi instance (creates new one if not provided)
+ * @param options - Plugin manager configuration options
+ * @param mode - Configuration mode ('standard' includes all extensions, 'performance' includes only performance-critical ones)
+ * @returns Configured FixiWithPlugins instance
  */
 export function createFixiWithPlugins(
   fixi: Fixi = new Fixi(), 
-  options: PluginManager = {},
+  options: PluginManagerOptions = {},
   mode: 'standard' | 'performance' = 'standard'
 ): FixiWithPlugins {
   const fixiWithPlugins = new FixiWithPlugins(fixi, options);
@@ -59,13 +67,22 @@ export function createFixiWithPlugins(
 
 /**
  * Create a FixiWithPlugins instance with only the specified extensions
+ * 
+ * @param fixi - Optional Fixi instance (creates new one if not provided)
+ * @param options - Plugin manager configuration options
+ * @param extensionNames - Array of extension names to include
+ * @returns Configured FixiWithPlugins instance with only specified extensions
  */
 export function createCustomFixiWithPlugins(
   fixi: Fixi = new Fixi(),
-  options: PluginManager = {},
+  options: PluginManagerOptions = {},
   extensionNames: string[] = []
 ): FixiWithPlugins {
   const fixiWithPlugins = new FixiWithPlugins(fixi, options);
+  
+  if (extensionNames.length === 0) {
+    return fixiWithPlugins;
+  }
   
   // Filter extensions by name
   const allAvailableExtensions = getAllExtensions();
@@ -85,21 +102,38 @@ export function createCustomFixiWithPlugins(
 
 /**
  * Create a minimal FixiWithPlugins instance with no extensions
+ * 
+ * @param fixi - Optional Fixi instance (creates new one if not provided)
+ * @param options - Plugin manager configuration options
+ * @returns Bare FixiWithPlugins instance without any extensions
  */
 export function createMinimalFixiWithPlugins(
   fixi: Fixi = new Fixi(),
-  options: PluginManager = {}
+  options: PluginManagerOptions = {}
 ): FixiWithPlugins {
   return new FixiWithPlugins(fixi, options);
 }
 
 /**
  * Helper to register multiple plugins at once
+ * 
+ * @param fixiWithPlugins - The target FixiWithPlugins instance
+ * @param plugins - Array of plugins to register
+ * @returns Number of successfully registered plugins
+ * @throws Error if fixiWithPlugins is null or undefined
  */
 export function registerPlugins(
   fixiWithPlugins: FixiWithPlugins,
   plugins: FixiPlugs[]
 ): number {
+  if (!fixiWithPlugins) {
+    throw new Error('Cannot register plugins: FixiWithPlugins instance is required');
+  }
+  
+  if (!Array.isArray(plugins) || plugins.length === 0) {
+    return 0;
+  }
+  
   let registered = 0;
   
   plugins.forEach(plugin => {

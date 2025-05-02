@@ -1,5 +1,4 @@
-import { PluginManagerExtension, PluginManager, PluginHook, PluginContext, RequestPluginContext } from '../types';
-import type { FixiPlugs } from '../types';
+import { PluginManagerExtension, PluginManager, PluginHook, PluginContext, RequestPluginContext, FixiPlugs } from '..';
 
 /**
  * Extension that provides fallback functionality

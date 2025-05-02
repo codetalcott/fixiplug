@@ -1,5 +1,4 @@
-import { PluginManagerExtension, PluginManager, PluginHook, PluginContext, PluginHealthMetrics } from '../types';
-import type { FixiPlugs } from '../types';
+import { PluginManagerExtension, PluginManager, PluginHook, PluginContext, PluginHealthMetrics, FixiPlugs } from '..';
 
 /**
  * Performance measurement utility
