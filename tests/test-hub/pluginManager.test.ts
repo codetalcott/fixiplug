@@ -1,6 +1,7 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext } from '../../src/hub';
 import { CircuitBreakerExtension } from '../../src/hub/extensions/circuitBreakerExtension';
+import { MetricsExtension } from '../../src/hub/extensions/metricsExtension';
 
 describe('PluginManager', () => {
   let manager: PluginManager;
@@ -12,6 +13,7 @@ describe('PluginManager', () => {
     manager = new PluginManager(fixi);
     // wire in circuit‑breaker logic for these tests
     manager.use(new CircuitBreakerExtension());
+    manager.use(new MetricsExtension());
   });
 
   it('beforeRequest hook modifies config', async () => {

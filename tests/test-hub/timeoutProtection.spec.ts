@@ -1,5 +1,6 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../../src/hub';
+import { MetricsExtension } from '../../src/hub/extensions/metricsExtension';
 
 describe('Timeout Protection', () => {
   let manager: PluginManager;
@@ -9,6 +10,7 @@ describe('Timeout Protection', () => {
     vi.useFakeTimers();
     fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn().mockResolvedValue({ ok: true }) };
     manager = new PluginManager(fixi);
+    manager.use(new MetricsExtension());
   });
 
   afterEach(() => {

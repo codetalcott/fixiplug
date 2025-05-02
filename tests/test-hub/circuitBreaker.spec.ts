@@ -1,5 +1,6 @@
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../../src/hub';
+import { MetricsExtension } from '../../src/hub/extensions/metricsExtension';
 
 describe('Circuit Breaker Lifecycle', () => {
   let manager: PluginManager;
@@ -11,6 +12,7 @@ describe('Circuit Breaker Lifecycle', () => {
     vi.useFakeTimers();
     fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn().mockResolvedValue({ ok: true }) };
     manager = new PluginManager(fixi);
+    manager.use(new MetricsExtension());
     testPlugin = createPlugin({
       name: 'circuitTest', version: '1.0.0', 
       circuitBreaker: { failureThreshold: 2, resetTimeout: 5000 },

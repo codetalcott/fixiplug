@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext, createPlugin } from '../../src/hub';
+import { MetricsExtension } from '../../src/hub/extensions/metricsExtension';
 
 describe('Plugin Health Monitoring', () => {
   let manager: PluginManager;
@@ -8,6 +9,7 @@ describe('Plugin Health Monitoring', () => {
   beforeEach(() => {
     fixi = { configure: () => ({ config: { logger: console } }), fetch: () => Promise.resolve({ ok: true }) };
     manager = new PluginManager(fixi);
+    manager.use(new MetricsExtension());
   });
 
   it('tracks totalCalls and errors for a plugin hook', async () => {
