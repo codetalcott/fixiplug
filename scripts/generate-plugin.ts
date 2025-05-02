@@ -96,10 +96,10 @@ async function main() {
   const outputDir = path.dirname(outputPath);
   fs.mkdirSync(outputDir, { recursive: true });
 
-  const stub = `import { createPlugin, FixiPlugs, PluginHook, RequestPluginContext, DomPluginContext } from '../hub';
+  const stub = `import type { FixiPlugs, PluginHook, RequestPluginContext, DomPluginContext } from '../hub';
 
 // Plugin generated from manifest ${manifestFile ? path.basename(manifestFile) : 'interactive input'}
-export default createPlugin<FixiPlugs>({
+export const ${manifest.name.charAt(0).toUpperCase() + manifest.name.slice(1)}Plugin: FixiPlugs = {
   name: '${manifest.name}',
   version: '${manifest.version}',
   ${manifest.priority !== undefined ? `priority: ${manifest.priority},` : ''}
@@ -135,7 +135,7 @@ export default createPlugin<FixiPlugs>({
   onDestroy(ctx) {
     // TODO: cleanup logic
   }
-});
+};
 `;
 
   fs.writeFileSync(outputPath, stub, 'utf8');
