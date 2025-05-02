@@ -54,7 +54,7 @@ export function getAllAvailablePlugins(): string[] {
 export async function createEntryFile(plugins: string[], config: BundleOptions): Promise<string> {
   const contentLines: string[] = [];
   contentLines.push('import { Fixi } from "../core/fixi";');
-  contentLines.push('import { createPluginSystem } from "../hub/fixihub.js";');
+  contentLines.push('import { createPluginSystem } from "../hub/index.js";');
   plugins.forEach(name => {
     contentLines.push(`import ${name}Plugin from "../plugs/${name}.ts";`);
   });
