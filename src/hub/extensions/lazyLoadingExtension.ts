@@ -56,7 +56,7 @@ export class LazyLoadingExtension implements PluginManagerExtension {
     }
     
     try {
-      this.manager.getLogger()?.debug(`Loading plugin "${name}"...`);
+      this.manager.getLogger().debug?.(`Loading plugin "${name}"...`);
       const plugin = await definition.load();
       this.pendingPlugins.delete(name);
       
