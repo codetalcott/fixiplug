@@ -1,23 +1,36 @@
 /**
  * Fixi With Plugins
  * 
- * This file contains the FixiWithPlugins class, which is a wrapper around the 
- * Fixi library that adds plugin support.
+ * A wrapper around the Fixi library that adds robust plugin support,
+ * enabling extensible HTTP client functionality through a plugin ecosystem.
  */
 
 import { Fixi } from '../core/fixi';
 import { PluginManager } from './pluginManager';
-import { FixiPlugs, PluginHook, RequestPluginContext } from './types';
+import { 
+  FixiPlugs, 
+  PluginHook, 
+  RequestPluginContext, 
+  PluginManagerExtension,
+  PluginSystemOptions,
+  RequestConfig,
+  FxResponse
+} from './types';
 
 /**
  * Extension of Fixi library that adds plugin support
+ * 
+ * @remarks
+ * FixiWithPlugins orchestrates the plugin lifecycle and provides a plugin-enhanced
+ * interface to the base Fixi functionality. It handles plugin registration,
+ * hook execution, and DOM observation capabilities.
  */
 export class FixiWithPlugins {
   /** The base Fixi instance */
-  private fixi: Fixi;
+  private readonly fixi: Fixi;
   
-  /** The plugin manager */
-  private manager: PluginManager;
+  /** The plugin manager responsible for plugin lifecycle */
+  private readonly manager: PluginManager;
   
   /** Whether DOM observation is enabled */
   private isDomObserving = false;
@@ -27,25 +40,30 @@ export class FixiWithPlugins {
 
   /**
    * Create a new FixiWithPlugins instance
+   * 
+   * @param fixi - The base Fixi instance
+   * @param options - Configuration options for the plugin system
    */
   constructor(fixi: Fixi, options: PluginSystemOptions = {}) {
     this.fixi = fixi;
     this.manager = new PluginManager(fixi);
     
     // Register initial plugins
-    if (options.plugins) {
+    if (options.plugins?.length) {
       options.plugins.forEach(plugin => this.register(plugin));
     }
     
     // Register lazy-loaded plugins
-    if (options.lazyPlugins) {
+    if (options.lazyPlugins?.length) {
       this.setupLazyPlugins(options.lazyPlugins);
     }
   }
 
   /**
    * Register a plugin
-   * @returns true if registration succeeded, false otherwise
+   * 
+   * @param plugin - The plugin to register
+   * @returns True if registration succeeded, false otherwise
    */
   public register(plugin: FixiPlugs): boolean {
     return this.manager.register(plugin);
@@ -53,7 +71,9 @@ export class FixiWithPlugins {
 
   /**
    * Unregister a plugin by name
-   * @returns true if unregistration succeeded, false otherwise
+   * 
+   * @param pluginName - The name of the plugin to unregister
+   * @returns True if unregistration succeeded, false otherwise
    */
   public unregister(pluginName: string): boolean {
     return this.manager.unregister(pluginName);
@@ -61,6 +81,9 @@ export class FixiWithPlugins {
 
   /**
    * Get a registered plugin by name
+   * 
+   * @param pluginName - The name of the plugin to retrieve
+   * @returns The plugin if found, undefined otherwise
    */
   public getPlugin<T extends FixiPlugs = FixiPlugs>(pluginName: string): T | undefined {
     return this.manager.get<T>(pluginName);
@@ -68,6 +91,8 @@ export class FixiWithPlugins {
 
   /**
    * Get all registered plugins
+   * 
+   * @returns An array of all registered plugins
    */
   public getPlugins(): FixiPlugs[] {
     return this.manager.getAll();
@@ -75,6 +100,8 @@ export class FixiWithPlugins {
 
   /**
    * Get the underlying plugin manager
+   * 
+   * @returns The plugin manager instance
    */
   public getManager(): PluginManager {
     return this.manager;
@@ -82,6 +109,11 @@ export class FixiWithPlugins {
 
   /**
    * Enhanced fetch method that runs plugins before and after requests
+   * 
+   * @param url - The URL to fetch
+   * @param options - Request configuration options
+   * @returns A promise that resolves to the response
+   * @throws Will throw if the request fails or if a plugin throws an error
    */
   public async fetch(url: string, options: RequestConfig = {}): Promise<FxResponse> {
     try {
@@ -114,7 +146,13 @@ export class FixiWithPlugins {
           error: error as Error
         };
         
-        await this.manager.execute(PluginHook.ERROR, errorContext);
+        const handledContext = await this.manager.execute(PluginHook.ERROR, errorContext);
+        
+        // If error was handled by a plugin, return the response (if provided)
+        if (handledContext.handled && handledContext.response) {
+          return handledContext.response;
+        }
+        
         throw error;
       }
       
@@ -136,11 +174,17 @@ export class FixiWithPlugins {
 
   /**
    * Start observing DOM mutations to trigger plugin hooks
+   * 
+   * @param targetElement - The DOM element to observe (defaults to document.body)
+   * @param options - MutationObserver configuration options
    */
-  public startObservingDom(targetElement: Element = document.body, options = { subtree: true, childList: true }): void {
+  public startObservingDom(
+    targetElement: Element = document.body, 
+    options = { subtree: true, childList: true }
+  ): void {
     if (this.isDomObserving) return;
     
-    if (!window?.MutationObserver) {
+    if (typeof window === 'undefined' || !window?.MutationObserver) {
       this.manager.getLogger().warn('MutationObserver not available, DOM mutation hooks will not be triggered.');
       return;
     }
@@ -169,6 +213,8 @@ export class FixiWithPlugins {
 
   /**
    * Check if DOM observation is active
+   * 
+   * @returns True if currently observing DOM mutations, false otherwise
    */
   public isObservingDom(): boolean {
     return this.isDomObserving;
@@ -176,17 +222,23 @@ export class FixiWithPlugins {
 
   /**
    * Use an extension with the plugin manager
+   * 
+   * @param extension - The extension to add to the plugin manager
+   * @returns This instance for method chaining
    */
-  public use(extension: any): this {
+  public use(extension: PluginManagerExtension): this {
     this.manager.use(extension);
     return this;
   }
   
   /**
    * Setup lazy-loaded plugins
+   * 
+   * @private
+   * @param lazyPlugins - Array of plugin definitions for lazy loading
    */
   private setupLazyPlugins(lazyPlugins: PluginDefinition[]): void {
-    // Implementation for lazy plugin loading
-    // This would be implemented by the LazyLoadingExtension
+    // This is a stub that would be implemented by the LazyLoadingExtension
+    // The extension would handle the actual lazy loading logic
   }
 }

@@ -29,6 +29,15 @@ export enum PluginHook {
 /** Base context provided to plugin hooks */
 export interface PluginContext {
   fixi: Fixi;
+  /**
+   * Internal control flags for plugin execution flow
+   * @internal
+   */
+  _control?: {
+    /** Signal to stop further plugin hook execution in the chain */
+    stopIteration?: boolean;
+    [key: string]: any;
+  };
   [key: string]: any;
 }
 

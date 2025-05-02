@@ -15,6 +15,47 @@ import {
   Logger
 } from './types';
 
+// Add a namespace for iteration utilities
+export namespace PluginIteration {
+  /**
+   * Checks if execution should continue to the next plugin
+   * @param context The current plugin context
+   * @returns true if iteration should continue, false if it should stop
+   */
+  export function shouldContinue<T extends PluginContext>(context: T): boolean {
+    return !(context._control?.stopIteration === true);
+  }
+
+  /**
+   * Signal that hook iteration should stop after the current plugin
+   * @param context The context to modify
+   * @returns The modified context with control flags
+   */
+  export function stop<T extends PluginContext>(context: T): T {
+    if (!context._control) {
+      context._control = {};
+    }
+    context._control.stopIteration = true;
+    return context;
+  }
+
+  /**
+   * Reset control flags to allow iteration to continue
+   * @param context The context to modify
+   * @returns The modified context with control flags reset
+   */
+  export function reset<T extends PluginContext>(context: T): T {
+    if (context._control?.stopIteration) {
+      delete context._control.stopIteration;
+      // Remove the _control object if it's empty
+      if (Object.keys(context._control).length === 0) {
+        delete context._control;
+      }
+    }
+    return context;
+  }
+}
+
 /**
  * Core plugin manager implementation
  * 
@@ -244,35 +285,19 @@ export class PluginManager {
     // Execute each plugin's hook
     for (const plugin of implementers) {
       currentContext = await this.executePluginHook(plugin, hookType, currentContext);
+      
+      // Check if iteration should continue using the PluginIteration namespace
+      if (!PluginIteration.shouldContinue(currentContext)) {
+        this.logger.debug(`Plugin ${plugin.name} signaled to stop further hook execution for ${hookType}`);
+        break;
+      }
     }
+    
+    // Clean up control flags before returning
+    PluginIteration.reset(currentContext);
     
     // Process after-execution extensions
     currentContext = this.processAfterExecuteExtensions(hookType, currentContext);
-    
-    return currentContext;
-  }
-  
-  /**
-   * Get prioritized list of plugins that implement the given hook
-   */
-  private getPrioritizedImplementers(hookType: PluginHook): FixiPlugs[] {
-    // Get plugins that implement this hook type
-    const implementers = this.hookImplementers.get(hookType) || [];
-    
-    // Sort by priority (higher numbers first)
-    return [...implementers].sort((a, b) => (b.priority || 0) - (a.priority || 0));
-  }
-
-  /**
-   * Process extensions that run before hook execution
-   */
-  private processBeforeExecuteExtensions<T extends PluginContext>(hookType: PluginHook, context: T): T {
-    let currentContext = context;
-    
-    for (const ext of this.extensions) {
-      const modifiedContext = ext.beforeExecute?.(hookType, currentContext);
-      if (modifiedContext) currentContext = modifiedContext;
-    }
     
     return currentContext;
   }
