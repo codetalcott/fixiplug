@@ -5,16 +5,15 @@
  * enabling extensible HTTP client functionality through a plugin ecosystem.
  */
 
-import { Fixi } from '../core/fixi';
+import { Fixi, RequestConfig, FxResponse } from '../core/fixi';
 import { PluginManager } from './pluginManager';
 import { 
-  FixiPlugs, 
-  PluginHook, 
-  RequestPluginContext, 
+  FixiPlugs,
+  PluginHook,
+  RequestPluginContext,
   PluginManagerExtension,
   PluginSystemOptions,
-  RequestConfig,
-  FxResponse
+  PluginDefinition
 } from './types';
 
 /**
@@ -115,7 +114,7 @@ export class FixiWithPlugins {
    * @returns A promise that resolves to the response
    * @throws Will throw if the request fails or if a plugin throws an error
    */
-  public async fetch(url: string, options: RequestConfig = {}): Promise<FxResponse> {
+  public async fetch(url: string, options: Partial<RequestConfig> = {}): Promise<FxResponse> {
     try {
       // Create the initial context for plugins
       const requestContext: RequestPluginContext = {
@@ -123,7 +122,7 @@ export class FixiWithPlugins {
         config: {
           url,
           ...options
-        }
+        } as RequestConfig
       };
       
       // Execute beforeRequest hooks
@@ -135,10 +134,8 @@ export class FixiWithPlugins {
       // Perform the fetch
       let response: FxResponse;
       try {
-        response = await this.fixi.fetch(
-          beforeRequestContext.config.url, 
-          beforeRequestContext.config
-        );
+        // Pass the full config object including URL
+        response = await this.fixi.fetch(beforeRequestContext.config);
       } catch (error) {
         // Execute error hooks
         const errorContext: RequestPluginContext = {
