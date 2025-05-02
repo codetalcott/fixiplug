@@ -1,5 +1,6 @@
 import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext } from '../../src/hub';
+import { CircuitBreakerExtension } from '../../src/hub/extensions/circuitBreakerExtension';
 
 describe('PluginManager', () => {
   let manager: PluginManager;
@@ -9,6 +10,8 @@ describe('PluginManager', () => {
     // Minimal Fixi stub
     fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn() };
     manager = new PluginManager(fixi);
+    // wire in circuit‑breaker logic for these tests
+    manager.use(new CircuitBreakerExtension());
   });
 
   it('beforeRequest hook modifies config', async () => {

@@ -16,6 +16,7 @@ import {
   FixiPlugs,
   PluginLogger
 } from './types';
+import { MetricsExtension } from './extensions/metricsExtension';
 
 // Add a namespace for iteration utilities
 export namespace PluginIteration {
@@ -475,5 +476,13 @@ export class PluginManager {
       case PluginHook.DESTROY: return plugin.onDestroy;
       default: return undefined;
     }
+  }
+
+  /**
+   * Proxy to MetricsExtension to retrieve per-plugin health metrics
+   */
+  public getPluginHealth(pluginName?: string): Record<string, PluginHealthMetrics> {
+    const ext = this.getExtension(MetricsExtension);
+    return ext ? ext.getPluginHealth(pluginName) : {};
   }
 }
