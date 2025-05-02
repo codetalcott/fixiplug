@@ -123,7 +123,7 @@ export interface DomPluginContext extends PluginContext {
 }
 
 /** 
- * Enhanced plugin definition interface with performance and reliability features
+ * plugin definition interface with performance and reliability features
  */
 export interface FixiPlugs {
   /** Unique plugin name */
@@ -214,12 +214,9 @@ export interface PluginHealthMetrics {
 }
 
 /* ============================
-   Enhanced Plugin Manager
+   Plugin Manager
 ============================ */
 
-/**
- * An enhanced plugin manager with performance optimizations and reliability features
- */
 export class PluginManager {
   /** Map of active plugins */
   private plugins: Map<string, FixiPlugs> = new Map();
@@ -244,7 +241,7 @@ export class PluginManager {
   }> = new Map();
   
   /** Current API version */
-  private readonly API_VERSION = '2.0.0';
+  private readonly API_VERSION = '0.0.1';
 
   constructor(fixi: Fixi) {
     this.fixi = fixi;

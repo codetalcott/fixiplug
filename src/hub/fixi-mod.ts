@@ -1,10 +1,11 @@
 // experimental mod to optimize fixi for plugins
-import { Fixi } from '../core/fixi.js';
-import { PluginManager, PluginHook } from './fixihub.js';
+import { Fixi } from '../core/fixi';
+import { PluginManager, PluginHook } from './index';
 // no built‑in plugins; plugins are optional
 
 export function createFixiWithPlugins(plugins: any[] = []) {
-  const fixi = new Fixi(), pm = new PluginManager();
+  const fixi = new Fixi();
+  const pm = new PluginManager(fixi);
   plugins.forEach(p => pm.register(p));
 
   const init = (elt: Element) => {

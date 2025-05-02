@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import '../../src/core/fixi.js';
-
+import { createFixiWithPlugins } from '../../src/hub';
+const fixi = createFixiWithPlugins([]);
 describe('Fixi Swap Logic', () => {
   let button: HTMLElement;
   let container: HTMLElement;
