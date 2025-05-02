@@ -4,7 +4,7 @@
  * This file contains the core types and interfaces for the Fixi plugin system.
  */
 
-import { Fixi, RequestConfig, FxResponse } from '../../core/fixi';
+import { Fixi, RequestConfig, FxResponse } from '../core/fixi';
 
 /**
  * Interface for logger used throughout the plugin system
