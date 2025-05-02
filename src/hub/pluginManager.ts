@@ -82,7 +82,7 @@ export class PluginManager {
 
   constructor(fixi: Fixi) {
     this.fixi = fixi;
-    this.logger = fixi.configure({}).config?.logger || console;
+    this.logger = fixi.logger || console;
     
     // Initialize hook implementers map for all hook types
     Object.values(PluginHook).forEach(hook => {

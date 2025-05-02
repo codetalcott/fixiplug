@@ -1,6 +1,7 @@
-import { createPlugin, FixiPlugs, DomPluginContext } from '../hub';
+import createPlugin from '../hub';
+import { FixiPlugs, DomPluginContext } from '../hub';
 
-export const AccessibilityPlugin = createPlugin<FixiPlugs>({
+export const AccessibilityPlugin = createPlugin({
   name: 'a11y',
   version: '1.0.0',
   
@@ -13,12 +14,13 @@ export const AccessibilityPlugin = createPlugin<FixiPlugs>({
     focusSelector: ''
   },
 
-  onInitialize() {
+  onInitialize(ctx: DomPluginContext) {
     // Create or reuse ARIA live region
-    let region = document.getElementById(this.config.liveRegionId);
+    const { config } = ctx;
+    let region = document.getElementById(config.liveRegionId);
     if (!region) {
       region = document.createElement('div');
-      region.id = this.config.liveRegionId;
+      region.id = config.liveRegionId;
       region.setAttribute('aria-live', 'polite');
       region.setAttribute('role', 'status');
       region.style.position = 'absolute';
@@ -30,11 +32,12 @@ export const AccessibilityPlugin = createPlugin<FixiPlugs>({
   },
 
   onDomMutated(ctx: DomPluginContext) {
-    const region = document.getElementById(this.config.liveRegionId)!;
+    const { config } = ctx;
+    const region = document.getElementById(config.liveRegionId)!;
     const msg = `${ctx.mutations.length} update${ctx.mutations.length !== 1 ? 's' : ''} applied`;
     region.textContent = msg;
-    if (this.config.focusSelector) {
-      const el = document.querySelector(this.config.focusSelector) as HTMLElement;
+    if (config.focusSelector) {
+      const el = document.querySelector(config.focusSelector) as HTMLElement;
       if (el) el.focus();
     }
   }

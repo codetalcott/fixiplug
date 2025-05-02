@@ -6,7 +6,7 @@ import { PluginManagerExtension, PluginManager, PluginHook, PluginContext, FixiP
  * This extension measures execution time for plugins to help identify performance bottlenecks.
  */
 export class BenchmarkExtension implements PluginManagerExtension {
-  private manager: PluginManager;
+  private manager!: PluginManager;
   private measurements: Map<string, {
     count: number;
     totalTime: number;

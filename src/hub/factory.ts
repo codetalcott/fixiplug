@@ -6,7 +6,9 @@
  */
 
 import { FixiWithPlugins } from './fixiWithPlugins';
-import { PluginManagerOptions, FixiPlugs, PluginManagerExtension } from './types';
+import { FixiPlugs, PluginManagerExtension } from './types';
+
+type PluginManagerOptions = any;
 import { Fixi } from '../core/fixi';
 import { StandardExtensions } from './extensions';
 
@@ -33,11 +35,10 @@ function getAllExtensions(): PluginManagerExtension[] {
  * @returns Array of performance-critical extensions
  */
 function getPerformanceExtensions(): PluginManagerExtension[] {
-  return [
-    new StandardExtensions.BenchmarkExtension(),
-    new StandardExtensions.TimeoutExtension(),
-    new StandardExtensions.CircuitBreakerExtension()
-  ];
+  const names = ['BenchmarkExtension', 'TimeoutExtension', 'CircuitBreakerExtension'];
+  return getAllExtensions().filter(ext =>
+    names.includes((ext.constructor as any).name)
+  );
 }
 
 /**

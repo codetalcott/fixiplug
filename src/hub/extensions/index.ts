@@ -9,7 +9,8 @@
  */
 
 import { Fixi } from '../../core/fixi';
-import { PluginManagerExtension, PluginManager } from '../types';
+import { PluginManagerExtension } from '../types';
+import { PluginManager } from '../pluginManager';
 
 // Import all extensions
 import { BenchmarkExtension } from './benchmarkExtension';

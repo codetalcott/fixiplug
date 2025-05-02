@@ -8,7 +8,7 @@ import { PluginManagerExtension, PluginManager, FixiPlugs } from '..';
  * by plugins and ensuring they're properly released when plugins are unregistered.
  */
 export class MemoryLeakProtectionExtension implements PluginManagerExtension {
-  private manager: PluginManager;
+  private manager!: PluginManager; // Using the definite assignment assertion
   private resourceRegistry: Map<string, { 
     type: string;
     handle: any; 
