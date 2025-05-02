@@ -7,12 +7,14 @@
 
 import { Fixi } from '../core/fixi';
 import { 
-  PluginContext, 
-  PluginHealthMetrics, 
-  PluginHook, 
-  PluginManagerExtension, 
+  PluginContext,
+  RequestPluginContext,
+  DomPluginContext,
+  PluginHealthMetrics,
+  PluginHook,
+  PluginManagerExtension,
   FixiPlugs,
-  Logger
+  PluginLogger
 } from './types';
 
 // Add a namespace for iteration utilities
@@ -72,7 +74,7 @@ export class PluginManager {
   private fixi: Fixi;
   
   /** Logger instance from Fixi */
-  private logger: Logger;
+  private logger: PluginLogger;
   
   /** Current API version */
   private readonly API_VERSION = '0.0.1';
@@ -82,7 +84,8 @@ export class PluginManager {
 
   constructor(fixi: Fixi) {
     this.fixi = fixi;
-    this.logger = fixi.logger || console;
+    // Default logger
+    this.logger = console;
     
     // Initialize hook implementers map for all hook types
     Object.values(PluginHook).forEach(hook => {
@@ -93,7 +96,7 @@ export class PluginManager {
   /**
    * Get the logger instance
    */
-  public getLogger(): Logger {
+  public getLogger(): PluginLogger {
     return this.logger;
   }
 
@@ -286,9 +289,9 @@ export class PluginManager {
     for (const plugin of implementers) {
       currentContext = await this.executePluginHook(plugin, hookType, currentContext);
       
-      // Check if iteration should continue using the PluginIteration namespace
       if (!PluginIteration.shouldContinue(currentContext)) {
-        this.logger.debug(`Plugin ${plugin.name} signaled to stop further hook execution for ${hookType}`);
+        // stop further execution
+        this.logger.debug?.(`Plugin ${plugin.name} signaled to stop further hook execution for ${hookType}`);
         break;
       }
     }
@@ -314,6 +317,29 @@ export class PluginManager {
     }
     
     return currentContext;
+  }
+
+  /**
+   * Process extensions that run before hook execution
+   */
+  private processBeforeExecuteExtensions<T extends PluginContext>(hookType: PluginHook, context: T): T {
+    let currentContext = context;
+    for (const ext of this.extensions) {
+      const modifiedContext = ext.beforeExecute?.(hookType, currentContext);
+      if (modifiedContext) currentContext = modifiedContext;
+    }
+    return currentContext;
+  }
+
+  /**
+   * Get prioritized list of plugins implementing the given hook
+   */
+  private getPrioritizedImplementers(hookType: PluginHook): FixiPlugs[] {
+    // Clone to avoid mutating original array
+    const implementers = [...(this.hookImplementers.get(hookType) || [])];
+    // Sort by descending priority (default 0)
+    implementers.sort((a, b) => (b.priority || 0) - (a.priority || 0));
+    return implementers;
   }
 
   /**
@@ -379,22 +405,21 @@ export class PluginManager {
   ): Promise<T> {
     const updatedContext = { ...context };
     
-    // Execute the appropriate hook based on type
     if (hookType === PluginHook.BEFORE_REQUEST && plugin.beforeRequest) {
-      const ctx = updatedContext as RequestPluginContext;
+      const ctx = updatedContext as unknown as RequestPluginContext;
       ctx.config = await plugin.beforeRequest(ctx);
     } 
     else if (hookType === PluginHook.AFTER_RESPONSE && plugin.afterResponse) {
-      const ctx = updatedContext as RequestPluginContext;
+      const ctx = updatedContext as unknown as RequestPluginContext;
       if (ctx.response) {
         ctx.response = await plugin.afterResponse(ctx);
       }
     } 
     else if (hookType === PluginHook.DOM_MUTATED && plugin.onDomMutated) {
-      plugin.onDomMutated(updatedContext as DomPluginContext);
+      plugin.onDomMutated(updatedContext as unknown as DomPluginContext);
     } 
     else if (hookType === PluginHook.ERROR && plugin.onError) {
-      plugin.onError(updatedContext as RequestPluginContext);
+      plugin.onError(updatedContext as unknown as RequestPluginContext);
     }
     else if (hookType === PluginHook.INITIALIZE && plugin.onInitialize) {
       plugin.onInitialize(updatedContext as PluginContext);

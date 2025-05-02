@@ -1,4 +1,4 @@
-import { vi, describe, it, expect } from 'vitest';
+import { vi, describe, it, expect, beforeEach } from 'vitest';
 import { PluginManager, PluginHook, RequestPluginContext } from '../../src/hub';
 
 describe('PluginManager', () => {
@@ -11,7 +11,7 @@ describe('PluginManager', () => {
     manager = new PluginManager(fixi);
   });
 
-  test('beforeRequest hook modifies config', async () => {
+  it('beforeRequest hook modifies config', async () => {
     manager.register({
       name: 'testPlugin',
       version: '1.0.0',
@@ -27,7 +27,7 @@ describe('PluginManager', () => {
     expect(result.config.modified).toBe(true);
   });
 
-  test('afterResponse hook modifies response', async () => {
+  it('afterResponse hook modifies response', async () => {
     manager.register({
       name: 'respPlugin',
       version: '1.0.0',
@@ -44,7 +44,7 @@ describe('PluginManager', () => {
     expect((result.response as any).processed).toBe(true);
   });
 
-  test('plugins execute in priority order', async () => {
+  it('plugins execute in priority order', async () => {
     const calls: string[] = [];
     manager.register({
       name: 'low',
@@ -72,7 +72,7 @@ describe('PluginManager', () => {
     expect(calls).toEqual(['high', 'low']);
   });
 
-  test('circuit breaker opens after threshold', async () => {
+  it('circuit breaker opens after threshold', async () => {
     manager.register({
       name: 'badPlugin',
       version: '1.0.0',
