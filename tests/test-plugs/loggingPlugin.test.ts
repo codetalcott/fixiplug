@@ -1,9 +1,9 @@
 import { describe, it, expect, beforeEach, afterEach, vi, SpyInstance, Mock } from 'vitest';
-import { PluginManager, PluginHook } from '../../src/hub';
+import { manager, PluginHook } from '../../src/hub';
 import { LoggingPlugin } from '../../src/plugs/loggingPlugin';
 
 describe('LoggingPlugin', () => {
-  let manager: PluginManager;
+  let manager: manager;
   let fixi: any;
   let consoleInfoSpy: SpyInstance;
   let consoleErrorSpy: SpyInstance;
@@ -11,7 +11,7 @@ describe('LoggingPlugin', () => {
   beforeEach(() => {
     // Stub Fixi with minimal interface
     fixi = { configure: () => ({ config: { logger: console } }), fetch: vi.fn() };
-    manager = new PluginManager(fixi);
+    manager = new manager(fixi);
     manager.register(LoggingPlugin);
 
     consoleInfoSpy = vi.spyOn(console, 'info').mockImplementation(() => {});

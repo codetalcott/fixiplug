@@ -6,9 +6,9 @@
  */
 
 import { Fixi, RequestConfig, FxResponse } from '../core/fixi';
-import { PluginManager } from './pluginManager';
+import { manager } from './manager';
 import { 
-  FixiPlugs,
+  Plugin,
   PluginHook,
   RequestPluginContext,
   PluginManagerExtension,
@@ -20,16 +20,16 @@ import {
  * Extension of Fixi library that adds plugin support
  * 
  * @remarks
- * FixiWithPlugins orchestrates the plugin lifecycle and provides a plugin-enhanced
+ * client orchestrates the plugin lifecycle and provides a plugin-enhanced
  * interface to the base Fixi functionality. It handles plugin registration,
  * hook execution, and DOM observation capabilities.
  */
-export class FixiWithPlugins {
+export class PluginClient {
   /** The base Fixi instance */
   private readonly fixi: Fixi;
   
   /** The plugin manager responsible for plugin lifecycle */
-  private readonly manager: PluginManager;
+  private readonly manager: manager;
   
   /** Whether DOM observation is enabled */
   private isDomObserving = false;
@@ -38,14 +38,14 @@ export class FixiWithPlugins {
   private domObserver?: MutationObserver;
 
   /**
-   * Create a new FixiWithPlugins instance
+   * Create a new client instance
    * 
    * @param fixi - The base Fixi instance
    * @param options - Configuration options for the plugin system
    */
   constructor(fixi: Fixi, options: PluginSystemOptions = {}) {
     this.fixi = fixi;
-    this.manager = new PluginManager(fixi);
+    this.manager = new manager(fixi);
     
     // Register initial plugins
     if (options.plugins?.length) {
@@ -64,7 +64,7 @@ export class FixiWithPlugins {
    * @param plugin - The plugin to register
    * @returns True if registration succeeded, false otherwise
    */
-  public register(plugin: FixiPlugs): boolean {
+  public register(plugin: Plugin): boolean {
     return this.manager.register(plugin);
   }
 
@@ -84,7 +84,7 @@ export class FixiWithPlugins {
    * @param pluginName - The name of the plugin to retrieve
    * @returns The plugin if found, undefined otherwise
    */
-  public getPlugin<T extends FixiPlugs = FixiPlugs>(pluginName: string): T | undefined {
+  public getPlugin<T extends Plugin = Plugin>(pluginName: string): T | undefined {
     return this.manager.get<T>(pluginName);
   }
 
@@ -93,7 +93,7 @@ export class FixiWithPlugins {
    * 
    * @returns An array of all registered plugins
    */
-  public getPlugins(): FixiPlugs[] {
+  public getPlugins(): Plugin[] {
     return this.manager.getAll();
   }
 
@@ -102,7 +102,7 @@ export class FixiWithPlugins {
    * 
    * @returns The plugin manager instance
    */
-  public getManager(): PluginManager {
+  public getManager(): manager {
     return this.manager;
   }
 
@@ -164,7 +164,7 @@ export class FixiWithPlugins {
       
       return afterResponseContext.response!;
     } catch (error) {
-      this.manager.getLogger().error('Error in FixiWithPlugins.fetch:', error);
+      this.manager.getLogger().error('Error in client.fetch:', error);
       throw error;
     }
   }

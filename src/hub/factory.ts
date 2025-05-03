@@ -1,11 +1,11 @@
 /**
  * Factory Functions
  * 
- * This file contains factory functions for creating FixiWithPlugins instances
+ * This file contains factory functions for creating client instances
  * with various configurations.
  */
 
-import { FixiWithPlugins } from './fixiWithPlugins';
+import { client } from './client';
 import { FixiPlugs, PluginManagerExtension } from './types';
 
 type PluginManagerOptions = any;
@@ -42,47 +42,47 @@ function getPerformanceExtensions(): PluginManagerExtension[] {
 }
 
 /**
- * Creates a FixiWithPlugins instance with all available extensions
+ * Creates a client instance with all available extensions
  * 
  * @param fixi - Optional Fixi instance (creates new one if not provided)
  * @param options - Plugin manager configuration options
  * @param mode - Configuration mode ('standard' includes all extensions, 'performance' includes only performance-critical ones)
- * @returns Configured FixiWithPlugins instance
+ * @returns Configured client instance
  */
-export function createFixiWithPlugins(
+export function createClient(
   fixi: Fixi = new Fixi(), 
   options: PluginManagerOptions = {},
   mode: 'standard' | 'performance' = 'standard'
-): FixiWithPlugins {
-  const fixiWithPlugins = new FixiWithPlugins(fixi, options);
+): client {
+  const client = new client(fixi, options);
   
   // Apply extensions based on mode
   const extensions = mode === 'performance' 
     ? getPerformanceExtensions() 
     : getAllExtensions();
   
-  extensions.forEach(ext => fixiWithPlugins.use(ext));
+  extensions.forEach(ext => client.use(ext));
   
-  return fixiWithPlugins;
+  return client;
 }
 
 /**
- * Create a FixiWithPlugins instance with only the specified extensions
+ * Create a client instance with only the specified extensions
  * 
  * @param fixi - Optional Fixi instance (creates new one if not provided)
  * @param options - Plugin manager configuration options
  * @param extensionNames - Array of extension names to include
- * @returns Configured FixiWithPlugins instance with only specified extensions
+ * @returns Configured client instance with only specified extensions
  */
-export function createCustomFixiWithPlugins(
+export function createCustomPluginClient(
   fixi: Fixi = new Fixi(),
   options: PluginManagerOptions = {},
   extensionNames: string[] = []
-): FixiWithPlugins {
-  const fixiWithPlugins = new FixiWithPlugins(fixi, options);
+): client {
+  const client = new client(fixi, options);
   
   if (extensionNames.length === 0) {
-    return fixiWithPlugins;
+    return client;
   }
   
   // Filter extensions by name
@@ -96,39 +96,39 @@ export function createCustomFixiWithPlugins(
     );
   });
   
-  selectedExtensions.forEach(ext => fixiWithPlugins.use(ext));
+  selectedExtensions.forEach(ext => client.use(ext));
   
-  return fixiWithPlugins;
+  return client;
 }
 
 /**
- * Create a minimal FixiWithPlugins instance with no extensions
+ * Create a minimal client instance with no extensions
  * 
  * @param fixi - Optional Fixi instance (creates new one if not provided)
  * @param options - Plugin manager configuration options
- * @returns Bare FixiWithPlugins instance without any extensions
+ * @returns Bare client instance without any extensions
  */
-export function createMinimalFixiWithPlugins(
+export function createMinimalPluginClient(
   fixi: Fixi = new Fixi(),
   options: PluginManagerOptions = {}
-): FixiWithPlugins {
-  return new FixiWithPlugins(fixi, options);
+): client {
+  return new client(fixi, options);
 }
 
 /**
  * Helper to register multiple plugins at once
  * 
- * @param fixiWithPlugins - The target FixiWithPlugins instance
+ * @param client - The target client instance
  * @param plugins - Array of plugins to register
  * @returns Number of successfully registered plugins
- * @throws Error if fixiWithPlugins is null or undefined
+ * @throws Error if client is null or undefined
  */
 export function registerPlugins(
-  fixiWithPlugins: FixiWithPlugins,
+  client: client,
   plugins: FixiPlugs[]
 ): number {
-  if (!fixiWithPlugins) {
-    throw new Error('Cannot register plugins: FixiWithPlugins instance is required');
+  if (!client) {
+    throw new Error('Cannot register plugins: client instance is required');
   }
   
   if (!Array.isArray(plugins) || plugins.length === 0) {
@@ -138,7 +138,7 @@ export function registerPlugins(
   let registered = 0;
   
   plugins.forEach(plugin => {
-    if (fixiWithPlugins.register(plugin)) {
+    if (client.register(plugin)) {
       registered++;
     }
   });

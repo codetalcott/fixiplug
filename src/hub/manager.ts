@@ -1,7 +1,7 @@
 /**
  * Plugin Manager Implementation
  * 
- * This file contains the core PluginManager class that manages the lifecycle
+ * This file contains the core manager class that manages the lifecycle
  * of plugins and coordinates their execution.
  */
 
@@ -13,7 +13,7 @@ import {
   PluginHealthMetrics,
   PluginHook,
   PluginManagerExtension,
-  FixiPlugs,
+  Plugin,
   PluginLogger
 } from './types';
 import { MetricsExtension } from './extensions/metricsExtension';
@@ -64,7 +64,7 @@ export namespace PluginIteration {
  * 
  * Handles plugin registration, unregistration, and execution of plugin hooks.
  */
-export class PluginManager {
+export class manager {
   /** Map of active plugins */
   private plugins: Map<string, FixiPlugs> = new Map();
   
@@ -102,7 +102,7 @@ export class PluginManager {
   }
 
   /**
-   * Add an extension to enhance PluginManager functionality
+   * Add an extension to enhance manager functionality
    */
   public use(extension: PluginManagerExtension): this {
     this.extensions.push(extension);

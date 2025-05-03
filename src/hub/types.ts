@@ -54,7 +54,7 @@ export interface DomPluginContext extends PluginContext {
   target?: Element;
 }
 
-export interface FixiPlugs {
+export interface Plugin {
   /** Unique plugin name */
   name: string;
   
@@ -123,7 +123,7 @@ export interface FixiPlugs {
 export interface PluginDefinition {
   name: string;
   dependencies?: string[];
-  load: () => Promise<FixiPlugs>;
+  load: () => Promise<Plugin>;
 }
 
 /** Plugin health metrics */
@@ -150,16 +150,16 @@ export interface PluginManagerExtension {
   init(manager: any): void;
   
   /** Called before plugin registration */
-  beforeRegister?(plugin: FixiPlugs): boolean | void;
+  beforeRegister?(plugin: Plugin): boolean | void;
   
   /** Called after plugin registration */
-  afterRegister?(plugin: FixiPlugs): void;
+  afterRegister?(plugin: Plugin): void;
   
   /** Called before plugin unregistration */
-  beforeUnregister?(name: string, plugin: FixiPlugs): boolean | void;
+  beforeUnregister?(name: string, plugin: Plugin): boolean | void;
   
   /** Called after plugin unregistration */
-  afterUnregister?(name: string, plugin: FixiPlugs): void;
+  afterUnregister?(name: string, plugin: Plugin): void;
   
   /** Called before executing hooks */
   beforeExecute?<T extends PluginContext>(hookType: PluginHook, context: T): T | void;
@@ -168,13 +168,13 @@ export interface PluginManagerExtension {
   afterExecute?<T extends PluginContext>(hookType: PluginHook, context: T): T | void;
   
   /** Called before executing an individual hook */
-  beforeHook?<T extends PluginContext>(plugin: FixiPlugs, hookType: PluginHook, context: T): boolean | void;
+  beforeHook?<T extends PluginContext>(plugin: Plugin, hookType: PluginHook, context: T): boolean | void;
   
   /** Called after executing an individual hook */
-  afterHook?<T extends PluginContext>(plugin: FixiPlugs, hookType: PluginHook, context: T, error: Error | null): void;
+  afterHook?<T extends PluginContext>(plugin: Plugin, hookType: PluginHook, context: T, error: Error | null): void;
   
   /** Called when a hook throws an error */
-  onHookError?<T extends PluginContext>(plugin: FixiPlugs, hookType: PluginHook, context: T, error: Error): boolean | void;
+  onHookError?<T extends PluginContext>(plugin: Plugin, hookType: PluginHook, context: T, error: Error): boolean | void;
 }
 
 /**
@@ -184,7 +184,7 @@ export interface PluginSystemOptions {
   /**
    * Initial plugins to register
    */
-  plugins?: FixiPlugs[];
+  plugins?: Plugin[];
   
   /**
    * Initial plugin definitions to register for lazy loading

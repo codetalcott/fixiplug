@@ -5,7 +5,7 @@ export class Fixi {
     let url = cfg.action, m = cfg.method, b = cfg.body, h = cfg.headers, s = cfg.signal;
     // GET/DELETE params
     if (/GET|DELETE/.test(m) && b instanceof FormData) {
-      const p = new URLSearchParams(b as any);
+      const p = new URLSearchParams(b);
       if (p.toString()) url += (url.includes('?') ? '&' : '?') + p;
       b = null;
     }

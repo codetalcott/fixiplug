@@ -1,4 +1,4 @@
-import { PluginManagerExtension, PluginManager, PluginHook, PluginContext, FixiPlugs } from '..';
+import { PluginManagerExtension, manager, PluginHook, PluginContext, FixiPlugs } from '..';
 
 /**
  * Extension that manages plugin lifecycle events
@@ -7,14 +7,14 @@ import { PluginManagerExtension, PluginManager, PluginHook, PluginContext, FixiP
  * and tracks their lifecycle state.
  */
 export class LifecycleExtension implements PluginManagerExtension {
-  private manager!: PluginManager;
+  private manager!: manager;
   private lifecycleState = new Map<string, {
     initialized: boolean;
     initTime: number;
     lastActive: number;
   }>();
   
-  init(manager: PluginManager): void {
+  init(manager: manager): void {
     this.manager = manager;
   }
   
