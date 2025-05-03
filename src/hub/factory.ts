@@ -5,7 +5,7 @@
  * with various configurations.
  */
 
-import { client } from './client';
+import { PluginClient } from './client';
 import { FixiPlugs, PluginManagerExtension } from './types';
 
 type PluginManagerOptions = any;
@@ -30,41 +30,26 @@ function getAllExtensions(): PluginManagerExtension[] {
   return extensions;
 }
 
-/**
- * Get essential extensions for performance-focused scenarios
- * @returns Array of performance-critical extensions
- */
-function getPerformanceExtensions(): PluginManagerExtension[] {
-  const names = ['BenchmarkExtension', 'TimeoutExtension', 'CircuitBreakerExtension'];
-  return getAllExtensions().filter(ext =>
-    names.includes((ext.constructor as any).name)
-  );
-}
+// Removed mode-specific extension filtering
 
 /**
  * Creates a client instance with all available extensions
  * 
  * @param fixi - Optional Fixi instance (creates new one if not provided)
  * @param options - Plugin manager configuration options
- * @param mode - Configuration mode ('standard' includes all extensions, 'performance' includes only performance-critical ones)
  * @returns Configured client instance
  */
 export function createClient(
-  fixi: Fixi = new Fixi(), 
-  options: PluginManagerOptions = {},
-  mode: 'standard' | 'performance' = 'standard'
-): client {
-  const client = new client(fixi, options);
-  
-  // Apply extensions based on mode
-  const extensions = mode === 'performance' 
-    ? getPerformanceExtensions() 
-    : getAllExtensions();
-  
-  extensions.forEach(ext => client.use(ext));
-  
+  fixi: Fixi = new Fixi(),
+  options: PluginManagerOptions = {}
+): PluginClient {
+  const client = new PluginClient(fixi, options);
+  // Apply all standard extensions
+  getAllExtensions().forEach(ext => client.use(ext));
   return client;
 }
+
+// Removed minimal client creator; use createClient or custom creator as needed
 
 /**
  * Create a client instance with only the specified extensions
@@ -78,8 +63,8 @@ export function createCustomPluginClient(
   fixi: Fixi = new Fixi(),
   options: PluginManagerOptions = {},
   extensionNames: string[] = []
-): client {
-  const client = new client(fixi, options);
+): PluginClient {
+  const client = new PluginClient(fixi, options);
   
   if (extensionNames.length === 0) {
     return client;
@@ -102,20 +87,6 @@ export function createCustomPluginClient(
 }
 
 /**
- * Create a minimal client instance with no extensions
- * 
- * @param fixi - Optional Fixi instance (creates new one if not provided)
- * @param options - Plugin manager configuration options
- * @returns Bare client instance without any extensions
- */
-export function createMinimalPluginClient(
-  fixi: Fixi = new Fixi(),
-  options: PluginManagerOptions = {}
-): client {
-  return new client(fixi, options);
-}
-
-/**
  * Helper to register multiple plugins at once
  * 
  * @param client - The target client instance
@@ -124,7 +95,7 @@ export function createMinimalPluginClient(
  * @throws Error if client is null or undefined
  */
 export function registerPlugins(
-  client: client,
+  client: PluginClient,
   plugins: FixiPlugs[]
 ): number {
   if (!client) {

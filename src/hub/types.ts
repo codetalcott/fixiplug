@@ -191,3 +191,5 @@ export interface PluginSystemOptions {
    */
   lazyPlugins?: PluginDefinition[];
 }
+
+export type FixiPlugs = Plugin;

@@ -1,8 +1,4 @@
-<h1>&#x1F6B2; fixi.js - <i>it ain't much...</i></h1> 
-
-
-[fixi.js](https://swag.htmx.org/products/fixi-js-tee) is an experimental, minimalist implementation
-of [generalized hypermedia controls](https://dl.acm.org/doi/fullHtml/10.1145/3648188.3675127)
+# [fixi.js](https://github.com/bigskysoftware/fixi/blob/master/fixi.js) is an experimental, minimalist implementation of [generalized hypermedia controls](https://dl.acm.org/doi/fullHtml/10.1145/3648188.3675127)
 
 The fixi [api](#api) consists of six [HTML attributes](#attributes), nine [events](#events) & two [properties](#properties)
 
@@ -34,10 +30,7 @@ the response inside the `output` tag below it.
 <!-- @section Minimalism -->
 ## Minimalism
 
-Philosophically, fixi is [scheme](https://scheme.org/) to [htmx](https://htmx.org)'s
-[common lisp](https://lisp-lang.org/): it is designed to be as 
-[lean as possible](https://ia601608.us.archive.org/8/items/pdfy-PeRDID4QHBNfcH7s/LeanSoftware_text.pdf) while still 
-being useful for real world projects.
+Fixi is designed to be as lean as possible while still being useful for real world projects.
 
 As such, it doesn't have many of the features found in htmx, including:
 - [request queueing & synchronization](https://htmx.org/attributes/hx-sync/)
@@ -81,8 +74,7 @@ The fixi project consists of three files:
 - [`test.html`](test.html), the test suite for the library
 - This [`README.md`](README.md), which is the documentation
 
-[`test.html`](test.html) is a stand-alone HTML file that implements its own visual testing infrastructure, mocking for 
-`fetch()`, etc. and that can be opened using the `file:` protocol for easy testing.
+[`test.html`](test.html) is a stand-alone HTML file that implements its own visual testing infrastructure, mocking for `fetch()`, etc. and that can be opened using the `file:` protocol for easy testing.
 
 <!-- @section Installing -->
 ## Installing
@@ -1098,4 +1090,3 @@ OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
   ]
 }
 ```
-
