@@ -1,24 +1,8 @@
-import { CircuitBreakerExtension } from './circuitBreakerExtension';
-import { LazyLoadingExtension } from './lazyLoadingExtension';
-import { LifecycleExtension } from './lifecycleExtension';
+// Removed all other extensions; only MetricsExtension is now included
 import { MetricsExtension } from './metricsExtension';
-import { TimeoutExtension } from './timeoutExtension';
-import { VersionExtension } from './versionExtension';
 
-export {
-  CircuitBreakerExtension,
-  LazyLoadingExtension,
-  LifecycleExtension,
-  MetricsExtension,
-  TimeoutExtension,
-  VersionExtension
-};
+export { MetricsExtension };
 
 export const StandardExtensions = {
-  CircuitBreakerExtension,
-  LazyLoadingExtension,
-  LifecycleExtension,
-  MetricsExtension,
-  TimeoutExtension,
-  VersionExtension
+  MetricsExtension
 };
