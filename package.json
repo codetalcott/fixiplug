@@ -1,16 +1,16 @@
 {
-  "name": "fixihub",
+  "name": "fixi.js",
   "version": "0.0.1",
-  "main": "./dist/fixi.js",
-  "module": "./dist/fixi.esm.js",
+  "main": "./dist/core/index.js",
+  "module": "./dist/core/index.js",
   "exports": {
     ".": {
-      "import": "./dist/fixi.esm.js",
-      "require": "./dist/fixi.cjs.js"
+      "import": "./dist/core/index.js",
+      "require": "./dist/core/index.cjs"
     },
-    "./plugin": {
-      "import": "./dist/fixi.plugin.esm.js",
-      "require": "./dist/fixi.plugin.cjs.js"
+    "./dom": {
+      "import": "./dist/core/dom.js",
+      "require": "./dist/core/dom.cjs"
     }
   },
   "type": "module",
