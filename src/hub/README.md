@@ -1,6 +1,6 @@
-# Fixi Plugin System
+# Fixi Hub
 
-A high-performance, modular plugin system for extending the Fixi JavaScript library.
+If fixi is a no-frills fixed wheel bike, the hub is a detachable frame with standardized slots to attach accessories or 'fixiplugs.'
 
 ## Architecture
 
@@ -35,7 +35,6 @@ The plugin system follows a modular "Core + Extensions" architecture:
 
 - **FixiWithPlugins**: The main wrapper around Fixi that adds plugin support
 - **PluginManager**: Handles registration and execution of plugins
-- **Plugin Interface (FixiPlugs)**: Standard interface for creating plugins
 
 ### Extension System
 
