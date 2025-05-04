@@ -66,10 +66,10 @@ export namespace PluginIteration {
  */
 export class manager {
   /** Map of active plugins */
-  private plugins: Map<string, FixiPlugs> = new Map();
+  private plugins: Map<string, Plugin> = new Map();
   
   /** Maps each hook type to the plugins that implement it (for faster execution) */
-  private hookImplementers: Map<PluginHook, FixiPlugs[]> = new Map();
+  private hookImplementers: Map<PluginHook, Plugin[]> = new Map();
   
   /** Reference to the Fixi instance */
   private fixi: Fixi;
@@ -114,7 +114,7 @@ export class manager {
    * Register a new plugin
    * @returns true if registration succeeded, false otherwise
    */
-  public register(plugin: FixiPlugs): boolean {
+  public register(plugin: Plugin): boolean {
     // Check if plugin is already registered
     if (this.plugins.has(plugin.name)) {
       this.logger.warn(`Plugin "${plugin.name}" is already registered.`);
@@ -164,7 +164,7 @@ export class manager {
   /**
    * Update the hook implementers map when a plugin is registered
    */
-  private updateHookImplementersMap(plugin: FixiPlugs): void {
+  private updateHookImplementersMap(plugin: Plugin): void {
     Object.values(PluginHook).forEach(hook => {
       const hookType = hook as PluginHook;
       const hookMethod = this.getHookMethod(plugin, hookType);
@@ -230,7 +230,7 @@ export class manager {
   /**
    * Remove a plugin from the hook implementers map
    */
-  private removeFromHookImplementersMap(plugin: FixiPlugs): void {
+  private removeFromHookImplementersMap(plugin: Plugin): void {
     Object.values(PluginHook).forEach(hook => {
       const hookType = hook as PluginHook;
       const implementers = this.hookImplementers.get(hookType);
@@ -246,14 +246,14 @@ export class manager {
   /**
    * Get a registered plugin by name
    */
-  public get<T extends FixiPlugs = FixiPlugs>(pluginName: string): T | undefined {
+  public get<T extends Plugin = Plugin>(pluginName: string): T | undefined {
     return this.plugins.get(pluginName) as T | undefined;
   }
 
   /**
    * Get all registered plugins
    */
-  public getAll(): FixiPlugs[] {
+  public getAll(): Plugin[] {
     return Array.from(this.plugins.values());
   }
   
@@ -335,7 +335,7 @@ export class manager {
   /**
    * Get prioritized list of plugins implementing the given hook
    */
-  private getPrioritizedImplementers(hookType: PluginHook): FixiPlugs[] {
+  private getPrioritizedImplementers(hookType: PluginHook): Plugin[] {
     // Clone to avoid mutating original array
     const implementers = [...(this.hookImplementers.get(hookType) || [])];
     // Sort by descending priority (default 0)
@@ -347,7 +347,7 @@ export class manager {
    * Execute a single plugin's hook
    */
   private async executePluginHook<T extends PluginContext>(
-    plugin: FixiPlugs, 
+    plugin: Plugin, 
     hookType: PluginHook, 
     context: T
   ): Promise<T> {
@@ -385,7 +385,7 @@ export class manager {
    * Check if a hook should be skipped based on extension feedback
    */
   private shouldSkipHook<T extends PluginContext>(
-    plugin: FixiPlugs, 
+    plugin: Plugin, 
     hookType: PluginHook, 
     context: T
   ): boolean {
@@ -400,7 +400,7 @@ export class manager {
    * Invoke the appropriate hook method based on the hook type
    */
   private async invokeHookMethod<T extends PluginContext>(
-    plugin: FixiPlugs, 
+    plugin: Plugin, 
     hookType: PluginHook, 
     context: T
   ): Promise<T> {
@@ -436,7 +436,7 @@ export class manager {
    * Notify extensions after a hook has executed
    */
   private notifyAfterHook<T extends PluginContext>(
-    plugin: FixiPlugs, 
+    plugin: Plugin, 
     hookType: PluginHook, 
     context: T, 
     error: Error | null
@@ -451,7 +451,7 @@ export class manager {
    * @returns true if the error was handled, false otherwise
    */
   private handleHookError<T extends PluginContext>(
-    plugin: FixiPlugs, 
+    plugin: Plugin, 
     hookType: PluginHook, 
     context: T, 
     error: Error
@@ -466,7 +466,7 @@ export class manager {
   /**
    * Get the appropriate hook method for a plugin
    */
-  private getHookMethod(plugin: FixiPlugs, hookType: PluginHook): Function | undefined {
+  private getHookMethod(plugin: Plugin, hookType: PluginHook): Function | undefined {
     switch (hookType) {
       case PluginHook.BEFORE_REQUEST: return plugin.beforeRequest;
       case PluginHook.AFTER_RESPONSE: return plugin.afterResponse;

@@ -20,7 +20,8 @@
     "preview": "vite preview",
     "test": "vitest run --coverage",
     "generate:plugin": "ts-node scripts/generate-plugin.ts",
-    "build-bundle": "ts-node scripts/build-bundle.ts"
+    "build-bundle": "ts-node scripts/build-bundle.ts",
+    "test:types": "tsd -p tsconfig.json tests/test-hub"
   },
   "devDependencies": {
     "@types/inquirer": "^9.0.0",
@@ -36,6 +37,7 @@
     "inquirer": "^9.3.7",
     "jsdom": "^26.1.0",
     "ts-node": "^10.9.1",
+    "tsd": "^0.26.1",
     "typescript": "^5.8.3",
     "vite": "^5.0.0",
     "vite-tsconfig-paths": "^4.0.0",
