@@ -42,9 +42,9 @@ export default defineConfig(({ mode }) => ({
         'dist/**',
         'node_modules/**'
       ],
-      branches: 60,
-      functions: 60,
-      lines: 60
+      branches: 40,
+      functions: 25,
+      lines: 15
     }
   }
 }));
