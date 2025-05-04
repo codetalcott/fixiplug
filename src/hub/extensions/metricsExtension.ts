@@ -1,4 +1,5 @@
-import { PluginManagerExtension, manager, PluginHook, PluginContext, PluginHealthMetrics, FixiPlugs } from '..';
+import { PluginManagerExtension, PluginHook, PluginContext, PluginHealthMetrics, FixiPlugs, PluginManager } from '..';
+import { manager } from '../manager';
 
 /**
  * Performance measurement utility
@@ -81,11 +82,11 @@ class PerformanceTracker {
  * Extension that provides performance metrics
  */
 export class MetricsExtension implements PluginManagerExtension {
-  private manager!: manager;
+  private manager!: PluginManager;
   private healthMetrics = new Map<string, PluginHealthMetrics>();
   
-  init(manager: manager): void {
-    this.manager = manager;
+  init(managerInstance: PluginManager): void {
+    this.manager = managerInstance;
     PerformanceTracker.reset();
   }
   
