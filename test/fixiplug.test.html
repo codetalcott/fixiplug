@@ -1,0 +1,530 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FixiPlugs Test Suite</title>
+  <link rel="stylesheet" href="https://unpkg.com/missing.css@1.1.3">
+  <script>
+    // Hooks for per-test setup/teardown
+    const beforeTest = [];
+    const afterTest = [];
+    function before(fn) { beforeTest.push(fn); }
+    function after(fn) { afterTest.push(fn); }
+
+    let tests = [];
+    let passed = 0, failed = 0, durations = [];
+    function test(fn) {
+      const wrapper = async () => {
+        for (const b of beforeTest) await b();
+        const start = performance.now();
+        try {
+          await fn();
+          const dur = performance.now() - start;
+          wrapper.duration = dur;
+          passed++;
+        } catch (e) {
+          wrapper.duration = performance.now() - start;
+          failed++;
+          throw e;
+        } finally {
+          for (const a of afterTest) await a();
+        }
+      };
+      tests.push(wrapper);
+    }
+    function assertEq(a, b) {
+      if (a !== b) {
+        const err = new Error(`Expected ${JSON.stringify(b)}, got ${JSON.stringify(a)}`);
+        err.expected = b;
+        err.actual = a;
+        throw err;
+      }
+    }
+  </script>
+  <script src="../fixiplug.js"></script>
+  <script>
+    // Dummy plugin registration smoke-check
+    (async () => {
+      let called = false;
+      function dummyPlugin(ctx) { ctx.on('dummyHook', () => { called = true; }); }
+      fixiplug.use(dummyPlugin);
+      await fixiplug.dispatch('dummyHook', {});
+      console.assert(called, 'Dummy plugin hook did not fire');
+    })();
+  </script>
+  <script type="module">
+    // Import and activate the dev mode and logger plugins for testing
+    import fixiplugDev from '../plugins/hookVisualizer.js';
+    import fixiplugLogger from '../plugins/logger.js';
+    import fixiplugErrorReporter from '../plugins/error-reporter.js';
+    // Use plugins via fixiplug wrapper
+    fixiplug.use(fixiplugDev);
+    fixiplug.use(fixiplugLogger);
+    fixiplug.use(fixiplugErrorReporter);
+    fixiplug.debug = true; // Enable debug mode
+    
+    // Visualize hook configuration once loaded
+    window.addEventListener('load', () => {
+      setTimeout(() => fixiplug.dispatch('api:visualizeHooks'), 100);
+    });
+  </script>
+  <style>
+        .test {
+            padding: 8px;
+            margin: 8px;
+        }
+        .passed {
+            border: 3px solid green;
+        }
+        .failed {
+            border: 3px solid red;
+        }
+        .passed-info {
+            color: green;
+        }
+        .failed-info {
+            color: red;
+        }
+        pre {
+            padding: 4px;
+            margin: 12px;
+            border: 1px solid rgb(128, 128, 128);
+            background-color: whitesmoke;
+        }
+        body.hide-passed .passed {
+            display: none;
+        }
+        .test-group { margin-bottom: 1em; }
+        .test-group h2 { background:#eee; padding:4px; }
+        #controls { margin: 1em 0; }
+        #stats table { border-collapse: collapse; width: 100%; }
+        #stats th, #stats td { border:1px solid #ccc; padding:4px; }
+        .duration { float:right; font-size:0.8em; color:#666; }
+        .desc { font-style: italic; }
+        .tags { font-size:0.8em; color:#888; }
+  </style>
+</head>
+<body>
+  <h1>FixiPlugs Plugin Wrapper Tests</h1>
+  <div class="passed-info">Passed: <span id="passed-count">0</span></div>
+  <div class="failed-info">Failed: <span id="failed-count">0</span></div>
+  <!-- Controls and Stats -->
+  <div id="controls">
+    <button id="rerun-failed">Re-run Failed Only</button>
+    <button id="toggle-passed">Toggle Passed</button>
+  </div>
+  <div id="stats">
+    <table>
+      <tr><th>Total</th><th>Passed</th><th>Failed</th><th>Avg ms</th></tr>
+      <tr>
+        <td id="stat-total">0</td>
+        <td id="stat-passed">0</td>
+        <td id="stat-failed">0</td>
+        <td id="stat-avg">0</td>
+      </tr>
+    </table>
+  </div>
+  <main>
+    <!-- Plugin API Tests -->
+    <div class="test-group" data-group="Plugin API">
+      <h2>Plugin API</h2>
+      <div class="test" data-test-id="pluginRegistration" data-tags="api,plugin" data-desc="Verifies use()/dispatch()">
+        <h3>Test pluginRegistration</h3>
+        <p class="desc">Verifies that plugins can be registered and their hooks are called when events are dispatched.</p>
+        <script>
+          test(function pluginRegistration() {
+            let called = false;
+            function myPlugin(ctx) {
+              ctx.on('alpha', () => { called = true; });
+            }
+            fixiplug.use(myPlugin);
+            return fixiplug.dispatch('alpha', {}).then(() => assertEq(called, true));
+          });
+        </script>
+      </div>
+      <div class="test" data-test-id="pluginEnableDisable" data-tags="api,plugin" data-desc="Confirms enable/disable">
+        <h3>Test pluginEnableDisable</h3>
+        <p class="desc">Confirms that plugins can be disabled (preventing hooks from firing) and re-enabled dynamically.</p>
+        <script>
+          test(async function pluginEnableDisable() {
+            let called = 0;
+            function testPlugin(ctx) {
+              ctx.on('testHook', () => { called++; });
+            }
+
+            // Use the plugin via fixiplug
+            fixiplug.use(testPlugin);
+
+            // Dispatch the hook and verify it fires
+            await fixiplug.dispatch('testHook', {});
+            assertEq(called, 1);
+
+            // Disable the plugin and verify it no longer fires
+            fixiplug.disable('testPlugin');
+            await fixiplug.dispatch('testHook', {});
+            assertEq(called, 1);
+
+            // Re-enable the plugin and verify it fires again
+            fixiplug.enable('testPlugin');
+            await fixiplug.dispatch('testHook', {});
+            assertEq(called, 2);
+          });
+        </script>
+      </div>
+      <div class="test" data-test-id="priorityOrder" data-tags="api,priority" data-desc="Ensures priority ordering">
+        <h3>Test priorityOrder</h3>
+        <p class="desc">Ensures that hook execution respects priority values, with higher priority hooks executing before lower priority ones.</p>
+        <script>
+          test(function priorityOrder() {
+            let order = [];
+            function first(ctx) { ctx.on('gamma', () => order.push('first'), fixiplug.PRIORITY.HIGH); }
+            function last(ctx) { ctx.on('gamma', () => order.push('last'), fixiplug.PRIORITY.LOW); }
+            fixiplug.use(first).use(last);
+            return fixiplug.dispatch('gamma', {}).then(() => assertEq(order.join(','), 'first,last'));
+          });
+        </script>
+      </div>
+      <div class="test" data-test-id="pluginUnuse" data-tags="api,plugin" data-desc="Verifies unuse()">
+        <h3>Test pluginUnuse</h3>
+        <p class="desc">Verifies that plugins can be completely removed, preventing their hooks from being called after removal.</p>
+        <script>
+          test(async function pluginUnuse() {
+            let called = 0;
+            function tempPlugin(ctx) {
+              ctx.on('tempHook', () => { called++; });
+            }
+
+            // Use the plugin via fixiplug
+            fixiplug.use(tempPlugin);
+
+            // Dispatch the hook and verify it fires
+            await fixiplug.dispatch('tempHook', {});
+            assertEq(called, 1);
+
+            // Unuse the plugin and verify it no longer fires
+            fixiplug.unuse('tempPlugin');
+            await fixiplug.dispatch('tempHook', {});
+            assertEq(called, 1);
+          });
+        </script>
+      </div>
+    </div>
+    <!-- DOM & Error Tests -->
+    <div class="test-group" data-group="DOM & Error">
+      <h2>DOM & Error</h2>
+      <div class="test" data-test-id="mutationHandling" data-tags="mutation,observer" data-desc="Prevents infinite loops">
+        <h3>Test mutationHandling</h3>
+        <p class="desc">Verifies that mutation handling doesn't cause infinite loops when DOM elements are modified during test execution.</p>
+        <script>
+          test(async function mutationHandling() {
+            let processCount = 0;
+            function monitorPlugin(ctx) {
+              ctx.on('init', () => {
+                processCount++;
+                if (processCount > 10) {
+                  throw new Error('Potential infinite loop detected: Too many element initializations');
+                }
+              });
+            }
+            fixiplug.use(monitorPlugin);
+            const testDiv = document.createElement('div');
+            testDiv.innerHTML = '<button id="test-btn">Test Button</button>';
+            document.body.appendChild(testDiv);
+            await new Promise(resolve => setTimeout(resolve, 50));
+            testDiv.innerHTML += '<button id="test-btn2" fx-action="/test">Another Button</button>';
+            await new Promise(resolve => setTimeout(resolve, 100));
+            document.body.removeChild(testDiv);
+            fixiplug.unuse('monitorPlugin');
+            assertEq(processCount <= 5, true);
+          });
+        </script>
+      </div>
+      <div class="test" data-test-id="abortErrorHandling" data-tags="error,abort" data-desc="Handles AbortError">
+        <h3>Test abortErrorHandling</h3>
+        <p class="desc">Verifies that AbortError exceptions are properly caught and don't result in unhandled promise rejections.</p>
+        <script>
+          test(async function abortErrorHandling() {
+            let errorCaught = false;
+            function abortPlugin(ctx) {
+              ctx.on('error', (event) => {
+                if (event.detail?.error?.name === 'AbortError') {
+                  errorCaught = true;
+                  event.preventDefault();
+                }
+              });
+            }
+            fixiplug.use(abortPlugin);
+            const abortError = new DOMException('Test abort', 'AbortError');
+            await fixiplug.dispatch('error', { 
+              detail: { error: abortError }
+            });
+            fixiplug.unuse('abortPlugin');
+            assertEq(errorCaught, true);
+          });
+        </script>
+      </div>
+      <div class="test" data-test-id="smokePluginUseOff" data-tags="smoke" data-desc="Smoke plugin use/off">
+        <h3>Smoke Test pluginUse/off</h3>
+        <p class="desc">Smoke test for plugin use/off functionality.</p>
+        <script>
+          test(async function smokePluginUseOff() {
+            let called = 0;
+
+            // Define the plugin and store the handler reference
+            let handler;
+            function smokePlugin(ctx) {
+              handler = () => { called++; };
+              ctx.on('smokeHook', handler);
+            }
+
+            // Use the plugin via fixiplug
+            fixiplug.use(smokePlugin);
+
+            // Dispatch the hook and verify it fires
+            await fixiplug.dispatch('smokeHook', {});
+            assertEq(called, 1);
+
+            // Remove the handler and verify it no longer fires
+            fixiplug.off('smokeHook', handler); // Correctly pass the handler reference
+            await fixiplug.dispatch('smokeHook', {});
+            assertEq(called, 1); // Ensure the count hasn't increased
+          });
+        </script>
+      </div>
+    </div>
+    <!-- Plugin Extensions Tests -->
+    <div class="test-group" data-group="Plugin Extensions">
+      <h2>Plugin Extensions</h2>
+
+      <div class="test" data-test-id="loggerRecord" data-tags="plugin,logger" data-desc="Logger plugin records hooks">
+        <h3>Test loggerRecord</h3>
+        <p class="desc"></p>
+        <script>
+          test(async function loggerRecord() {
+            // Dispatch a dummy hook
+            await fixiplug.dispatch('fooHook', { foo: 123 });
+            // Retrieve in-memory log
+            const result = await fixiplug.dispatch('api:getLogs', {});
+            const logs = result.logs;
+            assertEq(Array.isArray(logs), true);
+            assertEq(logs.some(e => e.hookName === 'fooHook'), true);
+          });
+        </script>
+      </div>
+
+      <div class="test" data-test-id="loggerEventPayload" data-tags="plugin,logger" data-desc="Logger captures event payload">
+        <h3>Test loggerEventPayload</h3>
+        <p class="desc"></p>
+        <script>
+          test(async function loggerEventPayload() {
+            await fixiplug.dispatch('barHook', { bar: 'baz' });
+            const { logs } = await fixiplug.dispatch('api:getLogs', {});
+            const entry = logs.find(e => e.hookName === 'barHook');
+            assertEq(entry.event.bar, 'baz');
+          });
+        </script>
+      </div>
+
+      <div class="test" data-test-id="loggerDuration" data-tags="plugin,logger" data-desc="Logger records execution time">
+        <h3>Test loggerDuration</h3>
+        <p class="desc"></p>
+        <script>
+          test(async function loggerDuration() {
+            await fixiplug.dispatch('bazHook', {});
+            const { logs } = await fixiplug.dispatch('api:getLogs', {});
+            const entry = logs.find(e => e.hookName === 'bazHook');
+            assertEq(typeof entry.duration === 'number' && entry.duration >= 0, true);
+          });
+        </script>
+      </div>
+
+      <!-- hookVisualizer Tests -->
+      <div class="test" data-test-id="hookVisualizerHookCounts" data-tags="plugin,hookVisualizer" data-desc="hookVisualizer tracks hook execution counts">
+        <h3>Test hookVisualizerHookCounts</h3>
+        <p class="desc"></p>
+        <script>
+          test(async function hookVisualizerHookCounts() {
+            // Dispatch hooks multiple times
+            await fixiplug.dispatch('testHook1', {});
+            await fixiplug.dispatch('testHook1', {});
+            await fixiplug.dispatch('testHook2', {});
+
+            // Visualize hooks to log execution counts
+            fixiplug.dispatch('api:visualizeHooks');
+
+            // No direct assertions since this is a visualization test
+            // Developers should verify counts in the console output
+          });
+        </script>
+      </div>
+
+      <div class="test" data-test-id="hookVisualizerPluginUsage" data-tags="plugin,hookVisualizer" data-desc="hookVisualizer summarizes plugin usage">
+        <h3>Test hookVisualizerPluginUsage</h3>
+        <p class="desc"></p>
+        <script>
+          test(async function hookVisualizerPluginUsage() {
+            // Register multiple plugins
+            function pluginA(ctx) { ctx.on('hookA', () => {}); }
+            function pluginB(ctx) { ctx.on('hookB', () => {}); ctx.on('hookC', () => {}); }
+
+            fixiplug.use(pluginA);
+            fixiplug.use(pluginB);
+
+            // Visualize hooks to log plugin usage summary
+            fixiplug.dispatch('api:visualizeHooks');
+
+            // No direct assertions since this is a visualization test
+            // Developers should verify plugin usage in the console output
+          });
+        </script>
+      </div>
+    </div> <!-- end Plugin Extensions group -->
+    <!-- Error Reporter Tests Group -->
+    <div class="test-group" data-group="Error Reporter Tests">
+      <h2>Error Reporter Tests</h2>
+      <!-- Error Reporter Tests -->
+      <div class="test" data-test-id="errorReporterStore" data-tags="plugin,error-reporter" data-desc="Error reporter stores plugin errors">
+        <h3>Error Reporter Stores pluginError events</h3>
+        <p class="desc"></p>
+        <script>
+          test(async function errorReporterStore() {
+            // Register a plugin whose handler throws
+            function badPlugin(ctx) {
+              ctx.on('testHook', () => { throw new Error('oops'); });
+            }
+            fixiplug.use(badPlugin);
+            // Dispatch to invoke the error
+            await fixiplug.dispatch('testHook', {});
+            // Retrieve stored errors
+            const { errors } = await fixiplug.dispatch('api:getErrors', {});
+            assertEq(Array.isArray(errors), true);
+            const entry = errors.find(e =>
+              e.plugin === 'badPlugin' && e.hookName === 'testHook'
+            );
+            assertEq(typeof entry.error.message === 'string' && entry.error.message === 'oops', true);
+          });
+        </script>
+      </div>
+
+      <div class="test" data-test-id="errorReporterDispatchWrap" data-tags="plugin,error-reporter" data-desc="Error reporter isolates dispatch errors">
+        <h3>Error Reporter Dispatch wrapper isolates errors</h3>
+        <p class="desc"></p>
+        <script>
+          test(async function errorReporterDispatchWrap() {
+            // Plugin whose handler returns rejected promise
+            function throwerPlugin(ctx) {
+              ctx.on('uniqueHook', () => Promise.reject(new Error('boom')));
+            }
+            fixiplug.use(throwerPlugin);
+            // Avoid unhandled rejection by catching
+            await fixiplug.dispatch('uniqueHook', {}).catch(() => {});
+            const { errors } = await fixiplug.dispatch('api:getErrors', {});
+            const found = errors.some(e =>
+              e.hookName === 'uniqueHook' && e.error.message === 'boom'
+            );
+            assertEq(found, true);
+          });
+        </script>
+      </div>
+    </div> <!-- end Error Reporter Tests group -->
+  </main>
+
+  <script>
+    // Populate descriptions
+    document.querySelectorAll('.test').forEach(el => {
+      el.querySelector('.desc').textContent = el.dataset.desc;
+    });
+    
+    // Runner logic
+    window.addEventListener('load', async () => {
+      const cards = Array.from(document.querySelectorAll('.test'));
+      let currentRun = [...tests];
+
+      function renderStats() {
+        const total = cards.length;
+        const avg = durations.length ? (durations.reduce((a,b)=>a+b,0)/durations.length).toFixed(1) : 0;
+        document.getElementById('stat-total').textContent = total;
+        document.getElementById('stat-passed').textContent = passed;
+        document.getElementById('stat-failed').textContent = failed;
+        document.getElementById('stat-avg').textContent = avg;
+        document.getElementById('passed-count').textContent = passed;
+        document.getElementById('failed-count').textContent = failed;
+      }
+
+      // Assign card metadata and run tests
+      for (let i = 0; i < currentRun.length; i++) {
+        const runFn = currentRun[i];
+        const card = cards[i];
+        try {
+          await runFn();
+          card.classList.add('passed');
+        } catch (e) {
+          card.classList.add('failed');
+          const errMsg = document.createElement('div');
+          errMsg.className = 'error-details';
+          const errSummary = document.createElement('h4');
+          errSummary.style.color = 'red';
+          errSummary.textContent = '❌ Test Failed';
+          errMsg.appendChild(errSummary);
+          const errText = document.createElement('p');
+          errText.textContent = e.message || e.toString();
+          errMsg.appendChild(errText);
+          if (e.expected !== undefined && e.actual !== undefined) {
+            const comparison = document.createElement('div');
+            comparison.innerHTML = `
+              <div class="comparison">
+                <div><strong>Expected:</strong> <code>${JSON.stringify(e.expected)}</code></div>
+                <div><strong>Actual:</strong> <code>${JSON.stringify(e.actual)}</code></div>
+              </div>
+            `;
+            errMsg.appendChild(comparison);
+          }
+          if (e.stack) {
+            const stack = document.createElement('pre');
+            stack.className = 'stack-trace';
+            stack.style.fontSize = '0.8em';
+            stack.style.maxHeight = '150px';
+            stack.style.overflow = 'auto';
+            stack.textContent = e.stack;
+            errMsg.appendChild(stack);
+          }
+          card.appendChild(errMsg);
+        }
+        const span = document.createElement('span');
+        span.className = 'duration';
+        span.textContent = runFn.duration.toFixed(1) + ' ms';
+        card.appendChild(span);
+        durations.push(runFn.duration);
+      }
+
+      renderStats();
+
+      // Controls
+      document.getElementById('toggle-passed')
+        .addEventListener('click', () => document.body.classList.toggle('hide-passed'));
+      document.getElementById('rerun-failed')
+        .addEventListener('click', async () => {
+          passed = failed = 0; durations = [];
+          cards.forEach(c => {
+            c.classList.remove('passed','failed');
+            const d = c.querySelector('.duration');
+            if (d) d.remove();
+          });
+          const failedIndices = cards.map((c,i)=>c.classList.contains('failed')?i:-1).filter(i=>i>=0);
+          const reruns = failedIndices.map(i => tests[i]);
+          for (const fn of reruns) {
+            const idx = tests.indexOf(fn);
+            const card = cards[idx];
+            try { await fn(); card.classList.add('passed'); } catch { card.classList.add('failed'); }
+            const span = document.createElement('span');
+            span.className = 'duration';
+            span.textContent = fn.duration.toFixed(1) + ' ms';
+            card.appendChild(span);
+            durations.push(fn.duration);
+          }
+          renderStats();
+        });
+    });
+  </script>
+</body>
+</html>

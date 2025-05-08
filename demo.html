@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FixiPlug.js Demo</title>
+  <script src="fixiplug.js"></script>
+  <style>
+    body { font-family: sans-serif; margin: 2em; }
+    h2 { margin-top: 1.5em; }
+    button { margin: .5em; }
+    .box { padding: .5em; border: 1px solid #ccc; margin: .5em 0; }
+    #log, #modified, #errorLog { background: #f9f9f9; padding: .5em; min-height: 2em; }
+    .active { background: #d4edda; }
+  </style>
+  <script type="module">
+    import fixiplugLogger from './plugins/logger.js';
+    import fixiplugErrorReporter from './plugins/error-reporter.js';
+
+    // Use plugins
+    fixiplug.use(fixiplugLogger);
+    fixiplug.use(fixiplugErrorReporter);
+
+    // Logging Plugin Handlers
+    async function showLogs() {
+      const { logs } = await fixiplug.dispatch('api:getLogs');
+      const container = document.getElementById('log');
+      container.innerHTML = '';
+      logs.forEach(entry => {
+        const p = document.createElement('p');
+        p.textContent = `[${entry.ts}] ${entry.hookName} → ${JSON.stringify(entry.event)}`;
+        container.appendChild(p);
+      });
+    }
+
+    document.getElementById('btnLogAlpha').onclick = async () => {
+      await fixiplug.dispatch('alphaEvent', { data: 'alpha' });
+      showLogs();
+    };
+    document.getElementById('btnLogBeta').onclick = async () => {
+      await fixiplug.dispatch('betaEvent', { data: 'beta' });
+      showLogs();
+    };
+    document.getElementById('clearLog').onclick = () => {
+      document.getElementById('log').innerHTML = '(log output)';
+    };
+
+    // Error Isolation Handlers
+    document.getElementById('btnError').onclick = async () => {
+      try {
+        await fixiplug.dispatch('brokenEvent');
+      } catch (e) {
+        console.error('Error caught:', e);
+      }
+
+      // Fetch and display errors in the errorLog element
+      const { errors } = await fixiplug.dispatch('api:getErrors');
+      const container = document.getElementById('errorLog');
+      container.innerHTML = '';
+      errors.forEach(entry => {
+        const p = document.createElement('p');
+        p.textContent = `[${entry.ts}] ${entry.plugin} → ${entry.error.message}`;
+        container.appendChild(p);
+      });
+    };
+    document.getElementById('clearErrors').onclick = () => {
+      document.getElementById('errorLog').innerHTML = '(error output)';
+    };
+  </script>
+</head>
+<body>
+  <h1>fixiplug.js Demo</h1>
+
+  <h2>1. Logging Plugin</h2>
+  <p>The logger plugin is attached using <code>fixiplug.use(fixiplugLogger)</code>. It listens to all hooks dynamically and logs their execution details.</p>
+  <button id="btnLogAlpha" data-hook="alphaEvent">Trigger <code>alphaEvent</code></button>
+  <button id="btnLogBeta" data-hook="betaEvent">Trigger <code>betaEvent</code></button>
+  <button id="clearLog">Clear Log</button>
+  <div id="log" class="box">(log output)</div>
+
+  <h2>2. Content Modifier + Runtime Toggle</h2>
+  <button id="btnModify">Trigger <code>modifyEvent</code></button>
+  <div id="modified" class="box">hello world</div>
+  <button id="disableMod">Disable Modifier</button>
+  <button id="enableMod">Enable Modifier</button>
+
+  <h2>3. Error Isolation</h2>
+  <p>Demonstrates catching errors from a broken plugin via <code>pluginError</code> events.</p>
+  <button id="btnError">Trigger <code>brokenEvent</code></button>
+  <button id="clearErrors">Clear Errors</button>
+  <div id="errorLog" class="box">(error output)</div>
+</body>
+</html>

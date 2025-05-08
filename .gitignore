@@ -1,3 +1,6 @@
+# Ignore the archive directory
+archive/
+
 # Node modules
 node_modules/
 
@@ -28,3 +31,4 @@ yarn-error.log*
 
 # IDE settings
 .idea/
+**/.claude/settings.local.json
