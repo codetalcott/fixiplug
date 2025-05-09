@@ -173,24 +173,27 @@
         <script>
           test(async function pluginEnableDisable() {
             let called = 0;
-            function testPlugin(ctx) {
-              ctx.on('testHook', () => { called++; });
-            }
+            const namedPlugin = {
+              name: 'testEnableDisablePlugin',
+              setup(ctx) {
+                ctx.on('testHook', () => { called++; });
+              }
+            };
 
             // Use the plugin via fixiplug
-            fixiplug.use(testPlugin);
+            fixiplug.use(namedPlugin);
 
             // Dispatch the hook and verify it fires
             await fixiplug.dispatch('testHook', {});
             assertEq(called, 1);
 
             // Disable the plugin and verify it no longer fires
-            fixiplug.disable('testPlugin');
+            fixiplug.disable('testEnableDisablePlugin');
             await fixiplug.dispatch('testHook', {});
             assertEq(called, 1);
 
             // Re-enable the plugin and verify it fires again
-            fixiplug.enable('testPlugin');
+            fixiplug.enable('testEnableDisablePlugin');
             await fixiplug.dispatch('testHook', {});
             assertEq(called, 2);
           });

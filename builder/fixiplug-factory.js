@@ -86,12 +86,17 @@ export function createFixiplug(options = {}) {
      */
     use(plugin) {
       // Extract plugin metadata
-      const name = typeof plugin === 'function' 
-        ? (plugin.name || 'anonymous') 
-        : (plugin.name || 'anonymous');
-      
+      const name = typeof plugin === 'function'
+        ? (plugin.name || `anonymous_${Date.now()}`)
+        : (plugin.name || `anonymous_${Date.now()}`);
+
       // Extract setup function
       const setup = typeof plugin === 'function' ? plugin : plugin.setup;
+
+      // If plugin is a function, add a name property for future reference
+      if (typeof plugin === 'function' && !plugin.name) {
+        plugin.pluginId = name;
+      }
       
       if (typeof setup !== 'function') {
         logger.error(`Invalid plugin: missing setup function`);

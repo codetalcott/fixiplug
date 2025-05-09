@@ -136,7 +136,10 @@ export function unregisterPlugin(pluginName) {
  * @param {string} pluginName - The plugin to disable
  */
 export function disablePlugin(pluginName) {
+  console.log(`[hooks] Disabling plugin: ${pluginName}`);
+  console.log(`[hooks] Current hooks:`, hooks);
   disabledPlugins.add(pluginName);
+  console.log(`[hooks] Disabled plugins:`, Array.from(disabledPlugins));
 }
 
 /**
@@ -144,7 +147,9 @@ export function disablePlugin(pluginName) {
  * @param {string} pluginName - The plugin to enable
  */
 export function enablePlugin(pluginName) {
+  console.log(`[hooks] Enabling plugin: ${pluginName}`);
   disabledPlugins.delete(pluginName);
+  console.log(`[hooks] Disabled plugins after enable:`, Array.from(disabledPlugins));
 }
 
 // Export storage
