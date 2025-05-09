@@ -41,8 +41,13 @@
       }
     }
   </script>
-  <script src="../fixiplug.js"></script>
-  <script>
+  <script type="module">
+    // Import fixiplug directly as a module
+    import { fixiplug } from '../fixiplug.js';
+
+    // Expose to global scope for tests
+    window.fixiplug = fixiplug;
+
     // Dummy plugin registration smoke-check
     (async () => {
       let called = false;
@@ -57,11 +62,18 @@
     import hooksPlug from '../plugins/hook-visualizer.js';
     import loggerPlug from '../plugins/logger.js';
     import errorPlug from '../plugins/error-reporter.js';
-    // Use plugins via fixiplug wrapper
-    fixiplug.use(hooksPlug);
-    fixiplug.use(loggerPlug);
-    fixiplug.use(errorPlug);
-    fixiplug.debug = true; // Enable debug mode
+    import { fixiplug } from '../fixiplug.js';
+
+    // Wait for the first module to initialize fixiplug globally
+    setTimeout(() => {
+      // Use plugins via fixiplug wrapper
+      fixiplug.use(hooksPlug);
+      fixiplug.use(loggerPlug);
+      fixiplug.use(errorPlug);
+
+      // Add testing feature
+      fixiplug.config.features.add('testing');
+    }, 100);
     
     // Visualize hook configuration once loaded
     window.addEventListener('load', () => {

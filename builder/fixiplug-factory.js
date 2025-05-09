@@ -259,17 +259,8 @@ export function createFixiplug(options = {}) {
     async dispatch(hookName, event = {}) {
       logger.log(`Dispatching hook: ${hookName}`, event);
       
-      // Track hook calls for testing if enabled
-      if (hasFeature(FEATURES.TESTING) && this.hookCalls) {
-        if (!this.hookCalls[hookName]) {
-          this.hookCalls[hookName] = [];
-        }
-        
-        this.hookCalls[hookName].push({
-          timestamp: new Date(),
-          event: JSON.parse(JSON.stringify(event))
-        });
-      }
+      // Testing tracking is now handled by the testing plugin
+      // No need for inline tracking here anymore
       
       try {
         return await Fixi.dispatch(hookName, event);
