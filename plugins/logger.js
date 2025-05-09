@@ -1,4 +1,17 @@
-export default function fixiplugLogger(ctx) {
+/** @typedef {import('../types').FixiPlug.PluginContext} PluginContext */
+
+/**
+ * @typedef {Object} PluginContext
+ * @property {function(string, function): void} on - Registers a hook listener.
+ * @property {function(function): void} registerCleanup - Registers a cleanup function.
+ * @property {Map<string, any>} storage - A shared storage map for the plugin.
+ */
+
+/**
+ * Logger plugin for Fixiplug.
+ * @param {PluginContext} ctx - The plugin context provided by Fixiplug.
+ */
+export default function loggerPlug(ctx) {
   // 1) keep original dispatch
   const originalDispatch = fixiplug.dispatch.bind(fixiplug);
 
@@ -51,5 +64,5 @@ export default function fixiplugLogger(ctx) {
     });
   }
 
-  console.log('🔍 fixiplugLogger active – tracking all hooks');
+  console.log('🔍 Fixiplug logger active – tracking all hooks');
 }

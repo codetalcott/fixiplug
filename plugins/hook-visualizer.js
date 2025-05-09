@@ -1,5 +1,19 @@
-// fixiplug/hookVisualizer.js
-export default function fixiplugHookVisualizer(ctx) {
+// fixiplug/hook-visualizer.js
+
+/** @typedef {import('../types').FixiPlug.PluginContext} PluginContext */
+
+/**
+ * @typedef {Object} PluginContext
+ * @property {function(string, function, number=): void} on - Registers a hook listener with optional priority.
+ * @property {function(function): void} registerCleanup - Registers a cleanup function.
+ * @property {Map<string, any>} [storage] - Shared storage map for the plugin.
+ */
+
+/**
+ * Hook visualizer plugin for Fixiplug.
+ * @param {PluginContext} ctx - The plugin context provided by Fixiplug.
+ */
+export default function hooksPlug(ctx) {
   try {
     // Store original methods
     const originalDispatch = fixiplug.dispatch;
@@ -18,7 +32,7 @@ export default function fixiplugHookVisualizer(ctx) {
     };
 
     // Add hook visualization with execution counts and plugin usage summary
-    ctx.on('api:visualizeHooks', () => {
+    ctx.on('api:hooksPlug', () => {
       try {
         console.group('📊 Hook Usage Visualization');
 

@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FixiPlug Builder</title>
+  <style>
+    body { font-family: sans-serif; max-width: 800px; margin: 2em auto; }
+    h1, h2 { margin-top: 1.5em; }
+    .grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(200px,1fr)); gap: 1em; }
+    fieldset { border: 1px solid #ccc; padding: 1em; }
+    .bundles button { margin: 0.3em; }
+    pre { background: #f4f4f4; padding: 1em; overflow-x: auto; }
+    #generate { margin-top: 1em; }
+  </style>
+</head>
+<body>
+
+  <h1>FixiPlug Builder</h1>
+  <p>Select the plugins you want to include, or pick one of the common bundles:</p>
+
+  <section class="bundles">
+    <h2>Quick-start Bundles</h2>
+    <!-- Buttons injected here -->
+  </section>
+
+  <section>
+    <h2>Available Plugins</h2>
+    <div class="grid" id="plugin-list">
+      <!-- checkboxes injected here -->
+    </div>
+    <button id="select-all">Select All</button>
+    <button id="clear-all">Clear All</button>
+  </section>
+
+  <section>
+    <h2>Generated Snippet</h2>
+    <pre id="snippet">// your code will appear here</pre>
+    <button id="generate">Generate Code</button>
+  </section>
+
+  <script>
+    // adjust these paths if you move plugins.json / bundles.json
+    const PLUGINS_JSON = './plugins.json';
+    const BUNDLES_JSON = './bundles.json';
+
+    let plugins = [];
+    let bundles = {};
+
+    async function loadData() {
+      plugins = await fetch(PLUGINS_JSON).then(r=>r.json());
+      bundles = await fetch(BUNDLES_JSON).then(r=>r.json());
+      renderBundles();
+      renderPlugins();
+    }
+
+    function renderBundles() {
+      const container = document.querySelector('.bundles');
+      Object.entries(bundles).forEach(([name, list]) => {
+        const btn = document.createElement('button');
+        btn.textContent = name;
+        btn.addEventListener('click', () => applyBundle(list));
+        container.appendChild(btn);
+      });
+    }
+
+    function renderPlugins() {
+      const list = document.getElementById('plugin-list');
+      list.innerHTML = '';
+      plugins.forEach(p => {
+        const id = p.id;
+        const wrapper = document.createElement('label');
+        wrapper.innerHTML = `
+          <input type="checkbox" class="plugin" value="${id}">
+          ${p.name} <small>(${p.description||id})</small>
+        `;
+        list.appendChild(wrapper);
+      });
+    }
+
+    function applyBundle(selectedIds) {
+      document.querySelectorAll('.plugin').forEach(cb => {
+        cb.checked = selectedIds.includes(cb.value);
+      });
+    }
+
+    document.getElementById('select-all').onclick = () => {
+      document.querySelectorAll('.plugin').forEach(cb => cb.checked = true);
+    };
+    document.getElementById('clear-all').onclick = () => {
+      document.querySelectorAll('.plugin').forEach(cb => cb.checked = false);
+    };
+
+    document.getElementById('generate').onclick = () => {
+      const selected = [...document.querySelectorAll('.plugin:checked')]
+        .map(cb => cb.value);
+      if (!selected.length) {
+        alert('Select at least one plugin!');
+        return;
+      }
+      // You can swap this snippet to a CLI command if your build supports it.
+      const imports = selected
+        .map(id => `import ${id} from '../plugins/${id}.js';`)
+        .join('\n');
+      const uses = selected
+        .map(id => `.use(${id})`)
+        .join('\n       ');
+      const code = `
+<script type="module">
+import fixiplug from '../fixiplug.js';
+${imports}
+
+fixiplug
+       ${uses}
+       ;
+<\/script>`.trim();
+      document.getElementById('snippet').textContent = code;
+    };
+
+    loadData();
+  </script>
+</body>
+</html>

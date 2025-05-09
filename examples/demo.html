@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <title>FixiPlug.js Demo</title>
-  <script src="fixiplug.js"></script>
+  <script src="../fixiplug.js"></script>
   <style>
     body { font-family: sans-serif; margin: 2em; }
     h2 { margin-top: 1.5em; }
@@ -13,12 +13,12 @@
     .active { background: #d4edda; }
   </style>
   <script type="module">
-    import fixiplugLogger from './plugins/logger.js';
-    import fixiplugErrorReporter from './plugins/error-reporter.js';
+    import loggerPlug from '../plugins/logger.js';
+    import errorPlug from '../plugins/error-reporter.js';
 
     // Use plugins
-    fixiplug.use(fixiplugLogger);
-    fixiplug.use(fixiplugErrorReporter);
+    fixiplug.use(loggerPlug);
+    fixiplug.use(errorPlug);
 
     // Logging Plugin Handlers
     async function showLogs() {

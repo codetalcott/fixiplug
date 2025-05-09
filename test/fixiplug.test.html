@@ -53,19 +53,19 @@
     })();
   </script>
   <script type="module">
-    // Import and activate the dev mode and logger plugins for testing
-    import fixiplugDev from '../plugins/hookVisualizer.js';
-    import fixiplugLogger from '../plugins/logger.js';
-    import fixiplugErrorReporter from '../plugins/error-reporter.js';
+    // Import and activate the hook-visualizer, logger, error plugins for testing
+    import hooksPlug from '../plugins/hook-visualizer.js';
+    import loggerPlug from '../plugins/logger.js';
+    import errorPlug from '../plugins/error-reporter.js';
     // Use plugins via fixiplug wrapper
-    fixiplug.use(fixiplugDev);
-    fixiplug.use(fixiplugLogger);
-    fixiplug.use(fixiplugErrorReporter);
+    fixiplug.use(hooksPlug);
+    fixiplug.use(loggerPlug);
+    fixiplug.use(errorPlug);
     fixiplug.debug = true; // Enable debug mode
     
     // Visualize hook configuration once loaded
     window.addEventListener('load', () => {
-      setTimeout(() => fixiplug.dispatch('api:visualizeHooks'), 100);
+      setTimeout(() => fixiplug.dispatch('api:hooksPlug'), 100);
     });
   </script>
   <style>
@@ -99,7 +99,8 @@
         #controls { margin: 1em 0; }
         #stats table { border-collapse: collapse; width: 100%; }
         #stats th, #stats td { border:1px solid #ccc; padding:4px; }
-        .duration { float:right; font-size:0.8em; color:#666; }
+        .test { display: flex; flex-direction: column; }
+        .duration { align-self: flex-end; font-size:0.8em; color:#666; margin-top: auto; }
         .desc { font-style: italic; }
         .tags { font-size:0.8em; color:#888; }
   </style>
@@ -338,12 +339,12 @@
         </script>
       </div>
 
-      <!-- hookVisualizer Tests -->
-      <div class="test" data-test-id="hookVisualizerHookCounts" data-tags="plugin,hookVisualizer" data-desc="hookVisualizer tracks hook execution counts">
-        <h3>Test hookVisualizerHookCounts</h3>
+      <!-- hook-visualizer Tests -->
+      <div class="test" data-test-id="hook-visualizerHookCounts" data-tags="plugin,hook-visualizer" data-desc="hook-visualizer tracks hook execution counts">
+        <h3>Test hook-visualizerHookCounts</h3>
         <p class="desc"></p>
         <script>
-          test(async function hookVisualizerHookCounts() {
+          test(async function hooksPlug() {
             // Dispatch hooks multiple times
             await fixiplug.dispatch('testHook1', {});
             await fixiplug.dispatch('testHook1', {});
@@ -358,11 +359,11 @@
         </script>
       </div>
 
-      <div class="test" data-test-id="hookVisualizerPluginUsage" data-tags="plugin,hookVisualizer" data-desc="hookVisualizer summarizes plugin usage">
-        <h3>Test hookVisualizerPluginUsage</h3>
+      <div class="test" data-test-id="hook-visualizerPluginUsage" data-tags="plugin,hook-visualizer" data-desc="hook-visualizer summarizes plugin usage">
+        <h3>Test hook-visualizerPluginUsage</h3>
         <p class="desc"></p>
         <script>
-          test(async function hookVisualizerPluginUsage() {
+          test(async function hooksPlugUsage() {
             // Register multiple plugins
             function pluginA(ctx) { ctx.on('hookA', () => {}); }
             function pluginB(ctx) { ctx.on('hookB', () => {}); ctx.on('hookC', () => {}); }
@@ -371,7 +372,7 @@
             fixiplug.use(pluginB);
 
             // Visualize hooks to log plugin usage summary
-            fixiplug.dispatch('api:visualizeHooks');
+            fixiplug.dispatch('api:hooksPlug');
 
             // No direct assertions since this is a visualization test
             // Developers should verify plugin usage in the console output
@@ -383,11 +384,11 @@
     <div class="test-group" data-group="Error Reporter Tests">
       <h2>Error Reporter Tests</h2>
       <!-- Error Reporter Tests -->
-      <div class="test" data-test-id="errorReporterStore" data-tags="plugin,error-reporter" data-desc="Error reporter stores plugin errors">
+      <div class="test" data-test-id="error-plug" data-tags="plugin, error-plug" data-desc="Error reporter stores plugin errors">
         <h3>Error Reporter Stores pluginError events</h3>
         <p class="desc"></p>
         <script>
-          test(async function errorReporterStore() {
+          test(async function errorPlugStore() {
             // Register a plugin whose handler throws
             function badPlugin(ctx) {
               ctx.on('testHook', () => { throw new Error('oops'); });
@@ -406,11 +407,11 @@
         </script>
       </div>
 
-      <div class="test" data-test-id="errorReporterDispatchWrap" data-tags="plugin,error-reporter" data-desc="Error reporter isolates dispatch errors">
+      <div class="test" data-test-id="errorPlugDispatchWrap" data-tags="plugin,error-plug" data-desc="Error reporter isolates dispatch errors">
         <h3>Error Reporter Dispatch wrapper isolates errors</h3>
         <p class="desc"></p>
         <script>
-          test(async function errorReporterDispatchWrap() {
+          test(async function errorPlugDispatchWrap() {
             // Plugin whose handler returns rejected promise
             function throwerPlugin(ctx) {
               ctx.on('uniqueHook', () => Promise.reject(new Error('boom')));

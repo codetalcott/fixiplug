@@ -1,4 +1,18 @@
-export default function fixiplugErrorReporter(ctx) {
+// At the top of each plugin file
+/** @typedef {import('../types').FixiPlug.PluginContext} PluginContext */
+
+/**
+ * @typedef {Object} PluginContext
+ * @property {function(string, function): void} on - Registers a hook listener.
+ * @property {function(function): void} registerCleanup - Registers a cleanup function.
+ * @property {Map<string, any>} [storage] - Shared storage map for the plugin.
+ */
+
+/**
+ * Error reporter plugin for Fixiplug.
+ * @param {PluginContext} ctx - The plugin context provided by Fixiplug.
+ */
+export default function errorPlug(ctx) {
   // 1) In-memory error store
   const errors = [];
 
@@ -53,5 +67,5 @@ export default function fixiplugErrorReporter(ctx) {
   // 4) Expose an API to retrieve stored errors
   ctx.on('api:getErrors', () => ({ errors }));
 
-  console.log('🛑 fixiplugErrorReporter active – capturing errors');
+  console.log('🛑 errorPlug active – capturing errors');
 }
