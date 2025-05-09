@@ -9,6 +9,9 @@ const hooks = {};
 // Plugin registry
 const pluginRegistry = new Map();
 
+// Disabled plugins
+const disabledPlugins = new Set();
+
 // Priority constants
 export const PRIORITY = {
   HIGH: 100,
@@ -66,22 +69,42 @@ export function removePluginHooks(pluginName) {
  * @returns {Promise<Object>} The processed event data
  */
 export async function dispatch(hookName, event = {}) {
-  if (!hooks[hookName] || !hooks[hookName].length) {
-    return event;
-  }
-  
   let result = event;
-  
-  // Process each handler
-  for (const { handler } of hooks[hookName]) {
-    try {
-      result = await handler(result, hookName) || result;
-    } catch (error) {
-      console.error(`Error in hook: ${hookName}`, error);
-      // Don't rethrow to avoid breaking the chain
+
+  // Process specific hook handlers
+  if (hooks[hookName] && hooks[hookName].length) {
+    // Process each handler, skipping disabled plugins
+    for (const { handler, plugin } of hooks[hookName]) {
+      // Skip handlers from disabled plugins
+      if (disabledPlugins.has(plugin)) {
+        continue;
+      }
+
+      try {
+        result = await handler(result, hookName) || result;
+      } catch (error) {
+        console.error(`Error in hook: ${hookName}`, error);
+        // Don't rethrow to avoid breaking the chain
+      }
     }
   }
-  
+
+  // Process wildcard handlers (if any)
+  if (hooks['*'] && hooks['*'].length) {
+    for (const { handler, plugin } of hooks['*']) {
+      // Skip handlers from disabled plugins
+      if (disabledPlugins.has(plugin)) {
+        continue;
+      }
+
+      try {
+        result = await handler(result, hookName) || result;
+      } catch (error) {
+        console.error(`Error in wildcard hook for: ${hookName}`, error);
+      }
+    }
+  }
+
   return result;
 }
 
@@ -105,7 +128,24 @@ export function registerPlugin(plugin) {
 export function unregisterPlugin(pluginName) {
   pluginRegistry.delete(pluginName);
   removePluginHooks(pluginName);
+  disabledPlugins.delete(pluginName); // Clean up if it was disabled
+}
+
+/**
+ * Disable a plugin's hooks
+ * @param {string} pluginName - The plugin to disable
+ */
+export function disablePlugin(pluginName) {
+  disabledPlugins.add(pluginName);
+}
+
+/**
+ * Enable a disabled plugin's hooks
+ * @param {string} pluginName - The plugin to enable
+ */
+export function enablePlugin(pluginName) {
+  disabledPlugins.delete(pluginName);
 }
 
 // Export storage
-export { hooks, pluginRegistry };
+export { hooks, pluginRegistry, disabledPlugins };

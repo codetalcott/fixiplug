@@ -5,7 +5,7 @@
 import { Fixi } from '../core/fixi-core.js';
 
 // Available features
-const FEATURES = {
+export const FEATURES = {
   DOM: 'dom',          // DOM integration
   LOGGING: 'logging',  // Console logging
   TESTING: 'testing',  // Test-specific functionality

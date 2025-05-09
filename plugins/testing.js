@@ -18,19 +18,22 @@ export default function testingPlugin(ctx) {
   ctx.storage.set('hookCalls', {});
   ctx.storage.set('originalHandlers', {});
   
+  // Store reference to fixiplug instance for API access
+  ctx.fixiplug = ctx.fixiplug || (typeof window !== 'undefined' ? window.fixiplug : undefined);
+
   // Register hooks to track all events
   ctx.on('*', (event, hookName) => {
     const hookCalls = ctx.storage.get('hookCalls');
-    
+
     if (!hookCalls[hookName]) {
       hookCalls[hookName] = [];
     }
-    
+
     hookCalls[hookName].push({
       timestamp: new Date(),
       event: JSON.parse(JSON.stringify(event))
     });
-    
+
     return event;
   }, -999); // Very low priority to run last
   

@@ -65,11 +65,11 @@ Fixi.unuse = function(pluginName) {
 };
 
 Fixi.enable = function(pluginName) {
-  // For now, similar to use - can be expanded later
+  hooks.enablePlugin(pluginName);
   return this;
 };
 
 Fixi.disable = function(pluginName) {
-  // For now, similar to unuse - can be expanded later
+  hooks.disablePlugin(pluginName);
   return this;
 };

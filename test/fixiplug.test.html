@@ -43,17 +43,24 @@
   </script>
   <script type="module">
     // Import fixiplug directly as a module
-    import { fixiplug } from '../fixiplug.js';
+    import { fixiplug, test } from '../fixiplug.js';
+    import { FEATURES } from '../builder/fixiplug-factory.js';
+
+    // Use the test version for testing
+    const testFixiplug = test;
 
     // Expose to global scope for tests
-    window.fixiplug = fixiplug;
+    window.fixiplug = testFixiplug;
+
+    // Enable testing features
+    testFixiplug.config.features.add(FEATURES.TESTING);
 
     // Dummy plugin registration smoke-check
     (async () => {
       let called = false;
       function dummyPlugin(ctx) { ctx.on('dummyHook', () => { called = true; }); }
-      fixiplug.use(dummyPlugin);
-      await fixiplug.dispatch('dummyHook', {});
+      testFixiplug.use(dummyPlugin);
+      await testFixiplug.dispatch('dummyHook', {});
       console.assert(called, 'Dummy plugin hook did not fire');
     })();
   </script>
@@ -62,22 +69,27 @@
     import hooksPlug from '../plugins/hook-visualizer.js';
     import loggerPlug from '../plugins/logger.js';
     import errorPlug from '../plugins/error-reporter.js';
-    import { fixiplug } from '../fixiplug.js';
+    import testingPlug from '../plugins/testing.js';
 
     // Wait for the first module to initialize fixiplug globally
     setTimeout(() => {
+      // Get the fixiplug instance from global scope
+      const fixiplug = window.fixiplug;
+
       // Use plugins via fixiplug wrapper
       fixiplug.use(hooksPlug);
       fixiplug.use(loggerPlug);
       fixiplug.use(errorPlug);
-
-      // Add testing feature
-      fixiplug.config.features.add('testing');
+      fixiplug.use(testingPlug);
     }, 100);
-    
+
     // Visualize hook configuration once loaded
     window.addEventListener('load', () => {
-      setTimeout(() => fixiplug.dispatch('api:hooksPlug'), 100);
+      setTimeout(() => {
+        if (window.fixiplug) {
+          window.fixiplug.dispatch('api:hooksPlug');
+        }
+      }, 200);
     });
   </script>
   <style>
