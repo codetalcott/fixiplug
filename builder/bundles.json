@@ -1,0 +1,7 @@
+{
+  "Development": ["logger", "hook-visualizer", "performance", "error-reporter"],
+  "Production": ["performance", "security", "error-reporter", "offline"],
+  "Testing": ["logger", "testing", "error-reporter"],
+  "Minimal": ["error-reporter"],
+  "Full": ["logger", "hook-visualizer", "performance", "security", "swap-idiomorph", "data-pipeline", "offline", "error-reporter", "testing"]
+}

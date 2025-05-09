@@ -70,20 +70,36 @@ export function removePluginHooks(pluginName) {
  */
 export async function dispatch(hookName, event = {}) {
   let result = event;
+  console.log(`[hooks] Dispatching ${hookName}, disabled plugins:`, Array.from(disabledPlugins));
 
   // Process specific hook handlers
   if (hooks[hookName] && hooks[hookName].length) {
+    console.log(`[hooks] Found ${hooks[hookName].length} handlers for ${hookName}:`, hooks[hookName]);
+
     // Process each handler, skipping disabled plugins
     for (const { handler, plugin } of hooks[hookName]) {
+      console.log(`[hooks] Processing handler from plugin '${plugin}'`);
+
       // Skip handlers from disabled plugins
       if (disabledPlugins.has(plugin)) {
+        console.log(`[hooks] Skipping disabled plugin: ${plugin}`);
         continue;
       }
 
+      console.log(`[hooks] Executing handler from plugin: ${plugin}`);
       try {
         result = await handler(result, hookName) || result;
       } catch (error) {
         console.error(`Error in hook: ${hookName}`, error);
+
+        // Emit a pluginError event to allow error reporters to catch it
+        dispatch('pluginError', {
+          plugin,
+          hookName,
+          error,
+          event: result
+        }).catch(e => console.error('Error dispatching plugin error:', e));
+
         // Don't rethrow to avoid breaking the chain
       }
     }
@@ -91,16 +107,30 @@ export async function dispatch(hookName, event = {}) {
 
   // Process wildcard handlers (if any)
   if (hooks['*'] && hooks['*'].length) {
+    console.log(`[hooks] Found ${hooks['*'].length} wildcard handlers`);
+
     for (const { handler, plugin } of hooks['*']) {
+      console.log(`[hooks] Processing wildcard handler from plugin '${plugin}'`);
+
       // Skip handlers from disabled plugins
       if (disabledPlugins.has(plugin)) {
+        console.log(`[hooks] Skipping disabled plugin (wildcard): ${plugin}`);
         continue;
       }
 
+      console.log(`[hooks] Executing wildcard handler from plugin: ${plugin}`);
       try {
         result = await handler(result, hookName) || result;
       } catch (error) {
         console.error(`Error in wildcard hook for: ${hookName}`, error);
+
+        // Emit a pluginError event for wildcard handlers too
+        dispatch('pluginError', {
+          plugin,
+          hookName,
+          error,
+          event: result
+        }).catch(e => console.error('Error dispatching plugin error:', e));
       }
     }
   }

@@ -16,7 +16,7 @@
 <body>
 
   <h1>FixiPlug Builder</h1>
-  <p>Select the plugins you want to include, or pick one of the common bundles:</p>
+  <p>Select the plugins you want to include (or none for a minimal build), or pick one of the common bundles:</p>
 
   <section class="bundles">
     <h2>Quick-start Bundles</h2>
@@ -29,13 +29,31 @@
       <!-- checkboxes injected here -->
     </div>
     <button id="select-all">Select All</button>
-    <button id="clear-all">Clear All</button>
+    <button id="clear-all">Clear All (Minimal Build)</button>
+  </section>
+
+  <section>
+    <h2>Configuration Options</h2>
+    <div>
+      <label>
+        <input type="checkbox" id="use-feature-api" checked>
+        Use modern factory approach (recommended)
+      </label>
+      <p><small>Creates a custom instance with only the features you need instead of using pre-built exports. This approach is more modular and efficient.</small></p>
+    </div>
+
+
+    <button id="generate">Generate Code</button>
   </section>
 
   <section>
     <h2>Generated Snippet</h2>
     <pre id="snippet">// your code will appear here</pre>
-    <button id="generate">Generate Code</button>
+  </section>
+
+  <section>
+    <h2>Advanced Configuration</h2>
+    <pre id="advanced-snippet">// advanced configuration will appear here</pre>
   </section>
 
   <script>
@@ -85,35 +103,116 @@
 
     document.getElementById('select-all').onclick = () => {
       document.querySelectorAll('.plugin').forEach(cb => cb.checked = true);
-    };
+    }
     document.getElementById('clear-all').onclick = () => {
       document.querySelectorAll('.plugin').forEach(cb => cb.checked = false);
-    };
+    }
 
     document.getElementById('generate').onclick = () => {
       const selected = [...document.querySelectorAll('.plugin:checked')]
         .map(cb => cb.value);
-      if (!selected.length) {
-        alert('Select at least one plugin!');
-        return;
-      }
-      // You can swap this snippet to a CLI command if your build supports it.
+
+      const useFeatureApi = document.getElementById('use-feature-api').checked;
+
+      // Standard import approach
       const imports = selected
-        .map(id => `import ${id} from '../plugins/${id}.js';`)
+        .map(id => {
+          // Convert the plugin ID to a variable name (camelCase)
+          const varName = id.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase()) + 'Plugin';
+          return `import ${varName} from '../plugins/${id}.js';`;
+        })
         .join('\n');
+
       const uses = selected
-        .map(id => `.use(${id})`)
+        .map(id => {
+          const varName = id.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase()) + 'Plugin';
+          return `.use(${varName})`;
+        })
         .join('\n       ');
-      const code = `
-<script type="module">
-import fixiplug from '../fixiplug.js';
+
+      // Standard snippet
+      let code;
+
+      if (useFeatureApi) {
+        if (selected.length === 0) {
+          code = `<script src="minimal-feature-api.js"><\/script>`.trim();
+        } else {
+          code = `<script src="full-feature-api.js"><\/script>`.trim();
+        }
+      } else {
+        if (selected.length === 0) {
+          code = `<script src="minimal-standard.js"><\/script>`.trim();
+        } else {
+          code = `<script src="full-standard.js"><\/script>`.trim();
+        }
+      }
+
+      document.getElementById('snippet').textContent = code;
+
+      // Generate advanced configuration
+      let advancedCode;
+
+      if (selected.length === 0) {
+        advancedCode = `
+// Advanced configuration with custom options
+import { createFixiplug, FEATURES } from './builder/fixiplug-factory.js';
+
+// Create a custom fixiplug instance with no plugins
+const customFixiplug = createFixiplug({
+  features: [
+    // Uncomment features you want to enable
+    // FEATURES.LOGGING,
+    // FEATURES.DOM,
+    // FEATURES.TESTING,
+    // FEATURES.SERVER,
+  ],
+  advanced: {
+    // Custom advanced options
+    debug: true,
+    strictMode: false,
+    // Add custom configuration here
+  }
+});
+
+// This is a minimal build with no plugins
+// You can dynamically add plugins later:
+// customFixiplug.use(somePlugin);
+`.trim();
+      } else {
+        advancedCode = `
+// Advanced configuration with custom options
+import { createFixiplug, FEATURES } from './builder/fixiplug-factory.js';
 ${imports}
 
-fixiplug
-       ${uses}
-       ;
-<\/script>`.trim();
-      document.getElementById('snippet').textContent = code;
+// Create a custom fixiplug instance
+const customFixiplug = createFixiplug({
+  features: [
+    FEATURES.LOGGING,
+    FEATURES.DOM,
+    // Add more features as needed
+  ],
+  advanced: {
+    // Custom advanced options
+    pluginPriorities: {
+      ${selected.map(id => {
+        const varName = id.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase());
+        return `${varName}: ${Math.floor(Math.random() * 3) * 50 - 50}`; // Random priority
+      }).join(',\n      ')}
+    },
+    debug: true,
+    // Add other advanced options here
+  }
+});
+
+// Register plugins with explicit options
+customFixiplug${selected.map(id => {
+  const varName = id.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase()) + 'Plugin';
+  return `.use(${varName}({ /* plugin options */ }))`;
+}).join('\n')};
+`.trim();
+      }
+
+      document.getElementById('advanced-snippet').textContent = advancedCode;
     };
 
     loadData();

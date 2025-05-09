@@ -15,17 +15,23 @@
 export default function errorPlug(ctx) {
   // 1) In-memory error store
   const errors = [];
+  
+  // Create storage
+  ctx.storage = ctx.storage || new Map();
+  ctx.storage.set('errors', errors);
 
   // 2) Handle pluginError events from core dispatch
   ctx.on('pluginError', event => {
     const entry = {
       ts: new Date().toISOString(),
-      plugin: event.plugin,
-      hookName: event.hookName,
-      error: event.error,
+      plugin: event.plugin || 'unknown',
+      hookName: event.hookName || 'unknown',
+      error: event.error || new Error('Unknown error'),
       event
     };
+    
     errors.push(entry);
+    
     console.warn(
       `[fixiplug][pluginError]`,
       `plugin=${entry.plugin}`,
@@ -33,7 +39,8 @@ export default function errorPlug(ctx) {
       `at ${entry.ts}`,
       entry.error
     );
-    return entry;
+    
+    return event;
   });
 
   // Register a handler for 'brokenEvent' to simulate an error
@@ -41,31 +48,38 @@ export default function errorPlug(ctx) {
     throw new Error('Simulated error from brokenEvent');
   });
 
-  // 3) Wrap dispatch for “brokenEvent” style isolation
-  const originalDispatch = fixiplug.dispatch.bind(fixiplug);
-  fixiplug.dispatch = async function (hookName, evt) {
-    try {
-      return await originalDispatch(hookName, evt);
-    } catch (err) {
-      const entry = {
-        ts: new Date().toISOString(),
-        plugin: 'dispatch',
-        hookName,
-        error: err,
-        event: evt
-      };
-      errors.push(entry);
-      console.error(
-        `[fixiplug][dispatchError]`,
-        `hook=${hookName}`,
-        `at ${entry.ts}`,
-        err
-      );
-    }
-  };
+  // 3) Register for uncaught errors
+  window.addEventListener('error', (e) => {
+    const entry = {
+      ts: new Date().toISOString(),
+      plugin: 'window',
+      hookName: 'error',
+      error: e.error || new Error(e.message || 'Unknown error'),
+      event: e
+    };
+    errors.push(entry);
+  });
 
-  // 4) Expose an API to retrieve stored errors
+  // 4) Register for promise rejections
+  window.addEventListener('unhandledrejection', (e) => {
+    const entry = {
+      ts: new Date().toISOString(),
+      plugin: 'window',
+      hookName: 'unhandledrejection',
+      error: e.reason || new Error('Unhandled Promise rejection'),
+      event: e
+    };
+    errors.push(entry);
+  });
+
+  // 5) Expose an API to retrieve stored errors
   ctx.on('api:getErrors', () => ({ errors }));
+
+  // 6) Register cleanup to remove event listeners
+  ctx.registerCleanup(() => {
+    window.removeEventListener('error', null);
+    window.removeEventListener('unhandledrejection', null);
+  });
 
   console.log('🛑 errorPlug active – capturing errors');
 }

@@ -3,7 +3,6 @@
 <head>
   <meta charset="UTF-8">
   <title>FixiPlug.js Demo</title>
-  <script src="../fixiplug.js"></script>
   <style>
     body { font-family: sans-serif; margin: 2em; }
     h2 { margin-top: 1.5em; }
@@ -13,12 +12,15 @@
     .active { background: #d4edda; }
   </style>
   <script type="module">
+    import fixiplug from '../fixiplug.js';
     import loggerPlug from '../plugins/logger.js';
     import errorPlug from '../plugins/error-reporter.js';
+    import contentModifier from '../plugins/content-modifier.js';
 
     // Use plugins
     fixiplug.use(loggerPlug);
     fixiplug.use(errorPlug);
+    fixiplug.use(contentModifier);
 
     // Logging Plugin Handlers
     async function showLogs() {
@@ -64,6 +66,21 @@
     };
     document.getElementById('clearErrors').onclick = () => {
       document.getElementById('errorLog').innerHTML = '(error output)';
+    };
+
+    // Content Modifier Handlers
+    const modifiedElement = document.getElementById('modified');
+
+    document.getElementById('btnModify').onclick = async () => {
+      await fixiplug.dispatch('modifyEvent', { target: modifiedElement });
+    };
+
+    document.getElementById('disableMod').onclick = () => {
+      fixiplug.disable('contentModifier');
+    };
+
+    document.getElementById('enableMod').onclick = () => {
+      fixiplug.enable('contentModifier');
     };
   </script>
 </head>

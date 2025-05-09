@@ -1,0 +1,56 @@
+[
+  {
+    "id": "logger",
+    "name": "Logger",
+    "description": "Detailed logging of events and timing",
+    "category": "development"
+  },
+  {
+    "id": "hook-visualizer",
+    "name": "Hook Visualizer",
+    "description": "Visual representation of hook execution (browser only)",
+    "category": "development"
+  },
+  {
+    "id": "performance",
+    "name": "Performance",
+    "description": "Measures and reports plugin execution time",
+    "category": "optimization"
+  },
+  {
+    "id": "security",
+    "name": "Security",
+    "description": "Validates event data and provides security protections",
+    "category": "production"
+  },
+  {
+    "id": "swap-idiomorph",
+    "name": "DOM Swapper (idiomorph)",
+    "description": "Advanced DOM swapping using the idiomorph library",
+    "category": "dom"
+  },
+  {
+    "id": "data-pipeline",
+    "name": "Data Pipeline",
+    "description": "Processes and transforms data through configurable stages",
+    "category": "data"
+  },
+  {
+    "id": "offline",
+    "name": "Offline Support",
+    "description": "Handles offline functionality and reconnection",
+    "category": "production"
+  },
+  {
+    "id": "testing",
+    "name": "Testing",
+    "description": "Testing utilities for hook mocking and tracking",
+    "category": "development"
+  },
+  {
+    "id": "error-reporter",
+    "name": "Error Reporter",
+    "description": "Catches and reports errors in the event pipeline",
+    "category": "production"
+  }
+]
