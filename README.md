@@ -1,12 +1,14 @@
 # FixiPlug
 
+Fixiplug is in early development, not quite alpha stage; all of the following may not match the current codebase.
+
 FixiPlug aims to provide a plugin wrapper for fixi.js. Fixi.js is already easily extensible, so why bother? Imagine a scenario where you want to run multiple swappable extensions; this might be early in your dev process when you need optimal debug logging as well as a streamlined pre-production build. FixiPlug wants to make that easy -- maybe even hot swappable -- through a framework for testing extension interoperability. We'll also (try to) honor the fixi core philosophy: no dependencies and careful attention to character count. [fixi.js](https://github.com/bigskysoftware/fixi/blob/master/fixi.js) is an experimental, minimalist implementation of [generalized hypermedia controls](https://dl.acm.org/doi/fullHtml/10.1145/3648188.3675127)
 
 ## FixiPlug Usage
 
 ### Quick Start with CLI
 
-FixiPlug provides a command-line interface for quickly setting up different environments:
+FixiPlug aims to provide a command-line interface for quickly setting up different environments:
 
 ```bash
 # Install fixiplug globally
