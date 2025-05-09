@@ -1,84 +1,65 @@
 /**
  * Factory function to create fixiplug instances with different configurations
- * @param {Object} options - Configuration options
- * @param {boolean} [options.enableLogging=true] - Whether to enable console logging
- * @param {boolean} [options.enableDom=false] - Whether to enable DOM integration
- * @param {boolean} [options.testMode=false] - Whether to enable test-specific features
- * @param {boolean} [options.serverMode=false] - Whether to configure for server environments
- * @param {boolean} [options.minimal=false] - Whether to create a minimal instance without extras
- * @returns {Object} Configured fixiplug instance
+ * @module fixiplug/factory
  */
 import { Fixi } from '../core/fixi-core.js';
 
+// Available features
+const FEATURES = {
+  DOM: 'dom',          // DOM integration
+  LOGGING: 'logging',  // Console logging
+  TESTING: 'testing',  // Test-specific functionality
+  SERVER: 'server'     // Server-optimized settings
+};
+
+/**
+ * Create a new fixiplug instance
+ * @param {Object} options - Configuration options
+ * @param {Array<string>} [options.features=[]] - List of features to enable
+ * @param {Object} [options.advanced={}] - Advanced configuration options
+ * @returns {Object} Configured fixiplug instance
+ */
 export function createFixiplug(options = {}) {
-  const {
-    enableLogging = true,
-    enableDom = false,
-    testMode = false,
-    serverMode = false,
-    minimal = false,
-    detectedEnv = null,
-    accessibilityMode = 'auto' // 'auto', 'enhanced', or 'standard'
+  const { 
+    features = [],
+    advanced = {}
   } = options;
   
-  // Store configuration for inspection
+  // Store feature configuration
   const config = {
-    enableLogging,
-    enableDom,
-    testMode,
-    serverMode,
-    minimal,
-    detectedEnv,
-    accessibilityMode
+    features: new Set(features),
+    advanced: { ...advanced }
+  };
+  
+  // Feature detection helpers
+  const hasFeature = (feature) => config.features.has(feature);
+  
+  // Logger utility
+  const logger = {
+    log(...args) {
+      if (hasFeature(FEATURES.LOGGING)) {
+        console.log(...args);
+      }
+    },
+    error(...args) {
+      if (hasFeature(FEATURES.LOGGING)) {
+        console.error(...args);
+      }
+    },
+    warn(...args) {
+      if (hasFeature(FEATURES.LOGGING)) {
+        console.warn(...args);
+      }
+    }
   };
   
   // Load DOM integration if requested
-  if (enableDom && typeof window !== 'undefined') {
+  if (hasFeature(FEATURES.DOM) && typeof window !== 'undefined') {
     import('../core/fixi-dom.js');
   }
   
-  // Create test-specific features if requested
-  const testFeatures = testMode ? {
-    hookCalls: {},
-    resetTracking() {
-      this.hookCalls = {};
-    },
-    mockHookResponse(hookName, mockFn) {
-      if (!this._originalHandlers) this._originalHandlers = {};
-      
-      if (!this._originalHandlers[hookName]) {
-        this._originalHandlers[hookName] = [...(Fixi.hooks[hookName] || [])];
-      }
-      
-      Fixi.hooks[hookName] = [];
-      
-      this.use({
-        name: `__mock_${hookName}`,
-        setup(ctx) {
-          ctx.on(hookName, mockFn, 1000);
-        }
-      });
-      
-      return this;
-    },
-    restoreHooks(hookName) {
-      if (!this._originalHandlers) return this;
-      
-      if (hookName) {
-        if (this._originalHandlers[hookName]) {
-          Fixi.hooks[hookName] = [...this._originalHandlers[hookName]];
-          delete this._originalHandlers[hookName];
-        }
-      } else {
-        for (const [hook, handlers] of Object.entries(this._originalHandlers)) {
-          Fixi.hooks[hook] = [...handlers];
-        }
-        this._originalHandlers = {};
-      }
-      
-      return this;
-    }
-  } : {};
+  // Plugin storage
+  const plugins = new Map();
   
   // Create the base fixiplug object
   const fixiplug = {
@@ -88,45 +69,151 @@ export function createFixiplug(options = {}) {
     config,
     
     /**
+     * Access to feature constants
+     */
+    FEATURES,
+    
+    /**
      * Priority levels for hook execution
      * @type {Object}
      */
-    PRIORITY: Fixi.PRIORITY,
+    PRIORITY: Fixi.PRIORITY ?? { HIGH: 100, NORMAL: 0, LOW: -100 },
     
     /**
      * Register a plugin with fixiplug
-     * @param {import('../types.js').FixiPlug.PluginFunction|import('../types.js').FixiPlug.PluginInstance} plugin - The plugin to register
+     * @param {Object|Function} plugin - The plugin to register
      * @returns {Object} This fixiplug instance for chaining
      */
     use(plugin) {
-      if (enableLogging && !minimal) {
-        console.log(`Registering plugin: ${plugin.name || 'anonymous'}`);
+      // Extract plugin metadata
+      const name = typeof plugin === 'function' 
+        ? (plugin.name || 'anonymous') 
+        : (plugin.name || 'anonymous');
+      
+      // Extract setup function
+      const setup = typeof plugin === 'function' ? plugin : plugin.setup;
+      
+      if (typeof setup !== 'function') {
+        logger.error(`Invalid plugin: missing setup function`);
+        return this;
       }
-      return Fixi.use(plugin);
+      
+      logger.log(`Registering plugin: ${name}`);
+      
+      // Create plugin context
+      const context = {
+        pluginName: name,
+        
+        // Register a hook listener
+        on(hookName, handler, priority = 0) {
+          if (!Fixi.hooks) Fixi.hooks = {};
+          if (!Fixi.hooks[hookName]) Fixi.hooks[hookName] = [];
+          
+          Fixi.hooks[hookName].push({
+            plugin: name,
+            handler,
+            priority
+          });
+          
+          // Sort handlers by priority (high to low)
+          Fixi.hooks[hookName].sort((a, b) => b.priority - a.priority);
+          
+          return this;
+        },
+        
+        // Remove a hook listener
+        off(hookName, handler) {
+          if (!Fixi.hooks || !Fixi.hooks[hookName]) return this;
+          
+          Fixi.hooks[hookName] = Fixi.hooks[hookName].filter(h => 
+            h.plugin !== name || h.handler !== handler
+          );
+          
+          return this;
+        },
+        
+        // Register a cleanup function
+        registerCleanup(fn) {
+          if (!plugins.has(name)) {
+            plugins.set(name, { cleanup: [] });
+          }
+          
+          const plugin = plugins.get(name);
+          plugin.cleanup = plugin.cleanup || [];
+          plugin.cleanup.push(fn);
+          
+          return this;
+        },
+        
+        // Plugin-specific storage
+        storage: new Map(),
+        
+        // Debug flag
+        debug: hasFeature(FEATURES.TESTING)
+      };
+      
+      // Store plugin reference
+      plugins.set(name, { 
+        instance: plugin,
+        context
+      });
+      
+      // Initialize the plugin
+      try {
+        setup(context);
+      } catch (err) {
+        logger.error(`Error initializing plugin ${name}:`, err);
+        this.unuse(name);
+      }
+      
+      return this;
     },
     
-    // Remove a plugin completely
+    /**
+     * Remove a plugin completely
+     * @param {string} pluginName - The name of the plugin to remove
+     * @returns {Object} This fixiplug instance for chaining
+     */
     unuse(pluginName) {
-      if (enableLogging && !minimal) {
-        console.log(`Removing plugin: ${pluginName}`);
+      logger.log(`Removing plugin: ${pluginName}`);
+      
+      // Run cleanup functions
+      if (plugins.has(pluginName)) {
+        const plugin = plugins.get(pluginName);
+        
+        if (plugin.cleanup && Array.isArray(plugin.cleanup)) {
+          for (const cleanup of plugin.cleanup) {
+            try {
+              cleanup();
+            } catch (err) {
+              logger.error(`Error during plugin cleanup for ${pluginName}:`, err);
+            }
+          }
+        }
+        
+        plugins.delete(pluginName);
       }
-      return Fixi.unuse(pluginName);
+      
+      // Remove all hooks for this plugin
+      if (Fixi.hooks) {
+        for (const [hookName, handlers] of Object.entries(Fixi.hooks)) {
+          Fixi.hooks[hookName] = handlers.filter(h => h.plugin !== pluginName);
+        }
+      }
+      
+      return this;
     },
     
     /**
      * Swap one plugin for another
-     * @param {string|Object} oldPlugin - The plugin name or instance to replace
-     * @param {Object} newPlugin - The new plugin to use
+     * @param {string} oldPluginName - The plugin name to replace
+     * @param {Object|Function} newPlugin - The new plugin to use
      * @returns {Object} This fixiplug instance for chaining
      */
-    swap(oldPlugin, newPlugin) {
-      const oldPluginName = typeof oldPlugin === 'string' 
-        ? oldPlugin 
-        : (oldPlugin.name || 'anonymous');
-      
-      if (enableLogging && !minimal) {
-        console.log(`Swapping plugin: ${oldPluginName} with ${newPlugin.name || 'anonymous'}`);
-      }
+    swap(oldPluginName, newPlugin) {
+      logger.log(`Swapping plugin: ${oldPluginName} with ${typeof newPlugin === 'function' 
+        ? (newPlugin.name || 'anonymous') 
+        : (newPlugin.name || 'anonymous')}`);
       
       // Remove the old plugin
       this.unuse(oldPluginName);
@@ -135,82 +222,128 @@ export function createFixiplug(options = {}) {
       return this.use(newPlugin);
     },
     
-    // Enable a disabled plugin
+    /**
+     * Enable a disabled plugin
+     * @param {string} pluginName - The name of the plugin to enable
+     * @returns {Object} This fixiplug instance for chaining 
+     */
     enable(pluginName) {
-      if (enableLogging && !minimal) {
-        console.log(`Enabling plugin: ${pluginName}`);
-      }
-      return Fixi.enable(pluginName);
-    },
-    
-    // Disable an active plugin
-    disable(pluginName) {
-      if (enableLogging && !minimal) {
-        console.log(`Disabling plugin: ${pluginName}`);
-      }
-      return Fixi.disable(pluginName);
-    },
-    
-    // Dispatch a hook through the fixi engine
-    async dispatch(hookName, event) {
-      if (enableLogging && !minimal) {
-        console.log(`Dispatching hook: ${hookName}`, event);
-      }
+      logger.log(`Enabling plugin: ${pluginName}`);
       
-      // Track hook calls for testing if in test mode
-      if (testMode && !minimal) {
+      // Implementation depends on how plugin disabling is stored
+      // For now, we'll assume plugins are enabled by default and this is a no-op
+      
+      return this;
+    },
+    
+    /**
+     * Disable an active plugin
+     * @param {string} pluginName - The name of the plugin to disable
+     * @returns {Object} This fixiplug instance for chaining
+     */
+    disable(pluginName) {
+      logger.log(`Disabling plugin: ${pluginName}`);
+      
+      // Implementation depends on how plugin disabling is stored
+      // For now, we'll assume it's similar to unuse but without cleanup
+      
+      return this;
+    },
+    
+    /**
+     * Dispatch a hook through the fixi engine
+     * @param {string} hookName - The name of the hook to dispatch
+     * @param {Object} event - The event data to pass to handlers
+     * @returns {Promise<Object>} The processed event
+     */
+    async dispatch(hookName, event = {}) {
+      logger.log(`Dispatching hook: ${hookName}`, event);
+      
+      // Track hook calls for testing if enabled
+      if (hasFeature(FEATURES.TESTING) && this.hookCalls) {
         if (!this.hookCalls[hookName]) {
           this.hookCalls[hookName] = [];
         }
+        
         this.hookCalls[hookName].push({
           timestamp: new Date(),
           event: JSON.parse(JSON.stringify(event))
         });
       }
       
-      return await Fixi.dispatch(hookName, event);
+      try {
+        return await Fixi.dispatch(hookName, event);
+      } catch (err) {
+        logger.error(`Error dispatching hook ${hookName}:`, err);
+        throw err;
+      }
     },
     
-    // Remove an individual handler from a hook
+    /**
+     * Remove an individual handler from a hook
+     * @param {string} hookName - The name of the hook
+     * @param {Function} handler - The handler function to remove
+     * @returns {Object} This fixiplug instance for chaining
+     */
     off(hookName, handler) {
-      if (enableLogging && !minimal) {
-        console.log(`Removing handler for hook: ${hookName}`);
-      }
-      return Fixi.off(hookName, handler);
+      logger.log(`Removing handler for hook: ${hookName}`);
+      
+      if (!Fixi.hooks || !Fixi.hooks[hookName]) return this;
+      
+      Fixi.hooks[hookName] = Fixi.hooks[hookName].filter(h => h.handler !== handler);
+      
+      return this;
+    },
+    
+    /**
+     * Get list of registered plugins
+     * @returns {Array<string>} List of plugin names
+     */
+    getPlugins() {
+      return Array.from(plugins.keys());
+    },
+    
+    /**
+     * Check if a feature is enabled
+     * @param {string} feature - The feature to check
+     * @returns {boolean} True if the feature is enabled
+     */
+    hasFeature(feature) {
+      return config.features.has(feature);
     },
     
     // Expose internals for debugging
     get hooks() {
       return Fixi.hooks;
-    },
-    
-    get pluginRegistry() {
-      return Fixi.pluginRegistry;
-    },
-    
-    // Include test-specific features 
-    ...testFeatures
+    }
   };
+  
+  // Auto-load testing plugin if testing feature is enabled
+  if (hasFeature(FEATURES.TESTING)) {
+    // We'll dynamically import the testing plugin in an async context
+    (async () => {
+      try {
+        const { default: testingPlugin } = await import('../plugins/testing.js');
+        fixiplug.use(testingPlugin);
+
+        // Add convenience methods that delegate to the plugin API
+        fixiplug.resetTracking = () => fixiplug.dispatch('api:testing:resetTracking');
+        fixiplug.mockHookResponse = (hookName, mockFn) => fixiplug.dispatch('api:testing:mockHook', { hookName, mockFn });
+        fixiplug.restoreHooks = (hookName) => fixiplug.dispatch('api:testing:restoreHook', { hookName });
+      } catch (err) {
+        logger.error('Failed to load testing plugin:', err);
+      }
+    })();
+  }
   
   return fixiplug;
 }
 
-/**
- * Helper function to export fixiplug object across different module systems
- * @param {Object} fixiplug - The fixiplug instance to export
- * @param {string} [name='fixiplug'] - Module name for AMD exports
- * @param {boolean} [attachToWindow=true] - Whether to attach to window in browser environments
- */
-export function exportFixiplug(fixiplug, name = 'fixiplug', attachToWindow = true) {
-  if (typeof module !== 'undefined' && module.exports) {
-    module.exports = fixiplug;
-  } else if (typeof define === 'function' && define.amd) {
-    define(name, [], () => fixiplug);
-  }
-  
-  if (attachToWindow && typeof window !== 'undefined') {
-    window[name] = fixiplug;
-  }
-  
-  return fixiplug;
-}
+// Predefined feature sets
+export const FEATURE_SETS = {
+  BROWSER: [FEATURES.DOM, FEATURES.LOGGING],
+  CORE: [FEATURES.LOGGING],
+  TEST: [FEATURES.TESTING, FEATURES.LOGGING],
+  SERVER: [FEATURES.SERVER],
+  MINIMAL: []
+};

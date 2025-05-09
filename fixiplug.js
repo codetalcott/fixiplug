@@ -5,17 +5,14 @@
  * @description Unified entry point providing different configurations for various environments
  */
 
-import { createFixiplug } from './builder/fixiplug-factory.js';
+import { createFixiplug, FEATURE_SETS, FEATURES } from './builder/fixiplug-factory.js';
 
 /**
  * Standard browser version with DOM integration
  * @type {Object}
  */
 export const fixiplug = createFixiplug({
-  enableLogging: true,
-  enableDom: true,
-  testMode: false,
-  serverMode: false
+  features: FEATURE_SETS.BROWSER
 });
 
 /**
@@ -23,10 +20,7 @@ export const fixiplug = createFixiplug({
  * @type {Object}
  */
 export const core = createFixiplug({
-  enableLogging: true,
-  enableDom: false,
-  testMode: false,
-  serverMode: false
+  features: FEATURE_SETS.CORE
 });
 
 /**
@@ -34,10 +28,7 @@ export const core = createFixiplug({
  * @type {Object}
  */
 export const test = createFixiplug({
-  enableLogging: true,
-  enableDom: false,
-  testMode: true,
-  serverMode: false
+  features: FEATURE_SETS.TEST
 });
 
 /**
@@ -45,24 +36,16 @@ export const test = createFixiplug({
  * @type {Object}
  */
 export const server = createFixiplug({
-  enableLogging: false,
-  enableDom: false,
-  testMode: false,
-  serverMode: true
+  features: FEATURE_SETS.SERVER
 });
 
 /**
- * Minimal version with no plugins or environment detection
+ * Minimal version with no plugins
  * @type {Object}
  */
 export const minimal = createFixiplug({
-  enableLogging: false,
-  enableDom: false,
-  testMode: false,
-  serverMode: false,
-  minimal: true
+  features: FEATURE_SETS.MINIMAL
 });
-
 
 /**
  * Create a custom fixiplug instance with specified configuration
@@ -75,20 +58,22 @@ export const minimal = createFixiplug({
  * @returns {Object} Custom fixiplug instance
  */
 export function configure(config = {}) {
+  // Convert legacy boolean config to features array
+  const features = [];
+  
+  if (config.logging !== false) features.push(FEATURES.LOGGING);
+  if (config.dom === true) features.push(FEATURES.DOM);
+  if (config.test === true) features.push(FEATURES.TESTING);
+  if (config.server === true) features.push(FEATURES.SERVER);
+  
   return createFixiplug({
-    ...baseConfig,
-    // Override with explicit settings
-    enableLogging: config.logging ?? baseConfig.enableLogging ?? true,
-    enableDom: config.dom ?? baseConfig.enableDom ?? false,
-    testMode: config.test ?? baseConfig.testMode ?? false,
-    serverMode: config.server ?? baseConfig.serverMode ?? false,
-    ...config.advanced
+    features,
+    advanced: config.advanced || {}
   });
 }
 
 // Export standard version as default
 export default fixiplug;
-
 
 // Auto-attach the default version to window in browser environments
 if (typeof window !== 'undefined') {
