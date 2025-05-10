@@ -16,17 +16,19 @@
     import loggerPlug from '../plugins/logger.js';
     import errorPlug from '../plugins/error-reporter.js';
     import contentModifier from '../plugins/content-modifier.js';
+    import createIdiomorphSwap from '../plugins/swap-idiomorph.js';
 
     // Use plugins
     fixiplug.use(loggerPlug);
     fixiplug.use(errorPlug);
     fixiplug.use(contentModifier);
+    fixiplug.use(createIdiomorphSwap());
 
     // Logging Plugin Handlers
     async function showLogs() {
       const { logs } = await fixiplug.dispatch('api:getLogs');
       const container = document.getElementById('log');
-      container.innerHTML = '';
+      container.innerHTML = ''; // Clear previous logs
       logs.forEach(entry => {
         const p = document.createElement('p');
         p.textContent = `[${entry.ts}] ${entry.hookName} → ${JSON.stringify(entry.event)}`;
@@ -70,9 +72,15 @@
 
     // Content Modifier Handlers
     const modifiedElement = document.getElementById('modified');
+    let isModified = false;
 
     document.getElementById('btnModify').onclick = async () => {
-      await fixiplug.dispatch('modifyEvent', { target: modifiedElement });
+      if (isModified) {
+        await fixiplug.dispatch('resetEvent', { target: modifiedElement });
+      } else {
+        await fixiplug.dispatch('modifyEvent', { target: modifiedElement });
+      }
+      isModified = !isModified;
     };
 
     document.getElementById('disableMod').onclick = () => {
@@ -82,25 +90,76 @@
     document.getElementById('enableMod').onclick = () => {
       fixiplug.enable('contentModifier');
     };
+
+    // Idiomorph Swap Handlers
+    const videoElement = document.getElementById('videoDemo');
+    const contentContainer = document.getElementById('contentContainer');
+    let isTitleAbove = true;
+
+    document.getElementById('btnUpdateContent').onclick = async () => {
+      const currentTime = videoElement.currentTime; // Save video playback position
+      const videoTitle = document.getElementById('videoTitle');
+      const videoContainer = document.getElementById('videoContainer');
+
+      // Toggle the position of the video title
+      if (isTitleAbove) {
+        videoContainer.appendChild(videoTitle); // Move title below the video
+      } else {
+        videoContainer.insertBefore(videoTitle, videoContainer.firstChild); // Move title above the video
+      }
+      isTitleAbove = !isTitleAbove;
+
+      // Update content dynamically
+      const newContent = `
+        <p>New content loaded dynamically!</p>
+        <p>Video playback should resume from <strong>${currentTime.toFixed(2)} seconds</strong>.</p>
+      `;
+      await fixiplug.dispatch('fx:after', {
+        detail: {
+          target: contentContainer,
+          content: newContent
+        }
+      });
+    };
   </script>
 </head>
 <body>
   <h1>fixiplug.js Demo</h1>
 
-  <h2>1. Logging Plugin</h2>
+  <h2>1. Idiomorph Swap Plugin</h2>
+  <p>
+    This section demonstrates the <code>swap-idiomorph</code> plugin, which preserves the state of elements like video playback during DOM updates.
+  </p>
+  <div id="videoContainer" class="box">
+    <h3 id="videoTitle">Big Buck Bunny</h3>
+    <video id="videoDemo" controls width="400">
+      <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+      Your browser does not support the video tag.
+    </video>
+  </div>
+  <button id="btnUpdateContent">Update Content</button>
+  <div id="contentContainer" class="box">
+    <p>Original content. Click the button above to update this content dynamically.</p>
+  </div>
+
+  <h2>2. Logging Plugin</h2>
   <p>The logger plugin is attached using <code>fixiplug.use(fixiplugLogger)</code>. It listens to all hooks dynamically and logs their execution details.</p>
   <button id="btnLogAlpha" data-hook="alphaEvent">Trigger <code>alphaEvent</code></button>
   <button id="btnLogBeta" data-hook="betaEvent">Trigger <code>betaEvent</code></button>
   <button id="clearLog">Clear Log</button>
   <div id="log" class="box">(log output)</div>
 
-  <h2>2. Content Modifier + Runtime Toggle</h2>
+  <h2>3. Content Modifier + Runtime Toggle</h2>
+  <p>
+    This section demonstrates the <code>contentModifier</code> plugin, which dynamically modifies the content and style of the box below when the <code>modifyEvent</code> is triggered. 
+    You can enable or disable the plugin at runtime using the buttons provided.
+  </p>
   <button id="btnModify">Trigger <code>modifyEvent</code></button>
   <div id="modified" class="box">hello world</div>
   <button id="disableMod">Disable Modifier</button>
   <button id="enableMod">Enable Modifier</button>
 
-  <h2>3. Error Isolation</h2>
+  <h2>4. Error Isolation</h2>
   <p>Demonstrates catching errors from a broken plugin via <code>pluginError</code> events.</p>
   <button id="btnError">Trigger <code>brokenEvent</code></button>
   <button id="clearErrors">Clear Errors</button>

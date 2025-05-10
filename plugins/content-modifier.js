@@ -23,8 +23,9 @@ export default function contentModifier(ctx) {
     }
   };
 
-  // Listen for the modifyEvent hook
+  // Listen for the modifyEvent and resetEvent hooks
   ctx.on('modifyEvent', modifyContent);
+  ctx.on('resetEvent', resetContent);
 
   // Cleanup logic to reset content when the plugin is disabled
   ctx.registerCleanup(resetContent);
