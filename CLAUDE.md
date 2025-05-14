@@ -2,126 +2,129 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Project Overview
+## Commands
 
-FixiPlug is a plugin system for fixi.js, a minimalist implementation of generalized hypermedia controls. FixiPlug aims to make it easy to run multiple swappable extensions, with a focus on the fixi core philosophy: no dependencies and careful attention to character count.
-
-## Project Structure
-
-- `/core/`: Core functionality modules including fixi integration
-- `/plugins/`: Individual plugins that can be used with fixiplug
-- `/builder/`: Factory and manager files for creating fixiplug instances
-- `/examples/`: Example implementations and demos
-- `/docs/`: Documentation for various features
-- `/test/`: Test files for the project
-
-## Import Options
-
-FixiPlug offers different variants to match specific needs:
-
-```javascript
-// Full browser version with DOM integration
-import { fixiplug } from 'fixiplug';
-
-// Core version without DOM dependencies 
-import { core } from 'fixiplug';
-
-// Test version with enhanced debugging
-import { test } from 'fixiplug';
-
-// Server optimized version
-import { server } from 'fixiplug';
-
-// Minimal version with no plugins
-import minimal from 'fixiplug/minimal';
-```
-
-## Plugin Development
-
-Plugins are objects that expose a setup function:
-
-```javascript
-const myPlugin = {
-  name: 'my-plugin',
-  setup(context) {
-    // Register event listeners
-    context.on('eventName', event => {
-      console.log('Event received:', event);
-      return event; // Return the event to continue the chain
-    });
-    
-    // Optional cleanup function
-    context.registerCleanup(() => {
-      console.log('Plugin cleanup');
-    });
-  }
-};
-
-// Use the plugin
-fixiplug.use(myPlugin);
-```
-
-## Development Commands
-
-### Running Tests
+### Build and Run
 
 ```bash
-# Open the test HTML file in a browser
-open test/fixiplug.test.html
+# Add build commands here
+
+# Add dev commands here
 ```
 
-The tests run in-browser and are accessible through the HTML test page.
+### Testing
 
-### Common Plugin Operations
-
-```javascript
-// Register a plugin
-fixiplug.use(myPlugin);
-
-// Disable a plugin
-fixiplug.disable('myPlugin');
-
-// Re-enable a plugin
-fixiplug.enable('myPlugin');
-
-// Remove a plugin
-fixiplug.unuse('myPlugin');
-
-// Dispatch an event
-fixiplug.dispatch('eventName', { data: value })
-  .then(result => {
-    console.log('Event processed:', result);
-  });
+```bash
+# Add test commands here
 ```
 
-## Core Architecture
 
-FixiPlug is built around a plugin system that allows for:
 
-1. **Event-Based Architecture**: Plugins can listen for and react to events using the context.on() method.
-2. **Hooks and Priorities**: Events can be prioritized to control execution order.
-3. **Build Variants**: Different builds can be used based on specific needs (browser, server, test).
-4. **Cleanup Handling**: Plugins can register cleanup functions to ensure proper resource management.
+## Project Architecture
 
-The main components are:
+fixiplug follows a modular architecture.
 
-- **FixiPlug Factory**: Creates configured instances of FixiPlug
-- **Plugin Manager**: Handles plugin registration, enabling/disabling, and removal
-- **Core Event System**: Dispatches events and manages the execution of handlers
+### Architectural Insights
 
-## Working with Plugins
+- Uses Factory pattern (found in 4 files)
+- Uses Observer pattern (found in 18 files)
+- Uses Dependency Injection pattern (found in 11 files)
 
-The repository includes several built-in plugins:
 
-- `logger`: Detailed logging of events and timing
-- `errorReporter`: Catches and reports errors in the event pipeline
-- `performance`: Measures and reports plugin execution time
-- `security`: Validates event data against schemas
-- `hookVisualizer`: Visual representation of hook execution (browser only)
+### Core Components
 
-When developing new code, follow these practices:
+**Main Module** (`src/index.ts`): Entry point
 
-1. Check existing plugins for patterns and conventions
-2. Test plugin interoperability with multiple activated plugins
-3. Return events from handlers to maintain the event chain
-4. Register cleanup functions for resource management
+
+
+## Domain Terminology
+
+- Fixi
+- Quick Start
+- Import Options
+
+Fixi
+- Creating Plugins
+
+Plugins
+- Dispatching Events
+
+Events
+- Included Plugins
+
+Fixi
+
+
+## Historical Context
+
+- Technology migration: feat: add idiomorph swap functionality and enhance content modifier plugin; update demo to showcase new features (2025-05-09)
+- Project history dates back to at least 2025-05-03
+
+
+## Architecture Diagrams
+
+This project has automatically generated architecture visualizations available in the `.agent-assist/visualizations` directory. You can access these diagrams to better understand the project structure.
+
+### Available Diagrams
+
+- **Component Diagram**: Shows relationships between key components
+  - View it at: `.agent-assist/visualizations/component-diagram.md`
+  - Update it with: `agent-assist visualize component`
+
+- **Module Diagram**: Displays dependencies between modules
+  - View it at: `.agent-assist/visualizations/module-diagram.md` 
+  - Update it with: `agent-assist visualize module`
+
+- **Class Diagram**: Illustrates inheritance and structure
+  - View it at: `.agent-assist/visualizations/class-diagram.md`
+  - Update it with: `agent-assist visualize class`
+
+### Sample Visualization
+
+```mermaid
+graph TD
+    A[App] --> B[Components]
+    A --> C[Services]
+    B --> D[UI Elements]
+    C --> E[API Clients]
+```
+
+To update these diagrams, run `agent-assist --full` or use specific visualization commands.
+
+## Code Style
+
+- Indentation: 2 spaces
+- Quotes: double
+- Semicolons: Required
+
+
+
+
+## Repository History
+
+Recent significant commits:
+- 9b98fca: feat: add idiomorph swap functionality and enhance content modifier plugin; update demo to showcase new features (2025-05-09)
+- 83d7b99: feat: enhance plugin management with new content modifier and error reporting features; update demo and test cases (2025-05-09)
+- b591a03: feat: enhance plugin management with improved naming and logging for enable/disable functionality (2025-05-09)
+- 3a5ffe4: feat: enhance plugin management with hooks enabling/disabling and testing features (2025-05-09)
+- 5cdb8be: feat: implement hooks system and refactor fixiplug core for modular plugin management (2025-05-09)
+
+
+Main contributors:   50 Wm Talcott
+
+Last major refactor: 2025-05-09: feat: implement hooks system and refactor fixiplug core for modular plugin management
+
+
+## Environment Setup
+
+
+### Container Support
+
+No Docker configuration detected.
+
+### Environment Variables
+
+The following environment variables may need to be set:
+- PROJECT_BASE_DIR: The base directory of the project
+- NODE_ENV: Environment mode (development, production, test)
+

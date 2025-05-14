@@ -125,7 +125,3 @@ fixiplug.use(errorReporter({ reportTo: '/api/errors' }));
 ```
 
 See the [full documentation](#) for plugin options and configuration.
-
-# 💀 *Memento Mori*
-
-Nothing lasts forever, including this plugin. Approach digital eternity with an appropriate level of suspicion. Consider this a thought experiment, built explicitly to explore the problem space. Please take liberally and build much more wisely.

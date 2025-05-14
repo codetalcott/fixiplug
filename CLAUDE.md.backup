@@ -1,0 +1,38 @@
+<context>
+Project summary: # FixiPlug
+
+The current date is May 12, 2025.
+My current OS is: macOS
+I am working in a workspace with the following folders:
+- /Users/williamtalcott/projects/fixiplug 
+I am working in a workspace that has the following structure:
+```
+package.json
+src/
+  index.ts
+```
+This view of the workspace structure may be truncated. You can use tools to collect more context if needed.
+
+Project conventions:
+- Style: 2 spaces, double quotes, with semicolons
+
+AI Context Resources:
+- cache: .agent-assist/cache.json (cache data)
+
+.agent-assist directory contents:
+- cache.json
+
+To access these resources, use file system operations to read these files. For example:
+```javascript
+const indexData = await fs.readJson(path.join(projectRoot, '.agent-assist', 'index.json'));
+const standardsPath = path.join(projectRoot, '.agent-assist', indexData.resources.standards.path);
+```
+</context>
+
+<reminder>
+When using the insert_edit_into_file tool, avoid repeating existing code, instead use a line comment with `...existing code...` to represent regions of unchanged code.
+</reminder>
+
+<prompt>
+[Your specific question or request]
+</prompt>

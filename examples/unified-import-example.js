@@ -3,23 +3,23 @@
  */
 
 // Standard browser version with DOM integration
-import fixiplug from './fixiplug.js';
+import fixiplug from '../fixiplug.js';
 console.log('Standard browser version loaded');
 
 // Core version (no DOM)
-import { core } from './fixiplug.js';
+import { core } from '../fixiplug.js';
 console.log('Core version loaded');
 
 // Test version
-import { test } from './fixiplug.js';
+import { test } from '../fixiplug.js';
 console.log('Test version loaded');
 
 // Server version
-import { server } from './fixiplug.js';
+import { server } from '../fixiplug.js';
 console.log('Server version loaded');
 
 // Custom configured version
-import { configure } from './fixiplug.js';
+import { configure } from '../fixiplug.js';
 const custom = configure({
   logging: true,
   dom: false,
@@ -33,9 +33,10 @@ console.log('Custom configured version loaded');
 
 // Alternative import methods
 // These imports access the same objects as above but through different entry points
-import coreAlternative from './core.js';
-import testAlternative from './test.js';
-import serverAlternative from './server.js';
+import coreAlternative from '../core/index.js';
+// Note: Direct test module not available - using main export instead
+import { test as testAlternative } from '../fixiplug.js';
+import { server as serverAlternative } from '../fixiplug.js';
 
 // Example plugin
 function examplePlugin(ctx) {
