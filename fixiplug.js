@@ -58,7 +58,15 @@ export const minimal = createFixiplug({
  * @returns {Object} Custom fixiplug instance
  */
 export function configure(config = {}) {
-  // Convert legacy boolean config to features array
+  // If explicit features array provided, use it directly
+  if (Array.isArray(config.features)) {
+    return createFixiplug({
+      features: config.features,
+      advanced: config.advanced || {}
+    });
+  }
+  
+  // Otherwise, convert legacy boolean config to features array
   const features = [];
   
   if (config.logging !== false) features.push(FEATURES.LOGGING);

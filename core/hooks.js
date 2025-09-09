@@ -62,6 +62,40 @@ export function removePluginHooks(pluginName) {
   }
 }
 
+// Error queue to prevent recursive dispatching
+const errorQueue = [];
+let processingErrors = false;
+
+/**
+ * Process queued errors without causing recursion
+ */
+async function processErrorQueue() {
+  if (processingErrors || errorQueue.length === 0) return;
+  
+  processingErrors = true;
+  while (errorQueue.length > 0) {
+    const errorEvent = errorQueue.shift();
+    try {
+      // Process error handlers directly without going through dispatch
+      if (hooks['pluginError'] && hooks['pluginError'].length) {
+        for (const { handler, plugin } of hooks['pluginError']) {
+          if (!disabledPlugins.has(plugin)) {
+            try {
+              await handler(errorEvent);
+            } catch (e) {
+              // Silent fail - error handlers should not throw
+              console.error('Error in error handler:', e);
+            }
+          }
+        }
+      }
+    } catch (e) {
+      console.error('Error processing error queue:', e);
+    }
+  }
+  processingErrors = false;
+}
+
 /**
  * Dispatch a hook event
  * @param {string} hookName - The hook to dispatch
@@ -70,69 +104,45 @@ export function removePluginHooks(pluginName) {
  */
 export async function dispatch(hookName, event = {}) {
   let result = event;
-  console.log(`[hooks] Dispatching ${hookName}, disabled plugins:`, Array.from(disabledPlugins));
 
-  // Process specific hook handlers
+  // Get all relevant handlers (specific + wildcard) in single pass
+  const allHandlers = [];
+  
+  // Add specific handlers
   if (hooks[hookName] && hooks[hookName].length) {
-    console.log(`[hooks] Found ${hooks[hookName].length} handlers for ${hookName}:`, hooks[hookName]);
+    allHandlers.push(...hooks[hookName]);
+  }
+  
+  // Add wildcard handlers
+  if (hooks['*'] && hooks['*'].length) {
+    allHandlers.push(...hooks['*']);
+  }
 
-    // Process each handler, skipping disabled plugins
-    for (const { handler, plugin } of hooks[hookName]) {
-      console.log(`[hooks] Processing handler from plugin '${plugin}'`);
+  // Process all handlers in single pass
+  for (const { handler, plugin } of allHandlers) {
+    // Skip handlers from disabled plugins
+    if (disabledPlugins.has(plugin)) {
+      continue;
+    }
 
-      // Skip handlers from disabled plugins
-      if (disabledPlugins.has(plugin)) {
-        console.log(`[hooks] Skipping disabled plugin: ${plugin}`);
-        continue;
-      }
+    try {
+      result = await handler(result, hookName) || result;
+    } catch (error) {
+      // Queue error for async processing to prevent recursion
+      errorQueue.push({
+        plugin,
+        hookName,
+        error,
+        event: result
+      });
 
-      console.log(`[hooks] Executing handler from plugin: ${plugin}`);
-      try {
-        result = await handler(result, hookName) || result;
-      } catch (error) {
-        console.error(`Error in hook: ${hookName}`, error);
-
-        // Emit a pluginError event to allow error reporters to catch it
-        dispatch('pluginError', {
-          plugin,
-          hookName,
-          error,
-          event: result
-        }).catch(e => console.error('Error dispatching plugin error:', e));
-
-        // Don't rethrow to avoid breaking the chain
-      }
+      // Don't rethrow to avoid breaking the chain
     }
   }
 
-  // Process wildcard handlers (if any)
-  if (hooks['*'] && hooks['*'].length) {
-    console.log(`[hooks] Found ${hooks['*'].length} wildcard handlers`);
-
-    for (const { handler, plugin } of hooks['*']) {
-      console.log(`[hooks] Processing wildcard handler from plugin '${plugin}'`);
-
-      // Skip handlers from disabled plugins
-      if (disabledPlugins.has(plugin)) {
-        console.log(`[hooks] Skipping disabled plugin (wildcard): ${plugin}`);
-        continue;
-      }
-
-      console.log(`[hooks] Executing wildcard handler from plugin: ${plugin}`);
-      try {
-        result = await handler(result, hookName) || result;
-      } catch (error) {
-        console.error(`Error in wildcard hook for: ${hookName}`, error);
-
-        // Emit a pluginError event for wildcard handlers too
-        dispatch('pluginError', {
-          plugin,
-          hookName,
-          error,
-          event: result
-        }).catch(e => console.error('Error dispatching plugin error:', e));
-      }
-    }
+  // Process any queued errors asynchronously
+  if (errorQueue.length > 0) {
+    setImmediate(() => processErrorQueue());
   }
 
   return result;
@@ -166,10 +176,7 @@ export function unregisterPlugin(pluginName) {
  * @param {string} pluginName - The plugin to disable
  */
 export function disablePlugin(pluginName) {
-  console.log(`[hooks] Disabling plugin: ${pluginName}`);
-  console.log(`[hooks] Current hooks:`, hooks);
   disabledPlugins.add(pluginName);
-  console.log(`[hooks] Disabled plugins:`, Array.from(disabledPlugins));
 }
 
 /**
@@ -177,9 +184,7 @@ export function disablePlugin(pluginName) {
  * @param {string} pluginName - The plugin to enable
  */
 export function enablePlugin(pluginName) {
-  console.log(`[hooks] Enabling plugin: ${pluginName}`);
   disabledPlugins.delete(pluginName);
-  console.log(`[hooks] Disabled plugins after enable:`, Array.from(disabledPlugins));
 }
 
 // Export storage
