@@ -27,7 +27,7 @@ export default function createIdiomorphSwap(options = {}) {
           // Try to load from CDN
           return new Promise((resolve, reject) => {
             const script = document.createElement('script');
-            script.src = 'https://cdn.jsdelivr.net/npm/idiomorph@0.1.0/dist/idiomorph.min.js';
+            script.src = 'https://cdn.jsdelivr.net/npm/idiomorph@0.7.4/dist/idiomorph.min.js';
             script.onload = () => resolve(window.Idiomorph);
             script.onerror = reject;
             document.head.appendChild(script);
