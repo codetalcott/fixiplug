@@ -142,7 +142,7 @@ export async function dispatch(hookName, event = {}) {
 
   // Process any queued errors asynchronously
   if (errorQueue.length > 0) {
-    setImmediate(() => processErrorQueue());
+    setTimeout(() => processErrorQueue(), 0);
   }
 
   return result;

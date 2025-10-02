@@ -24,6 +24,38 @@
     fixiplug.use(contentModifier);
     fixiplug.use(createIdiomorphSwap());
 
+    // Helper to serialize events for display
+    function serializeEvent(event) {
+      if (!event || typeof event !== 'object') return JSON.stringify(event);
+
+      // Handle arrays
+      if (Array.isArray(event)) {
+        return JSON.stringify(event.map(item => {
+          if (item instanceof Error) return item.message;
+          if (item instanceof HTMLElement) return `<${item.tagName.toLowerCase()}${item.id ? '#' + item.id : ''}>`;
+          if (typeof item === 'object' && item !== null) return JSON.parse(serializeEvent(item));
+          return item;
+        }));
+      }
+
+      const clone = {};
+      for (const key in event) {
+        const value = event[key];
+        if (value instanceof Error) {
+          clone[key] = value.message;
+        } else if (value instanceof HTMLElement) {
+          clone[key] = `<${value.tagName.toLowerCase()}${value.id ? '#' + value.id : ''}>`;
+        } else if (Array.isArray(value)) {
+          clone[key] = JSON.parse(serializeEvent(value));
+        } else if (typeof value === 'object' && value !== null) {
+          clone[key] = JSON.parse(serializeEvent(value));
+        } else {
+          clone[key] = value;
+        }
+      }
+      return JSON.stringify(clone);
+    }
+
     // Logging Plugin Handlers
     async function showLogs() {
       const { logs } = await fixiplug.dispatch('api:getLogs');
@@ -31,7 +63,7 @@
       container.innerHTML = ''; // Clear previous logs
       logs.forEach(entry => {
         const p = document.createElement('p');
-        p.textContent = `[${entry.ts}] ${entry.hookName} → ${JSON.stringify(entry.event)}`;
+        p.textContent = `[${entry.ts}] ${entry.hookName} → ${serializeEvent(entry.event)}`;
         container.appendChild(p);
       });
     }
@@ -56,13 +88,17 @@
         console.error('Error caught:', e);
       }
 
+      // Wait for error queue to process asynchronously
+      await new Promise(resolve => setTimeout(resolve, 10));
+
       // Fetch and display errors in the errorLog element
       const { errors } = await fixiplug.dispatch('api:getErrors');
       const container = document.getElementById('errorLog');
       container.innerHTML = '';
       errors.forEach(entry => {
         const p = document.createElement('p');
-        p.textContent = `[${entry.ts}] ${entry.plugin} → ${entry.error.message}`;
+        const errorMsg = entry.error instanceof Error ? entry.error.message : String(entry.error);
+        p.textContent = `[${entry.ts}] ${entry.plugin} @ ${entry.hookName} → ${errorMsg}`;
         container.appendChild(p);
       });
     };

@@ -10,9 +10,10 @@
 
 /**
  * Error reporter plugin for Fixiplug.
- * @param {PluginContext} ctx - The plugin context provided by Fixiplug.
  */
-export default function errorPlug(ctx) {
+export default {
+  name: 'error-reporter',
+  setup(ctx) {
   // 1) In-memory error store
   const errors = [];
   
@@ -82,4 +83,5 @@ export default function errorPlug(ctx) {
   });
 
   console.log('🛑 errorPlug active – capturing errors');
-}
+  }
+};
