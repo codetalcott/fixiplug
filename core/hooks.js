@@ -71,7 +71,7 @@ let processingErrors = false;
  */
 async function processErrorQueue() {
   if (processingErrors || errorQueue.length === 0) return;
-  
+
   processingErrors = true;
   while (errorQueue.length > 0) {
     const errorEvent = errorQueue.shift();
@@ -107,12 +107,12 @@ export async function dispatch(hookName, event = {}) {
 
   // Get all relevant handlers (specific + wildcard) in single pass
   const allHandlers = [];
-  
+
   // Add specific handlers
   if (hooks[hookName] && hooks[hookName].length) {
     allHandlers.push(...hooks[hookName]);
   }
-  
+
   // Add wildcard handlers
   if (hooks['*'] && hooks['*'].length) {
     allHandlers.push(...hooks['*']);

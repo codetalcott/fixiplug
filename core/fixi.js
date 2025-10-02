@@ -1,4 +1,3 @@
-// fixi.js core library
 (()=>{
 	if(document.__fixi_mo) return;
 	document.__fixi_mo = new MutationObserver((recs)=>recs.forEach((r)=>r.type === "childList" && r.addedNodes.forEach((n)=>process(n))))
@@ -62,7 +61,7 @@
 					cfg.target.insertAdjacentHTML(cfg.swap, cfg.text)
 				else if(cfg.swap in cfg.target)
 					cfg.target[cfg.swap] = cfg.text
-				else throw cfg.swap
+				else if(cfg.swap !== 'none') throw cfg.swap
 			}
 			if (cfg.transition)
 				await cfg.transition(doSwap).finished

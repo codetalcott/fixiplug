@@ -65,15 +65,15 @@ export function configure(config = {}) {
       advanced: config.advanced || {}
     });
   }
-  
+
   // Otherwise, convert legacy boolean config to features array
   const features = [];
-  
+
   if (config.logging !== false) features.push(FEATURES.LOGGING);
   if (config.dom === true) features.push(FEATURES.DOM);
   if (config.test === true) features.push(FEATURES.TESTING);
   if (config.server === true) features.push(FEATURES.SERVER);
-  
+
   return createFixiplug({
     features,
     advanced: config.advanced || {}
