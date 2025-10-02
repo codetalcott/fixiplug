@@ -162,6 +162,47 @@
       container.innerHTML = priorityOrder.map((msg, i) => `${i + 1}. ${msg}`).join('<br>');
     };
 
+    // Data Transformer Plugin
+    const dataTransformerPlugin = {
+      name: 'data-transformer',
+      setup(ctx) {
+        ctx.on('dataTransform', (event) => {
+          const { type, data } = event;
+
+          switch (type) {
+            case 'json':
+              try {
+                event.transformed = JSON.parse(data);
+              } catch (e) {
+                event.error = e.message;
+              }
+              break;
+            case 'csv':
+              try {
+                const lines = data.split('\n');
+                const headers = lines[0].split(',');
+                event.transformed = lines.slice(1).map(line => {
+                  const values = line.split(',');
+                  const obj = {};
+                  headers.forEach((header, i) => {
+                    obj[header] = values[i];
+                  });
+                  return obj;
+                });
+              } catch (e) {
+                event.error = e.message;
+              }
+              break;
+            default:
+              event.transformed = data;
+          }
+
+          return event;
+        });
+      }
+    };
+    fixiplug.use(dataTransformerPlugin);
+
     // Data Pipeline Handlers
     document.getElementById('btnTransformJSON').onclick = async () => {
       const result = await fixiplug.dispatch('dataTransform', {
@@ -169,7 +210,7 @@
         data: '{"name":"FixiPlug","version":"0.0.3","features":["plugins","hooks","priority"]}'
       });
       const container = document.getElementById('pipelineOutput');
-      container.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+      container.innerHTML = `<pre>${JSON.stringify(result.transformed, null, 2)}</pre>`;
     };
 
     document.getElementById('btnTransformCSV').onclick = async () => {
@@ -178,7 +219,7 @@
         data: 'name,version,type\nFixiPlug,0.0.3,library\nIdiomorph,0.7.4,dependency'
       });
       const container = document.getElementById('pipelineOutput');
-      container.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+      container.innerHTML = `<pre>${JSON.stringify(result.transformed, null, 2)}</pre>`;
     };
 
     // Wildcard Hook Handlers
