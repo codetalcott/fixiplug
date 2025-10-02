@@ -127,6 +127,160 @@
       fixiplug.enable('contentModifier');
     };
 
+    // Hook Priority Handlers
+    let priorityOrder = [];
+
+    // Register three hooks with different priorities
+    const highPriorityHandler = (event) => {
+      priorityOrder.push('HIGH priority');
+      return event;
+    };
+    const normalPriorityHandler = (event) => {
+      priorityOrder.push('NORMAL priority');
+      return event;
+    };
+    const lowPriorityHandler = (event) => {
+      priorityOrder.push('LOW priority');
+      return event;
+    };
+
+    // Create temporary plugin to register priority hooks
+    const priorityPlugin = {
+      name: 'priority-test',
+      setup(ctx) {
+        ctx.on('priorityTest', highPriorityHandler, fixiplug.PRIORITY.HIGH);
+        ctx.on('priorityTest', normalPriorityHandler, fixiplug.PRIORITY.NORMAL);
+        ctx.on('priorityTest', lowPriorityHandler, fixiplug.PRIORITY.LOW);
+      }
+    };
+    fixiplug.use(priorityPlugin);
+
+    document.getElementById('btnPriority').onclick = async () => {
+      priorityOrder = [];
+      await fixiplug.dispatch('priorityTest', { test: true });
+      const container = document.getElementById('priorityLog');
+      container.innerHTML = priorityOrder.map((msg, i) => `${i + 1}. ${msg}`).join('<br>');
+    };
+
+    // Data Pipeline Handlers
+    document.getElementById('btnTransformJSON').onclick = async () => {
+      const result = await fixiplug.dispatch('dataTransform', {
+        type: 'json',
+        data: '{"name":"FixiPlug","version":"0.0.3","features":["plugins","hooks","priority"]}'
+      });
+      const container = document.getElementById('pipelineOutput');
+      container.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+    };
+
+    document.getElementById('btnTransformCSV').onclick = async () => {
+      const result = await fixiplug.dispatch('dataTransform', {
+        type: 'csv',
+        data: 'name,version,type\nFixiPlug,0.0.3,library\nIdiomorph,0.7.4,dependency'
+      });
+      const container = document.getElementById('pipelineOutput');
+      container.innerHTML = `<pre>${JSON.stringify(result, null, 2)}</pre>`;
+    };
+
+    // Wildcard Hook Handlers
+    let wildcardEnabled = false;
+    let wildcardCaptures = [];
+    let wildcardHandler;
+
+    document.getElementById('btnToggleWildcard').onclick = () => {
+      if (!wildcardEnabled) {
+        wildcardHandler = (event, hookName) => {
+          if (hookName !== 'api:getLogs' && !hookName.startsWith('api:')) {
+            wildcardCaptures.push({ hookName, event });
+          }
+          return event;
+        };
+
+        const wildcardPlugin = {
+          name: 'wildcard-logger',
+          setup(ctx) {
+            ctx.on('*', wildcardHandler);
+          }
+        };
+        fixiplug.use(wildcardPlugin);
+        wildcardEnabled = true;
+        document.getElementById('btnToggleWildcard').textContent = 'Disable Wildcard Logger';
+      } else {
+        fixiplug.unuse('wildcard-logger');
+        wildcardEnabled = false;
+        document.getElementById('btnToggleWildcard').textContent = 'Enable Wildcard Logger';
+      }
+    };
+
+    document.getElementById('btnTestWildcard').onclick = async () => {
+      wildcardCaptures = [];
+      await fixiplug.dispatch('testEvent1', { id: 1 });
+      await fixiplug.dispatch('testEvent2', { id: 2 });
+      await fixiplug.dispatch('testEvent3', { id: 3 });
+
+      const container = document.getElementById('wildcardLog');
+      if (wildcardCaptures.length > 0) {
+        container.innerHTML = wildcardCaptures.map(cap =>
+          `<div>${cap.hookName} → ${serializeEvent(cap.event)}</div>`
+        ).join('');
+      } else {
+        container.innerHTML = '(wildcard logger is disabled - enable it first!)';
+      }
+    };
+
+    // Plugin Management Handlers
+    let customPluginAdded = false;
+
+    function updatePluginList() {
+      const plugins = fixiplug.getPlugins();
+      document.getElementById('pluginList').innerHTML =
+        `Active plugins: ${plugins.join(', ') || '(none)'}`;
+    }
+    updatePluginList();
+
+    document.getElementById('btnAddPlugin').onclick = () => {
+      if (!customPluginAdded) {
+        const customPlugin = {
+          name: 'custom-demo-plugin',
+          setup(ctx) {
+            ctx.on('customEvent', (event) => {
+              console.log('Custom plugin triggered!', event);
+              return event;
+            });
+          }
+        };
+        fixiplug.use(customPlugin);
+        customPluginAdded = true;
+        updatePluginList();
+      } else {
+        alert('Custom plugin already added!');
+      }
+    };
+
+    document.getElementById('btnRemovePlugin').onclick = () => {
+      if (customPluginAdded) {
+        fixiplug.unuse('custom-demo-plugin');
+        customPluginAdded = false;
+        updatePluginList();
+      } else {
+        alert('No custom plugin to remove!');
+      }
+    };
+
+    document.getElementById('btnSwapPlugin').onclick = () => {
+      const newLogger = {
+        name: 'simple-console-logger',
+        setup(ctx) {
+          ctx.on('*', (event, hookName) => {
+            console.log(`[SWAPPED LOGGER] ${hookName}:`, event);
+            return event;
+          });
+        }
+      };
+      fixiplug.swap('loggerPlug', newLogger);
+      updatePluginList();
+      alert('Logger plugin swapped! Check console for new log format.');
+    };
+
     // Idiomorph Swap Handlers
     const videoElement = document.getElementById('videoDemo');
     const contentContainer = document.getElementById('contentContainer');
@@ -200,5 +354,29 @@
   <button id="btnError">Trigger <code>brokenEvent</code></button>
   <button id="clearErrors">Clear Errors</button>
   <div id="errorLog" class="box">(error output)</div>
+
+  <h2>5. Hook Priority</h2>
+  <p>Demonstrates hook execution order based on priority (HIGH > NORMAL > LOW).</p>
+  <button id="btnPriority">Trigger Priority Test</button>
+  <div id="priorityLog" class="box">(priority execution order)</div>
+
+  <h2>6. Data Pipeline</h2>
+  <p>Transform data through the pipeline without DOM manipulation.</p>
+  <button id="btnTransformJSON">Transform JSON</button>
+  <button id="btnTransformCSV">Transform CSV</button>
+  <div id="pipelineOutput" class="box">(data output)</div>
+
+  <h2>7. Wildcard Hook Listener</h2>
+  <p>The <code>*</code> wildcard hook captures all events. Toggle to see it in action.</p>
+  <button id="btnToggleWildcard">Enable Wildcard Logger</button>
+  <button id="btnTestWildcard">Trigger Any Event</button>
+  <div id="wildcardLog" class="box">(wildcard captures)</div>
+
+  <h2>8. Plugin Management</h2>
+  <p>Dynamically add, remove, and swap plugins at runtime.</p>
+  <button id="btnAddPlugin">Add Custom Plugin</button>
+  <button id="btnRemovePlugin">Remove Custom Plugin</button>
+  <button id="btnSwapPlugin">Swap Logger Plugin</button>
+  <div id="pluginList" class="box">(active plugins)</div>
 </body>
 </html>
