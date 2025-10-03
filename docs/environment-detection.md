@@ -1,6 +1,8 @@
 # Fixiplug Environment Detection Guide
 
-Fixiplug provides a powerful environment detection system that automatically adapts to your runtime environment. This guide explains how it works and how you can customize it.
+Fixiplug provides a powerful environment detection system that automatically
+adapts to your runtime environment. This guide explains how it works and how you
+can customize it.
 
 ## Automatic Environment Detection
 
@@ -14,14 +16,14 @@ Fixiplug can detect:
 
 ```javascript
 // Import the auto-configured version
-import { auto } from 'fixiplug';
+import { auto } from "fixiplug";
 
 // Use it just like any other fixiplug instance
 auto.use(myPlugin);
-auto.dispatch('init', {});
+auto.dispatch("init", {});
 
 // Check detected environment
-console.log(auto.config); 
+console.log(auto.config);
 // {
 //   enableLogging: true, // false in production
 //   enableDom: true,     // true in browser, false in Node.js
@@ -38,28 +40,28 @@ console.log(auto.config);
 ### Option 1: Using the `configure()` function
 
 ```javascript
-import { configure } from 'fixiplug';
+import { configure } from "fixiplug";
 
 // Create a custom instance with auto-detection plus overrides
 const myFixiplug = configure({
   // Use auto-detection but override specific settings
-  logging: true,     // force logging on
-  test: false,       // force test mode off
-  
+  logging: true, // force logging on
+  test: false, // force test mode off
+
   // Optional: disable auto-detection completely
-  autoDetect: false
+  autoDetect: false,
 });
 ```
 
 ### Option 2: Using the `forceEnvironment()` function
 
 ```javascript
-import { forceEnvironment, auto, configure } from 'fixiplug';
+import { auto, configure, forceEnvironment } from "fixiplug";
 
 // Force specific environment flags
 forceEnvironment({
   isProduction: true,
-  isTest: true
+  isTest: true,
 });
 
 // All new instances will respect these settings
@@ -72,6 +74,7 @@ forceEnvironment(null);
 ## Detection Logic
 
 ### Browser Detection
+
 - Checks for `window` and `document` objects
 - Detects browser test frameworks (Jest, Mocha, Jasmine, etc.)
 - Production is determined by:
@@ -80,20 +83,23 @@ forceEnvironment(null);
   - Explicit environment flags
 
 ### Node.js Detection
+
 - Checks for `process.versions.node`
 - Detects Node.js test runners
 - Production is determined by `NODE_ENV=production`
 
 ### Deno Detection
+
 - Checks for `typeof Deno !== 'undefined'`
 - Production is determined by `DENO_ENV=production`
 
 ## Refreshing Environment Detection
 
-If your application needs to react to environment changes during runtime, you can refresh the detection:
+If your application needs to react to environment changes during runtime, you
+can refresh the detection:
 
 ```javascript
-import { auto, refreshEnvironment } from 'fixiplug';
+import { auto, refreshEnvironment } from "fixiplug";
 
 // Use the auto-configured version
 auto.use(myPlugin);
@@ -109,6 +115,7 @@ console.log(auto.config.enableLogging); // Will be false if production mode was 
 ```
 
 This is particularly useful for:
+
 - Single-page applications that might change environment during runtime
 - Testing different environments without reloading the application
 - Server applications that need to adapt to environment changes
@@ -124,7 +131,7 @@ globalThis.__FIXIPLUG_PRODUCTION__ = true;
 // Or set detailed environment overrides
 globalThis.__FIXIPLUG_ENV_OVERRIDE__ = {
   isProduction: true,
-  isTest: true
+  isTest: true,
 };
 ```
 
@@ -132,5 +139,6 @@ globalThis.__FIXIPLUG_ENV_OVERRIDE__ = {
 
 1. For most use cases, simply import and use the `auto` version
 2. For testing, use the `test` version or `forceEnvironment({ isTest: true })`
-3. For configuration that changes at runtime, use `configure()` or `auto.refreshConfig()`
+3. For configuration that changes at runtime, use `configure()` or
+   `auto.refreshConfig()`
 4. If auto-detection doesn't work for your environment, use `forceEnvironment()`
