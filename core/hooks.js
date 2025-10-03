@@ -96,6 +96,86 @@ async function processErrorQueue() {
   processingErrors = false;
 }
 
+// Deferred event queue for plugin-emitted events
+const deferredQueue = [];
+let processingDeferred = false;
+const MAX_DEFERRED_QUEUE_SIZE = 1000;
+
+// Track deferred event counts to detect infinite loops
+const deferredEventCounts = new Map();
+
+/**
+ * Process deferred events emitted by plugins
+ * This prevents infinite recursion by processing events after the current dispatch completes
+ */
+async function processDeferredQueue() {
+  if (processingDeferred || deferredQueue.length === 0) return;
+
+  processingDeferred = true;
+
+  // Process in batches to prevent infinite loops
+  const batchSize = Math.min(50, deferredQueue.length);
+  let processed = 0;
+
+  while (deferredQueue.length > 0 && processed < batchSize) {
+    const { hookName, event } = deferredQueue.shift();
+    processed++;
+
+    try {
+      await dispatch(hookName, event);
+    } catch (e) {
+      console.error('Error processing deferred event:', e);
+    }
+  }
+
+  processingDeferred = false;
+
+  // If queue still has items, schedule next batch
+  if (deferredQueue.length > 0) {
+    setTimeout(() => processDeferredQueue(), 0);
+  } else {
+    // Clear counts when queue is empty
+    deferredEventCounts.clear();
+  }
+}
+
+/**
+ * Queue an event for deferred dispatch
+ * Used by ctx.emit() to prevent recursion
+ * @param {string} hookName - The hook to dispatch
+ * @param {Object} event - The event data
+ */
+export function queueDeferredEvent(hookName, event) {
+  // Prevent queue from growing too large (infinite loop protection)
+  if (deferredQueue.length >= MAX_DEFERRED_QUEUE_SIZE) {
+    console.warn(`[FixiPlug] Deferred queue is full (${MAX_DEFERRED_QUEUE_SIZE}). Dropping event: ${hookName}`);
+    console.warn('[FixiPlug] This usually indicates an infinite event loop.');
+    return;
+  }
+
+  // Track event frequency to detect tight loops
+  const count = (deferredEventCounts.get(hookName) || 0) + 1;
+  deferredEventCounts.set(hookName, count);
+
+  if (count > 100) {
+    console.warn(`[FixiPlug] Event "${hookName}" has been emitted ${count} times. Possible infinite loop.`);
+    if (count > 500) {
+      console.error(`[FixiPlug] Event "${hookName}" emitted too many times (${count}). Dropping to prevent infinite loop.`);
+      return;
+    }
+  }
+
+  deferredQueue.push({ hookName, event });
+
+  // Trigger processing if not already running
+  if (!processingDeferred) {
+    setTimeout(() => processDeferredQueue(), 0);
+  }
+}
+
+// Re-entrance prevention: track currently executing hooks
+const activeHooks = new Set();
+
 /**
  * Dispatch a hook event
  * @param {string} hookName - The hook to dispatch
@@ -103,49 +183,66 @@ async function processErrorQueue() {
  * @returns {Promise<Object>} The processed event data
  */
 export async function dispatch(hookName, event = {}) {
-  let result = event;
-
-  // Get all relevant handlers (specific + wildcard) in single pass
-  const allHandlers = [];
-
-  // Add specific handlers
-  if (hooks[hookName] && hooks[hookName].length) {
-    allHandlers.push(...hooks[hookName]);
+  // Prevent re-entrance to same hook
+  if (activeHooks.has(hookName)) {
+    console.warn(`[FixiPlug] Hook "${hookName}" is already executing. Skipping recursive call to prevent infinite loop.`);
+    return event;
   }
 
-  // Add wildcard handlers
-  if (hooks['*'] && hooks['*'].length) {
-    allHandlers.push(...hooks['*']);
-  }
+  activeHooks.add(hookName);
 
-  // Process all handlers in single pass
-  for (const { handler, plugin } of allHandlers) {
-    // Skip handlers from disabled plugins
-    if (disabledPlugins.has(plugin)) {
-      continue;
+  try {
+    let result = event;
+
+    // Get all relevant handlers (specific + wildcard) in single pass
+    const allHandlers = [];
+
+    // Add specific handlers
+    if (hooks[hookName] && hooks[hookName].length) {
+      allHandlers.push(...hooks[hookName]);
     }
 
-    try {
-      result = await handler(result, hookName) || result;
-    } catch (error) {
-      // Queue error for async processing to prevent recursion
-      errorQueue.push({
-        plugin,
-        hookName,
-        error,
-        event: result
-      });
+    // Add wildcard handlers
+    if (hooks['*'] && hooks['*'].length) {
+      allHandlers.push(...hooks['*']);
+    }
 
-      // Don't rethrow to avoid breaking the chain
+    // Process all handlers in single pass
+    for (const { handler, plugin } of allHandlers) {
+      // Skip handlers from disabled plugins
+      if (disabledPlugins.has(plugin)) {
+        continue;
+      }
+
+      try {
+        result = await handler(result, hookName) || result;
+      } catch (error) {
+        // Queue error for async processing to prevent recursion
+        errorQueue.push({
+          plugin,
+          hookName,
+          error,
+          event: result
+        });
+
+        // Don't rethrow to avoid breaking the chain
+      }
+    }
+
+    // Process any queued errors asynchronously
+    if (errorQueue.length > 0) {
+      setTimeout(() => processErrorQueue(), 0);
+    }
+
+    return result;
+  } finally {
+    activeHooks.delete(hookName);
+
+    // Process deferred events after this dispatch completes
+    if (deferredQueue.length > 0 && !processingDeferred) {
+      setTimeout(() => processDeferredQueue(), 0);
     }
   }
-
-  // Process any queued errors asynchronously
-  if (errorQueue.length > 0) {
-    setTimeout(() => processErrorQueue(), 0);
-  }
-
-  return result;
 }
 
 /**

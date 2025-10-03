@@ -3,6 +3,7 @@
  * @module fixiplug/factory
  */
 import { Fixi } from '../core/fixi-core.js';
+import { queueDeferredEvent } from '../core/hooks.js';
 
 // Available features
 export const FEATURES = {
@@ -108,61 +109,70 @@ export function createFixiplug(options = {}) {
       // Create plugin context
       const context = {
         pluginName: name,
-        
+
         // Register a hook listener
         on(hookName, handler, priority = 0) {
           if (!Fixi.hooks) Fixi.hooks = {};
           if (!Fixi.hooks[hookName]) Fixi.hooks[hookName] = [];
-          
+
           Fixi.hooks[hookName].push({
             plugin: name,
             handler,
             priority
           });
-          
+
           // Sort handlers by priority (high to low)
           Fixi.hooks[hookName].sort((a, b) => b.priority - a.priority);
-          
+
           return this;
         },
-        
+
         // Remove a hook listener
         off(hookName, handler) {
           if (!Fixi.hooks || !Fixi.hooks[hookName]) return this;
-          
-          Fixi.hooks[hookName] = Fixi.hooks[hookName].filter(h => 
+
+          Fixi.hooks[hookName] = Fixi.hooks[hookName].filter(h =>
             h.plugin !== name || h.handler !== handler
           );
-          
+
           return this;
         },
-        
+
+        // Emit an event (deferred to prevent recursion)
+        emit(hookName, event = {}) {
+          queueDeferredEvent(hookName, event);
+          return this;
+        },
+
         // Register a cleanup function
         registerCleanup(fn) {
           if (!plugins.has(name)) {
             plugins.set(name, { cleanup: [] });
           }
-          
+
           const plugin = plugins.get(name);
           plugin.cleanup = plugin.cleanup || [];
           plugin.cleanup.push(fn);
-          
+
           return this;
         },
-        
+
         // Plugin-specific storage
         storage: new Map(),
-        
+
         // Debug flag
         debug: hasFeature(FEATURES.TESTING)
       };
       
-      // Store plugin reference
-      plugins.set(name, { 
+      // Store plugin reference locally
+      plugins.set(name, {
         instance: plugin,
         context
       });
-      
+
+      // Register in core plugin registry for introspection
+      Fixi.use(plugin);
+
       // Initialize the plugin
       try {
         setup(context);

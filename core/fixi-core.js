@@ -73,3 +73,27 @@ Fixi.disable = function(pluginName) {
   hooks.disablePlugin(pluginName);
   return this;
 };
+
+// Introspection methods for exposing internal state safely
+Fixi.getPluginRegistry = function() {
+  // Return a copy to prevent mutation
+  return new Map(hooks.pluginRegistry);
+};
+
+Fixi.getHooks = function() {
+  // Return a deep copy without handler functions (security)
+  const hooksCopy = {};
+  for (const [name, handlers] of Object.entries(hooks.hooks)) {
+    hooksCopy[name] = handlers.map(h => ({
+      plugin: h.plugin,
+      priority: h.priority
+      // Omit handler function to prevent direct invocation
+    }));
+  }
+  return hooksCopy;
+};
+
+Fixi.getDisabledPlugins = function() {
+  // Return a copy to prevent mutation
+  return new Set(hooks.disabledPlugins);
+};
