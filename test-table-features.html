@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FixiPlug Table Plugin - Feature Tests</title>
+  <script src="https://unpkg.com/fixi.js@latest/fixi.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2em;
+      background: #f5f5f5;
+    }
+    .test-section {
+      background: white;
+      padding: 2em;
+      margin-bottom: 2em;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #4CAF50;
+      padding-bottom: 0.5em;
+    }
+    h2 {
+      color: #4CAF50;
+      margin-top: 0;
+    }
+    .description {
+      color: #666;
+      margin-bottom: 1em;
+      font-style: italic;
+    }
+    .feature-badge {
+      display: inline-block;
+      background: #4CAF50;
+      color: white;
+      padding: 0.25em 0.75em;
+      border-radius: 12px;
+      font-size: 0.85em;
+      margin-right: 0.5em;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 FixiPlug Table Plugin - Feature Tests</h1>
+
+  <!-- Test 1: Basic Table with All Client-Side Features -->
+  <div class="test-section">
+    <h2>Test 1: All Client-Side Features</h2>
+    <div class="description">
+      <span class="feature-badge">Search</span>
+      <span class="feature-badge">Sort</span>
+      <span class="feature-badge">Pagination</span>
+      <span class="feature-badge">Export</span>
+    </div>
+    <p>This table demonstrates all client-side features working together.</p>
+
+    <div
+      id="test1"
+      fx-table
+      fx-table-search
+      fx-table-sortable
+      fx-table-paginate
+      fx-table-export
+      fx-page-size="5"
+      fx-export-filename="products.csv">
+    </div>
+  </div>
+
+  <!-- Test 2: Inline Editing -->
+  <div class="test-section">
+    <h2>Test 2: Inline Editing (Double-click cells)</h2>
+    <div class="description">
+      <span class="feature-badge">Editable</span>
+      <span class="feature-badge">Sort</span>
+    </div>
+    <p>Double-click name or stock cells to edit. Press Enter to save, Escape to cancel.</p>
+
+    <div
+      id="test2"
+      fx-table
+      fx-table-editable
+      fx-table-sortable
+      fx-table-save-url="/api/products/update">
+    </div>
+  </div>
+
+  <!-- Test 3: Search Only -->
+  <div class="test-section">
+    <h2>Test 3: Search Filter Only</h2>
+    <div class="description">
+      <span class="feature-badge">Search</span>
+    </div>
+    <p>Try searching for product names, categories, or price ranges.</p>
+
+    <div
+      id="test3"
+      fx-table
+      fx-table-search
+      fx-table-search-placeholder="Search products...">
+    </div>
+  </div>
+
+  <!-- Test 4: Pagination Only -->
+  <div class="test-section">
+    <h2>Test 4: Pagination Only</h2>
+    <div class="description">
+      <span class="feature-badge">Pagination</span>
+    </div>
+    <p>Navigate through pages using controls below the table.</p>
+
+    <div
+      id="test4"
+      fx-table
+      fx-table-paginate
+      fx-page-size="10">
+    </div>
+  </div>
+
+  <!-- Test 5: Export Only -->
+  <div class="test-section">
+    <h2>Test 5: CSV Export</h2>
+    <div class="description">
+      <span class="feature-badge">Export</span>
+    </div>
+    <p>Click the Export CSV button to download table data.</p>
+
+    <div
+      id="test5"
+      fx-table
+      fx-table-export
+      fx-export-filename="my-data.csv">
+    </div>
+  </div>
+
+  <!-- Test 6: Django Format -->
+  <div class="test-section">
+    <h2>Test 6: Django Table Format</h2>
+    <div class="description">
+      <span class="feature-badge">Django Integration</span>
+      <span class="feature-badge">Search</span>
+      <span class="feature-badge">Sort</span>
+      <span class="feature-badge">Pagination</span>
+    </div>
+    <p>Simulates Django dj-fixi table format with column metadata.</p>
+
+    <div
+      id="test6"
+      fx-table
+      fx-table-search
+      fx-table-paginate
+      fx-page-size="8">
+    </div>
+  </div>
+
+  <!-- Test 7: Large Dataset Performance -->
+  <div class="test-section">
+    <h2>Test 7: Large Dataset (1000 rows)</h2>
+    <div class="description">
+      <span class="feature-badge">Search</span>
+      <span class="feature-badge">Sort</span>
+      <span class="feature-badge">Pagination</span>
+    </div>
+    <p>Test performance with a larger dataset. Try searching and sorting.</p>
+
+    <div
+      id="test7"
+      fx-table
+      fx-table-search
+      fx-table-sortable
+      fx-table-paginate
+      fx-page-size="20">
+    </div>
+  </div>
+
+  <script type="module">
+    import fixiplug from './src/index.js';
+    import createDataPipeline from './plugins/data-pipeline.js';
+    import createTablePlugin from './plugins/table.js';
+    import createDjangoIntegration from './plugins/django-integration.js';
+
+    // Register plugins
+    fixiplug.use(createDjangoIntegration());
+    fixiplug.use(createDataPipeline());
+    fixiplug.use(createTablePlugin());
+
+    console.log('✅ Plugins registered');
+
+    // Sample data
+    const products = [
+      { id: 1, name: 'Laptop', category: 'Electronics', price: 999.99, stock: 15, isActive: true },
+      { id: 2, name: 'Mouse', category: 'Electronics', price: 29.99, stock: 100, isActive: true },
+      { id: 3, name: 'Keyboard', category: 'Electronics', price: 79.99, stock: 50, isActive: true },
+      { id: 4, name: 'Monitor', category: 'Electronics', price: 299.99, stock: 25, isActive: true },
+      { id: 5, name: 'Desk', category: 'Furniture', price: 399.99, stock: 10, isActive: true },
+      { id: 6, name: 'Chair', category: 'Furniture', price: 249.99, stock: 20, isActive: true },
+      { id: 7, name: 'Webcam', category: 'Electronics', price: 89.99, stock: 30, isActive: true },
+      { id: 8, name: 'Headphones', category: 'Electronics', price: 149.99, stock: 40, isActive: true },
+      { id: 9, name: 'Notebook', category: 'Stationery', price: 4.99, stock: 200, isActive: true },
+      { id: 10, name: 'Pen Set', category: 'Stationery', price: 12.99, stock: 150, isActive: true },
+      { id: 11, name: 'Tablet', category: 'Electronics', price: 599.99, stock: 18, isActive: true },
+      { id: 12, name: 'Phone', category: 'Electronics', price: 799.99, stock: 35, isActive: true },
+      { id: 13, name: 'Lamp', category: 'Furniture', price: 49.99, stock: 60, isActive: true },
+      { id: 14, name: 'Printer', category: 'Electronics', price: 199.99, stock: 12, isActive: false },
+      { id: 15, name: 'Scanner', category: 'Electronics', price: 149.99, stock: 8, isActive: false },
+    ];
+
+    // Test 1: Full featured table
+    const test1 = document.getElementById('test1');
+    test1.dispatchEvent(new CustomEvent('fx:data', {
+      detail: {
+        data: products,
+        cfg: {}
+      }
+    }));
+
+    // Test 2: Editable table
+    const test2 = document.getElementById('test2');
+    test2.dispatchEvent(new CustomEvent('fx:data', {
+      detail: {
+        data: products.slice(0, 5),
+        cfg: {}
+      }
+    }));
+
+    // Test 3: Search only
+    const test3 = document.getElementById('test3');
+    test3.dispatchEvent(new CustomEvent('fx:data', {
+      detail: {
+        data: products,
+        cfg: {}
+      }
+    }));
+
+    // Test 4: Pagination only
+    const test4 = document.getElementById('test4');
+    test4.dispatchEvent(new CustomEvent('fx:data', {
+      detail: {
+        data: products,
+        cfg: {}
+      }
+    }));
+
+    // Test 5: Export only
+    const test5 = document.getElementById('test5');
+    test5.dispatchEvent(new CustomEvent('fx:data', {
+      detail: {
+        data: products.slice(0, 5),
+        cfg: {}
+      }
+    }));
+
+    // Test 6: Django format
+    const test6 = document.getElementById('test6');
+    const djangoData = {
+      data: products,
+      columns: [
+        { key: 'id', label: 'ID', sortable: true, editable: false },
+        { key: 'name', label: 'Product Name', sortable: true, editable: true, inputType: 'text' },
+        { key: 'category', label: 'Category', sortable: true, editable: false },
+        { key: 'price', label: 'Price', sortable: true, editable: false, type: 'number' },
+        { key: 'stock', label: 'Stock', sortable: true, editable: true, inputType: 'number' },
+        { key: 'isActive', label: 'Active', sortable: false, editable: false, type: 'boolean' }
+      ],
+      meta: {
+        editable: true,
+        sortable: true,
+        viewPrefix: 'product'
+      }
+    };
+
+    test6.dispatchEvent(new CustomEvent('fx:data', {
+      detail: {
+        data: djangoData,
+        djangoTable: true,
+        cfg: {}
+      }
+    }));
+
+    // Test 7: Large dataset
+    const largeData = [];
+    for (let i = 1; i <= 1000; i++) {
+      largeData.push({
+        id: i,
+        name: `Product ${i}`,
+        category: ['Electronics', 'Furniture', 'Stationery'][i % 3],
+        price: Math.random() * 1000,
+        stock: Math.floor(Math.random() * 100),
+        isActive: Math.random() > 0.2
+      });
+    }
+
+    const test7 = document.getElementById('test7');
+    test7.dispatchEvent(new CustomEvent('fx:data', {
+      detail: {
+        data: largeData,
+        cfg: {}
+      }
+    }));
+
+    // Listen for export events
+    document.addEventListener('table:exported', (e) => {
+      console.log('✅ Table exported:', e.detail);
+      alert(`Exported ${e.detail.rowCount} rows to ${e.detail.filename}`);
+    });
+
+    // Listen for cell save events
+    document.addEventListener('table:cellSaved', (e) => {
+      console.log('✅ Cell saved:', e.detail);
+      alert(`Saved: Row ${e.detail.rowId}, Column ${e.detail.column} = ${e.detail.value}`);
+    });
+
+    // Listen for cell save errors
+    document.addEventListener('table:cellSaveError', (e) => {
+      console.error('❌ Save failed:', e.detail);
+      alert(`Save failed: ${e.detail.error.message}`);
+    });
+
+    console.log('✅ All tests initialized');
+  </script>
+</body>
+</html>
