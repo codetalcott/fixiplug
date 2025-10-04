@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FixiPlug Agent Plugins Test - Phase 1</title>
+  <script src="https://unpkg.com/fixi.js@latest/fixi.min.js"></script>
+  <style>
+    body {
+      font-family: system-ui, -apple-system, sans-serif;
+      max-width: 1400px;
+      margin: 0 auto;
+      padding: 2em;
+      background: #f5f5f5;
+    }
+    .test-section {
+      background: white;
+      padding: 2em;
+      margin-bottom: 2em;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #4CAF50;
+      padding-bottom: 0.5em;
+    }
+    h2 {
+      color: #4CAF50;
+      margin-top: 0;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 0.75em 1.5em;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1em;
+      margin: 0.5em 0.5em 0.5em 0;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    .output {
+      background: #f5f5f5;
+      border: 1px solid #ddd;
+      padding: 1em;
+      margin-top: 1em;
+      border-radius: 4px;
+      font-family: 'Courier New', monospace;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .success {
+      color: #4CAF50;
+      font-weight: bold;
+    }
+    .error {
+      color: #f44336;
+      font-weight: bold;
+    }
+    form {
+      display: grid;
+      gap: 1em;
+      max-width: 500px;
+    }
+    label {
+      display: flex;
+      flex-direction: column;
+      gap: 0.25em;
+    }
+    input, select, textarea {
+      padding: 0.5em;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 1em;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 1em;
+    }
+    th, td {
+      padding: 0.75em;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #f5f5f5;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <h1>🤖 FixiPlug Agent Plugins - Phase 1 Test Suite</h1>
+
+  <!-- Test 1: Capability Discovery -->
+  <div class="test-section">
+    <h2>Test 1: Capability Discovery</h2>
+    <p>Auto-discover Django endpoints, tables, and forms</p>
+
+    <button onclick="testCapabilityDiscovery()">Discover All Capabilities</button>
+    <button onclick="testDiscoverEndpoints()">Discover Endpoints</button>
+    <button onclick="testGetCapability()">Get Specific Capability</button>
+
+    <div id="output1" class="output"></div>
+  </div>
+
+  <!-- Test 2: Agent Commands - Fill Form -->
+  <div class="test-section">
+    <h2>Test 2: Agent Commands - Fill Form</h2>
+    <p>LLM agent fills form without DOM knowledge</p>
+
+    <form name="product-form" onsubmit="return false;">
+      <label>
+        Product Name (required)
+        <input type="text" name="name" required>
+      </label>
+      <label>
+        Price (required)
+        <input type="number" name="price" min="0" step="0.01" required>
+      </label>
+      <label>
+        Category
+        <select name="category">
+          <option value="">Select...</option>
+          <option value="electronics">Electronics</option>
+          <option value="furniture">Furniture</option>
+          <option value="clothing">Clothing</option>
+        </select>
+      </label>
+      <label>
+        In Stock
+        <input type="checkbox" name="inStock">
+      </label>
+      <label>
+        Description
+        <textarea name="description" rows="3"></textarea>
+      </label>
+      <button type="submit">Submit Product</button>
+    </form>
+
+    <button onclick="testFillForm()">Agent: Fill Form</button>
+    <button onclick="testSubmitForm()">Agent: Fill + Submit Form</button>
+
+    <div id="output2" class="output"></div>
+  </div>
+
+  <!-- Test 3: Form Schema Extraction -->
+  <div class="test-section">
+    <h2>Test 3: Form Schema Extraction</h2>
+    <p>Extract JSON schema from form for validation</p>
+
+    <button onclick="testGetFormSchema()">Get Form Schema</button>
+    <button onclick="testValidateFormData()">Validate Data (Valid)</button>
+    <button onclick="testValidateInvalidData()">Validate Data (Invalid)</button>
+    <button onclick="testGenerateSampleData()">Generate Sample Data</button>
+
+    <div id="output3" class="output"></div>
+  </div>
+
+  <!-- Test 4: Agent Commands - Query Table -->
+  <div class="test-section">
+    <h2>Test 4: Agent Commands - Query Table</h2>
+    <p>LLM agent queries table data with filters</p>
+
+    <div
+      id="products-table"
+      fx-table
+      fx-table-search
+      fx-table-sortable
+      data-model="products">
+    </div>
+
+    <button onclick="testQueryTable()">Agent: Query All Products</button>
+    <button onclick="testQueryTableFiltered()">Agent: Query Filtered (price >= 100)</button>
+
+    <div id="output4" class="output"></div>
+  </div>
+
+  <!-- Test 5: Agent Commands - Click & Navigate -->
+  <div class="test-section">
+    <h2>Test 5: Agent Commands - Click & Navigate</h2>
+    <p>LLM agent clicks buttons and navigates</p>
+
+    <button id="test-button" role="primary">Primary Action</button>
+    <button onclick="alert('Secondary clicked!')">Secondary Action</button>
+
+    <button onclick="testClickButton()">Agent: Click by Text</button>
+    <button onclick="testClickByRole()">Agent: Click by Role</button>
+    <button onclick="testExtractData()">Agent: Extract Button Text</button>
+
+    <div id="output5" class="output"></div>
+  </div>
+
+  <!-- Test 6: Full Agent Workflow -->
+  <div class="test-section">
+    <h2>Test 6: Complete Agent Workflow</h2>
+    <p>LLM agent discovers capabilities → queries data → fills form → validates → submits</p>
+
+    <button onclick="testCompleteWorkflow()">Run Complete Agent Workflow</button>
+
+    <div id="output6" class="output"></div>
+  </div>
+
+  <script type="module">
+    import fixiplug from './src/index.js';
+    import createDataPipeline from './plugins/data-pipeline.js';
+    import createTablePlugin from './plugins/table.js';
+    import createDjangoIntegration from './plugins/django-integration.js';
+    import createIntrospection from './plugins/introspection.js';
+    import createStateTracker from './plugins/state-tracker.js';
+    import createCapabilityRegistry from './plugins/capability-registry.js';
+    import createAgentCommands from './plugins/agent-commands.js';
+    import createFormSchema from './plugins/form-schema.js';
+
+    // Register all plugins
+    fixiplug
+      .use(createIntrospection)
+      .use(createStateTracker)
+      .use(createDjangoIntegration())
+      .use(createDataPipeline())
+      .use(createTablePlugin())
+      .use(createCapabilityRegistry)
+      .use(createAgentCommands)
+      .use(createFormSchema);
+
+    console.log('✅ All plugins registered');
+
+    // Sample product data
+    const products = [
+      { id: 1, name: 'Laptop', category: 'Electronics', price: 999.99, inStock: true },
+      { id: 2, name: 'Mouse', category: 'Electronics', price: 29.99, inStock: true },
+      { id: 3, name: 'Desk', category: 'Furniture', price: 399.99, inStock: false },
+      { id: 4, name: 'Monitor', category: 'Electronics', price: 299.99, inStock: true },
+      { id: 5, name: 'Chair', category: 'Furniture', price: 249.99, inStock: true },
+    ];
+
+    // Load table data (simulating Django response)
+    const tableEl = document.getElementById('products-table');
+    tableEl.dispatchEvent(new CustomEvent('fx:data', {
+      detail: {
+        data: {
+          data: products,
+          columns: [
+            { key: 'name', label: 'Product Name', sortable: true },
+            { key: 'category', label: 'Category', sortable: true },
+            { key: 'price', label: 'Price', sortable: true, type: 'number' },
+            { key: 'inStock', label: 'In Stock', type: 'boolean' }
+          ],
+          meta: { model: 'Product' }
+        },
+        djangoTable: true,
+        cfg: {}
+      }
+    }));
+
+    // Make fixiplug available globally for test functions
+    window.fixiplug = fixiplug;
+    window.log = (el, data) => {
+      el.textContent = JSON.stringify(data, null, 2);
+    };
+
+    console.log('✅ Test environment ready');
+  </script>
+
+  <script>
+    // Test 1: Capability Discovery
+    async function testCapabilityDiscovery() {
+      const result = await fixiplug.dispatch('api:getCapabilities');
+      log(document.getElementById('output1'), result);
+    }
+
+    async function testDiscoverEndpoints() {
+      const result = await fixiplug.dispatch('api:discoverEndpoints');
+      log(document.getElementById('output1'), result);
+    }
+
+    async function testGetCapability() {
+      const result = await fixiplug.dispatch('api:getCapability', {
+        endpoint: 'unknown' // This will be set by auto-registration
+      });
+      log(document.getElementById('output1'), result);
+    }
+
+    // Test 2: Agent Commands - Fill Form
+    async function testFillForm() {
+      const result = await fixiplug.dispatch('agent:fillForm', {
+        form: 'product-form',
+        data: {
+          name: 'Gaming Laptop',
+          price: 1499.99,
+          category: 'electronics',
+          inStock: true,
+          description: 'High-performance gaming laptop with RTX 4090'
+        }
+      });
+      log(document.getElementById('output2'), result);
+    }
+
+    async function testSubmitForm() {
+      const result = await fixiplug.dispatch('agent:submitForm', {
+        form: 'product-form',
+        data: {
+          name: 'Mechanical Keyboard',
+          price: 149.99,
+          category: 'electronics',
+          inStock: true
+        }
+      });
+      log(document.getElementById('output2'), result);
+    }
+
+    // Test 3: Form Schema
+    async function testGetFormSchema() {
+      const result = await fixiplug.dispatch('api:getFormSchema', {
+        form: 'product-form'
+      });
+      log(document.getElementById('output3'), result);
+    }
+
+    async function testValidateFormData() {
+      const result = await fixiplug.dispatch('api:validateFormData', {
+        form: 'product-form',
+        data: {
+          name: 'Valid Product',
+          price: 99.99,
+          category: 'electronics'
+        }
+      });
+      log(document.getElementById('output3'), result);
+    }
+
+    async function testValidateInvalidData() {
+      const result = await fixiplug.dispatch('api:validateFormData', {
+        form: 'product-form',
+        data: {
+          name: '', // Required but empty
+          price: 'not-a-number', // Invalid type
+        }
+      });
+      log(document.getElementById('output3'), result);
+    }
+
+    async function testGenerateSampleData() {
+      const result = await fixiplug.dispatch('api:generateSampleData', {
+        form: 'product-form'
+      });
+      log(document.getElementById('output3'), result);
+    }
+
+    // Test 4: Query Table
+    async function testQueryTable() {
+      const result = await fixiplug.dispatch('agent:queryTable', {
+        table: 'products'
+      });
+      log(document.getElementById('output4'), result);
+    }
+
+    async function testQueryTableFiltered() {
+      const result = await fixiplug.dispatch('agent:queryTable', {
+        table: 'products',
+        filter: { price__gte: 100 }
+      });
+      log(document.getElementById('output4'), result);
+    }
+
+    // Test 5: Click & Navigate
+    async function testClickButton() {
+      const result = await fixiplug.dispatch('agent:clickButton', {
+        text: 'secondary'
+      });
+      log(document.getElementById('output5'), result);
+    }
+
+    async function testClickByRole() {
+      const result = await fixiplug.dispatch('agent:clickButton', {
+        role: 'primary'
+      });
+      log(document.getElementById('output5'), result);
+    }
+
+    async function testExtractData() {
+      const result = await fixiplug.dispatch('agent:extract', {
+        selector: 'button',
+        fields: ['textContent']
+      });
+      log(document.getElementById('output5'), result);
+    }
+
+    // Test 6: Complete Workflow
+    async function testCompleteWorkflow() {
+      const output = document.getElementById('output6');
+      const steps = [];
+
+      try {
+        // Step 1: Discover capabilities
+        steps.push('Step 1: Discovering capabilities...');
+        const caps = await fixiplug.dispatch('api:getCapabilities');
+        steps.push(`✅ Found ${caps.count} capabilities: ${caps.types.join(', ')}`);
+
+        // Step 2: Get form schema
+        steps.push('\nStep 2: Getting form schema...');
+        const schema = await fixiplug.dispatch('api:getFormSchema', { form: 'product-form' });
+        steps.push(`✅ Form has ${Object.keys(schema.schema.fields).length} fields`);
+
+        // Step 3: Generate sample data
+        steps.push('\nStep 3: Generating sample data...');
+        const sample = await fixiplug.dispatch('api:generateSampleData', { form: 'product-form' });
+        steps.push(`✅ Generated: ${JSON.stringify(sample.sample, null, 2)}`);
+
+        // Step 4: Validate data
+        steps.push('\nStep 4: Validating data...');
+        const validation = await fixiplug.dispatch('api:validateFormData', {
+          form: 'product-form',
+          data: sample.sample
+        });
+        steps.push(`✅ Validation: ${validation.valid ? 'PASSED' : 'FAILED'}`);
+
+        // Step 5: Fill form
+        steps.push('\nStep 5: Filling form...');
+        const fill = await fixiplug.dispatch('agent:fillForm', {
+          form: 'product-form',
+          data: sample.sample
+        });
+        steps.push(`✅ Filled ${fill.filled.length} fields`);
+
+        // Step 6: Query table
+        steps.push('\nStep 6: Querying table...');
+        const query = await fixiplug.dispatch('agent:queryTable', {
+          table: 'products',
+          filter: { price__gte: 100 }
+        });
+        steps.push(`✅ Found ${query.count} products with price >= $100`);
+
+        steps.push('\n🎉 Complete workflow succeeded!');
+
+      } catch (error) {
+        steps.push(`\n❌ Error: ${error.message}`);
+      }
+
+      output.textContent = steps.join('\n');
+    }
+
+    // Primary button action
+    document.getElementById('test-button').onclick = () => {
+      alert('Primary button clicked!');
+    };
+  </script>
+</body>
+</html>
