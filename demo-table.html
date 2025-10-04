@@ -1,0 +1,400 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FixiPlug Table Plugin Demo</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #4CAF50;
+      padding-bottom: 0.5rem;
+    }
+    h2 {
+      color: #555;
+      margin-top: 2rem;
+      padding: 0.5rem;
+      background: #fff;
+      border-left: 4px solid #4CAF50;
+    }
+    .demo-section {
+      background: white;
+      padding: 1.5rem;
+      margin-bottom: 2rem;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    .demo-description {
+      color: #666;
+      margin-bottom: 1rem;
+      padding: 1rem;
+      background: #f9f9f9;
+      border-radius: 4px;
+    }
+    button {
+      background: #4CAF50;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 1rem;
+      margin: 0.5rem 0.5rem 0.5rem 0;
+    }
+    button:hover {
+      background: #45a049;
+    }
+    button:disabled {
+      background: #ccc;
+      cursor: not-allowed;
+    }
+    .code-block {
+      background: #1e1e1e;
+      color: #d4d4d4;
+      padding: 1rem;
+      border-radius: 4px;
+      overflow-x: auto;
+      margin: 1rem 0;
+    }
+    .code-block code {
+      font-family: 'Consolas', 'Monaco', monospace;
+    }
+    .table-container {
+      margin-top: 1rem;
+    }
+    .info-box {
+      background: #e3f2fd;
+      border-left: 4px solid #2196F3;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 4px;
+    }
+    .warning-box {
+      background: #fff3e0;
+      border-left: 4px solid #ff9800;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 4px;
+    }
+    .success-box {
+      background: #e8f5e9;
+      border-left: 4px solid #4CAF50;
+      padding: 1rem;
+      margin: 1rem 0;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>🎨 FixiPlug Table Plugin Demo</h1>
+
+  <div class="info-box">
+    <strong>About this demo:</strong> This page demonstrates the FixiPlug table plugin's capabilities including
+    basic rendering, Django integration, sorting, and inline editing. Open the browser console to see plugin logs.
+  </div>
+
+  <!-- Demo 1: Basic Table -->
+  <div class="demo-section">
+    <h2>Demo 1: Basic Table Rendering</h2>
+    <div class="demo-description">
+      <p>Simple table rendered from JSON data with auto-detected columns.</p>
+    </div>
+
+    <button id="load-basic">Load Basic Table</button>
+
+    <div class="code-block"><code>&lt;div id="basic-table" fx-table&gt;&lt;/div&gt;</code></div>
+
+    <div id="basic-table" class="table-container"></div>
+  </div>
+
+  <!-- Demo 2: Sortable Table -->
+  <div class="demo-section">
+    <h2>Demo 2: Sortable Columns</h2>
+    <div class="demo-description">
+      <p>Click any column header to sort. Click again to reverse sort order. Notice the sort indicators (▲/▼).</p>
+    </div>
+
+    <button id="load-sortable">Load Sortable Table</button>
+
+    <div class="code-block"><code>&lt;div id="sortable-table" fx-table fx-table-sortable&gt;&lt;/div&gt;</code></div>
+
+    <div id="sortable-table" class="table-container"></div>
+  </div>
+
+  <!-- Demo 3: Editable Table -->
+  <div class="demo-section">
+    <h2>Demo 3: Inline Editing</h2>
+    <div class="demo-description">
+      <p>Double-click any cell in the "Name" or "Age" columns to edit. Press Enter to save or Escape to cancel.</p>
+    </div>
+
+    <div class="warning-box">
+      <strong>Note:</strong> This demo doesn't have a backend server, so edits will show validation errors.
+      In a real app with Django's FxCRUDView, edits would be saved automatically.
+    </div>
+
+    <button id="load-editable">Load Editable Table</button>
+
+    <div class="code-block"><code>&lt;div id="editable-table"
+  fx-table
+  fx-table-editable
+  fx-table-save-url="/api/users/"&gt;&lt;/div&gt;</code></div>
+
+    <div id="editable-table" class="table-container"></div>
+  </div>
+
+  <!-- Demo 4: Django Format -->
+  <div class="demo-section">
+    <h2>Demo 4: Django Integration (dj-fixi)</h2>
+    <div class="demo-description">
+      <p>Table rendered from Django-formatted JSON (simulating dj-fixi FxCRUDView response).
+         Features are auto-enabled based on metadata.</p>
+    </div>
+
+    <div class="success-box">
+      <strong>Django Features:</strong> This table automatically enables sorting and editing based on the
+      column metadata from the Django backend. The "ID" column is read-only as specified by Django.
+    </div>
+
+    <button id="load-django">Load Django Table</button>
+
+    <div class="code-block"><code>&lt;div fx-action="/products/"
+  fx-trigger="load"
+  fx-table&gt;&lt;/div&gt;</code></div>
+
+    <div id="django-table" class="table-container"></div>
+  </div>
+
+  <!-- Demo 5: Custom Columns -->
+  <div class="demo-section">
+    <h2>Demo 5: Custom Column Configuration</h2>
+    <div class="demo-description">
+      <p>Table with manually configured columns showing only specific fields with custom labels.</p>
+    </div>
+
+    <button id="load-custom">Load Custom Table</button>
+
+    <div class="code-block"><code>&lt;div id="custom-table"
+  fx-table
+  fx-table-sortable
+  fx-table-columns='[
+    {"key":"name","label":"Employee Name"},
+    {"key":"email","label":"Contact Email"},
+    {"key":"active","label":"Status"}
+  ]'&gt;&lt;/div&gt;</code></div>
+
+    <div id="custom-table" class="table-container"></div>
+  </div>
+
+  <!-- Demo 6: Combined Features -->
+  <div class="demo-section">
+    <h2>Demo 6: All Features Combined</h2>
+    <div class="demo-description">
+      <p>Sortable + Editable table with custom column configuration. The ultimate demo!</p>
+    </div>
+
+    <button id="load-combined">Load Combined Table</button>
+
+    <div class="code-block"><code>&lt;div id="combined-table"
+  fx-table
+  fx-table-sortable
+  fx-table-editable
+  fx-table-columns='[...]'&gt;&lt;/div&gt;</code></div>
+
+    <div id="combined-table" class="table-container"></div>
+  </div>
+
+  <script type="module">
+    import fixiplug from './fixiplug.js';
+    import createDataPipeline from './plugins/data-pipeline.js';
+    import createTablePlugin from './plugins/table.js';
+    import createDjangoIntegration from './plugins/django-integration.js';
+
+    // Sample data
+    const userData = [
+      { id: 1, name: 'Alice Johnson', age: 30, email: 'alice@example.com', active: true, department: 'Engineering' },
+      { id: 2, name: 'Bob Smith', age: 25, email: 'bob@example.com', active: false, department: 'Marketing' },
+      { id: 3, name: 'Charlie Brown', age: 35, email: 'charlie@example.com', active: true, department: 'Sales' },
+      { id: 4, name: 'Diana Prince', age: 28, email: 'diana@example.com', active: true, department: 'Engineering' },
+      { id: 5, name: 'Eve Davis', age: 32, email: 'eve@example.com', active: false, department: 'HR' }
+    ];
+
+    // Django-formatted data (simulating dj-fixi response)
+    const djangoProductData = {
+      data: [
+        { id: 1, name: 'Laptop Pro 15"', price: 1299.99, stock: 45, category: 'Electronics' },
+        { id: 2, name: 'Wireless Mouse', price: 29.99, stock: 150, category: 'Accessories' },
+        { id: 3, name: 'USB-C Cable', price: 19.99, stock: 300, category: 'Accessories' },
+        { id: 4, name: 'Monitor 27"', price: 449.99, stock: 20, category: 'Electronics' },
+        { id: 5, name: 'Keyboard Mechanical', price: 129.99, stock: 75, category: 'Accessories' }
+      ],
+      columns: [
+        { key: 'id', label: 'Product ID', sortable: true, editable: false },
+        { key: 'name', label: 'Product Name', sortable: true, editable: true, inputType: 'text' },
+        { key: 'price', label: 'Price ($)', sortable: true, editable: true, inputType: 'number', type: 'number' },
+        { key: 'stock', label: 'In Stock', sortable: true, editable: true, inputType: 'number' },
+        { key: 'category', label: 'Category', sortable: true, editable: false }
+      ],
+      meta: {
+        editable: true,
+        sortable: true,
+        searchable: false
+      }
+    };
+
+    // Initialize plugins
+    fixiplug.use(createDataPipeline());
+    fixiplug.use(createDjangoIntegration());
+    fixiplug.use(createTablePlugin());
+
+    console.log('✅ FixiPlug Table Plugin Demo initialized');
+
+    // Demo 1: Basic Table
+    document.getElementById('load-basic').addEventListener('click', async () => {
+      const container = document.getElementById('basic-table');
+      container.setAttribute('fx-table', '');
+
+      await fixiplug.dispatch('fx:data', {
+        target: container,
+        detail: {
+          data: userData,
+          cfg: {}
+        }
+      });
+
+      await fixiplug.dispatch('fx:swapped', { target: container });
+      console.log('Demo 1: Basic table loaded');
+    });
+
+    // Demo 2: Sortable Table
+    document.getElementById('load-sortable').addEventListener('click', async () => {
+      const container = document.getElementById('sortable-table');
+      container.setAttribute('fx-table', '');
+      container.setAttribute('fx-table-sortable', '');
+
+      await fixiplug.dispatch('fx:data', {
+        target: container,
+        detail: {
+          data: userData,
+          cfg: {}
+        }
+      });
+
+      await fixiplug.dispatch('fx:swapped', { target: container });
+      console.log('Demo 2: Sortable table loaded');
+    });
+
+    // Demo 3: Editable Table
+    document.getElementById('load-editable').addEventListener('click', async () => {
+      const container = document.getElementById('editable-table');
+      container.setAttribute('fx-table', '');
+      container.setAttribute('fx-table-editable', '');
+      container.setAttribute('fx-table-save-url', '/api/users/');
+      container.setAttribute('fx-table-columns', JSON.stringify([
+        { key: 'id', label: 'ID', editable: false },
+        { key: 'name', label: 'Name', editable: true, inputType: 'text' },
+        { key: 'age', label: 'Age', editable: true, inputType: 'number' },
+        { key: 'email', label: 'Email', editable: false },
+        { key: 'active', label: 'Active', editable: false }
+      ]));
+
+      await fixiplug.dispatch('fx:data', {
+        target: container,
+        detail: {
+          data: userData,
+          cfg: {}
+        }
+      });
+
+      await fixiplug.dispatch('fx:swapped', { target: container });
+      console.log('Demo 3: Editable table loaded');
+    });
+
+    // Demo 4: Django Table
+    document.getElementById('load-django').addEventListener('click', async () => {
+      const container = document.getElementById('django-table');
+      container.setAttribute('fx-table', '');
+
+      await fixiplug.dispatch('fx:data', {
+        target: container,
+        detail: {
+          data: djangoProductData,
+          djangoTable: true,
+          cfg: {}
+        }
+      });
+
+      await fixiplug.dispatch('fx:swapped', { target: container });
+      console.log('Demo 4: Django table loaded');
+    });
+
+    // Demo 5: Custom Columns
+    document.getElementById('load-custom').addEventListener('click', async () => {
+      const container = document.getElementById('custom-table');
+      container.setAttribute('fx-table', '');
+      container.setAttribute('fx-table-sortable', '');
+      container.setAttribute('fx-table-columns', JSON.stringify([
+        { key: 'name', label: 'Employee Name', sortable: true },
+        { key: 'email', label: 'Contact Email', sortable: true },
+        { key: 'active', label: 'Status', sortable: true, type: 'boolean' }
+      ]));
+
+      await fixiplug.dispatch('fx:data', {
+        target: container,
+        detail: {
+          data: userData,
+          cfg: {}
+        }
+      });
+
+      await fixiplug.dispatch('fx:swapped', { target: container });
+      console.log('Demo 5: Custom columns table loaded');
+    });
+
+    // Demo 6: Combined Features
+    document.getElementById('load-combined').addEventListener('click', async () => {
+      const container = document.getElementById('combined-table');
+      container.setAttribute('fx-table', '');
+      container.setAttribute('fx-table-sortable', '');
+      container.setAttribute('fx-table-editable', '');
+      container.setAttribute('fx-table-save-url', '/api/users/');
+      container.setAttribute('fx-table-columns', JSON.stringify([
+        { key: 'id', label: 'ID', sortable: true, editable: false },
+        { key: 'name', label: 'Full Name', sortable: true, editable: true, inputType: 'text' },
+        { key: 'age', label: 'Age', sortable: true, editable: true, inputType: 'number', type: 'number' },
+        { key: 'department', label: 'Department', sortable: true, editable: false },
+        { key: 'active', label: 'Active', sortable: true, editable: false, type: 'boolean' }
+      ]));
+
+      await fixiplug.dispatch('fx:data', {
+        target: container,
+        detail: {
+          data: userData,
+          cfg: {}
+        }
+      });
+
+      await fixiplug.dispatch('fx:swapped', { target: container });
+      console.log('Demo 6: Combined features table loaded');
+    });
+
+    // Listen for table events
+    fixiplug.use(function demoEventListener(ctx) {
+      ctx.on('table:cellSaved', (event) => {
+        console.log('✅ Cell saved:', event);
+      });
+
+      ctx.on('table:cellSaveError', (event) => {
+        console.error('❌ Cell save error:', event.error);
+      });
+    });
+  </script>
+</body>
+</html>

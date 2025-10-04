@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Table Plugin Tests</title>
+  <style>
+    body {
+      font-family: monospace;
+      padding: 2rem;
+      background: #1e1e1e;
+      color: #d4d4d4;
+    }
+    h1 {
+      color: #4CAF50;
+    }
+    .test-output {
+      background: #2d2d2d;
+      padding: 1rem;
+      border-radius: 4px;
+      margin: 1rem 0;
+      white-space: pre-wrap;
+    }
+    .pass {
+      color: #4CAF50;
+    }
+    .fail {
+      color: #f44336;
+    }
+    .summary {
+      background: #2d2d2d;
+      padding: 1.5rem;
+      border-radius: 4px;
+      margin-top: 2rem;
+      font-size: 1.2rem;
+    }
+    #test-containers {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+  <h1>🧪 Table Plugin Test Suite</h1>
+  <div id="test-output" class="test-output"></div>
+  <div id="test-summary" class="summary"></div>
+  <div id="test-containers"></div>
+
+  <script type="module" src="./test-table-plugin.js"></script>
+</body>
+</html>
