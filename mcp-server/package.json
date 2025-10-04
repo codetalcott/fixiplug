@@ -1,0 +1,27 @@
+{
+  "name": "fixiplug-mcp-server",
+  "version": "1.0.0",
+  "description": "MCP server for FixiPlug agent commands",
+  "type": "module",
+  "main": "build/index.js",
+  "bin": {
+    "fixiplug-mcp": "build/index.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "prepare": "npm run build",
+    "inspector": "npx @modelcontextprotocol/inspector node build/index.js"
+  },
+  "keywords": ["mcp", "fixiplug", "agent", "automation"],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.0.4",
+    "playwright": "^1.48.2",
+    "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/node": "^22.10.2",
+    "typescript": "^5.7.2"
+  }
+}
