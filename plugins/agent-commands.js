@@ -30,10 +30,21 @@
  * });
  *
  * @example
- * // Extract data
+ * // Extract data (array format - uses data attributes)
  * const data = await fixiplug.dispatch('agent:extract', {
  *   selector: '.product-card',
  *   fields: ['name', 'price', 'stock']
+ * });
+ *
+ * @example
+ * // Extract data (object format - uses CSS selectors)
+ * const data = await fixiplug.dispatch('agent:extract', {
+ *   selector: 'tr',
+ *   fields: {
+ *     id: 'td:nth-child(1)',
+ *     name: 'td:nth-child(2)',
+ *     price: 'td:nth-child(3)'
+ *   }
  * });
  */
 
@@ -222,22 +233,44 @@ export default function agentCommands(ctx) {
       };
     }
 
+    // Determine if fields is array or object format
+    const isArrayFormat = Array.isArray(fields);
+    const isObjectFormat = !isArrayFormat && typeof fields === 'object';
+
+    if (!isArrayFormat && !isObjectFormat) {
+      return { error: 'fields must be an array or object' };
+    }
+
     const extracted = [];
 
     elements.forEach((el, index) => {
       const item = {};
 
-      fields.forEach(field => {
+      if (isArrayFormat) {
+        // Array format: ['name', 'price', 'stock']
         // Try multiple strategies to get field value
-        const value =
-          el.querySelector(`[data-field="${field}"]`)?.textContent?.trim() ||
-          el.querySelector(`[name="${field}"]`)?.value ||
-          el.querySelector(`[data-${field}]`)?.textContent?.trim() ||
-          el.getAttribute(`data-${field}`) ||
-          null;
+        fields.forEach(field => {
+          const value =
+            el.querySelector(`[data-field="${field}"]`)?.textContent?.trim() ||
+            el.querySelector(`[name="${field}"]`)?.value ||
+            el.querySelector(`[data-${field}]`)?.textContent?.trim() ||
+            el.getAttribute(`data-${field}`) ||
+            null;
 
-        item[field] = value;
-      });
+          item[field] = value;
+        });
+      } else {
+        // Object format: {name: 'td:nth-child(1)', price: 'td:nth-child(2)'}
+        // Use CSS selectors to find specific elements
+        for (const [fieldName, fieldSelector] of Object.entries(fields)) {
+          const fieldEl = el.querySelector(fieldSelector);
+          const value = fieldEl ?
+            (fieldEl.value || fieldEl.textContent?.trim() || fieldEl.getAttribute('value') || null) :
+            null;
+
+          item[fieldName] = value;
+        }
+      }
 
       extracted.push(item);
     });
@@ -246,7 +279,8 @@ export default function agentCommands(ctx) {
       success: true,
       count: extracted.length,
       data: format === 'array' ? extracted : Object.fromEntries(extracted.map((item, i) => [i, item])),
-      selector
+      selector,
+      fieldsFormat: isArrayFormat ? 'array' : 'object'
     };
   });
 
