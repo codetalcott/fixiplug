@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FixiPlug + Hono Client Example</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 40px 20px;
+      background: #f8f9fa;
+    }
+
+    .container {
+      background: white;
+      border-radius: 8px;
+      padding: 30px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    h1 {
+      color: #2c3e50;
+      margin-bottom: 10px;
+    }
+
+    .subtitle {
+      color: #7f8c8d;
+      margin-bottom: 30px;
+    }
+
+    .state-panel {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 30px;
+    }
+
+    .state-box {
+      padding: 20px;
+      border-radius: 6px;
+      background: #f8f9fa;
+    }
+
+    .state-box h2 {
+      font-size: 14px;
+      text-transform: uppercase;
+      color: #7f8c8d;
+      margin-bottom: 10px;
+    }
+
+    .state-badge {
+      display: inline-block;
+      padding: 8px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 16px;
+    }
+
+    .state-idle { background: #e0e0e0; color: #424242; }
+    .state-loading { background: #2196F3; color: white; }
+    .state-success { background: #4CAF50; color: white; }
+    .state-error { background: #f44336; color: white; }
+    .state-pending { background: #FF9800; color: white; }
+
+    .mode-selector {
+      margin-bottom: 30px;
+      padding: 15px;
+      background: #e3f2fd;
+      border-radius: 6px;
+    }
+
+    .mode-selector label {
+      margin-right: 20px;
+      cursor: pointer;
+    }
+
+    .mode-selector input[type="radio"] {
+      margin-right: 5px;
+    }
+
+    .connection-status {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 12px;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+
+    .connected { background: #4CAF50; color: white; }
+    .disconnected { background: #f44336; color: white; }
+
+    .actions {
+      margin-bottom: 30px;
+    }
+
+    .actions h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+
+    .button-group {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    button {
+      padding: 12px 24px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      background: #3498db;
+      color: white;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .btn-primary { background: #3498db; }
+    .btn-success { background: #27ae60; }
+    .btn-danger { background: #e74c3c; }
+    .btn-warning { background: #f39c12; }
+    .btn-info { background: #16a085; }
+
+    .events-panel {
+      margin-top: 30px;
+    }
+
+    .events-panel h2 {
+      font-size: 18px;
+      margin-bottom: 15px;
+      color: #2c3e50;
+    }
+
+    .events-list {
+      background: #f8f9fa;
+      border-radius: 6px;
+      padding: 15px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .event-item {
+      background: white;
+      padding: 12px;
+      margin-bottom: 8px;
+      border-radius: 4px;
+      border-left: 4px solid #3498db;
+      font-size: 14px;
+    }
+
+    .event-time {
+      color: #7f8c8d;
+      font-size: 12px;
+      margin-bottom: 4px;
+    }
+
+    .event-message {
+      color: #2c3e50;
+    }
+
+    .data-display {
+      margin-top: 20px;
+      padding: 15px;
+      background: #ecf0f1;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 14px;
+      max-height: 200px;
+      overflow-y: auto;
+    }
+
+    .clear-btn {
+      float: right;
+      padding: 6px 12px;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>FixiPlug + Hono Integration</h1>
+    <p class="subtitle">Bidirectional state synchronization demo</p>
+
+    <!-- Sync Mode Selector -->
+    <div class="mode-selector">
+      <strong>Sync Mode:</strong>
+      <label>
+        <input type="radio" name="mode" value="headers" checked>
+        Headers (HTTP)
+      </label>
+      <label>
+        <input type="radio" name="mode" value="sse">
+        SSE (Server Push)
+        <span id="sseStatus" class="connection-status disconnected">Disconnected</span>
+      </label>
+      <label>
+        <input type="radio" name="mode" value="websocket">
+        WebSocket
+        <span id="wsStatus" class="connection-status disconnected">Disconnected</span>
+      </label>
+    </div>
+
+    <!-- State Display -->
+    <div class="state-panel">
+      <div class="state-box">
+        <h2>Server State</h2>
+        <span id="serverState" class="state-badge state-idle">idle</span>
+      </div>
+      <div class="state-box">
+        <h2>Client State</h2>
+        <span id="clientState" class="state-badge state-idle">idle</span>
+      </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+      <h2>Test Actions</h2>
+
+      <div class="button-group">
+        <button class="btn-primary" onclick="fetchData()">📥 Fetch Data</button>
+        <button class="btn-danger" onclick="triggerError()">❌ Trigger Error</button>
+        <button class="btn-info" onclick="checkHealth()">🏥 Health Check</button>
+      </div>
+
+      <h3 style="margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Client State Control</h3>
+      <div class="button-group">
+        <button class="btn-warning" onclick="setClientState('loading')">⏳ Loading</button>
+        <button class="btn-success" onclick="setClientState('success')">✓ Success</button>
+        <button class="btn-danger" onclick="setClientState('error')">⚠ Error</button>
+        <button onclick="setClientState('idle')">↻ Idle</button>
+      </div>
+
+      <h3 style="margin-top: 20px; margin-bottom: 10px; font-size: 16px;">Server State Control</h3>
+      <div class="button-group">
+        <button class="btn-warning" onclick="setServerState('loading')">⏳ Loading</button>
+        <button class="btn-success" onclick="setServerState('success')">✓ Success</button>
+        <button class="btn-danger" onclick="setServerState('error')">⚠ Error</button>
+        <button onclick="setServerState('idle')">↻ Idle</button>
+      </div>
+    </div>
+
+    <!-- Data Display -->
+    <div id="dataDisplay" class="data-display" style="display: none;"></div>
+
+    <!-- Events Log -->
+    <div class="events-panel">
+      <h2>
+        Event Log
+        <button class="clear-btn" onclick="clearEvents()">Clear</button>
+      </h2>
+      <div id="eventsList" class="events-list"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    // Note: In production, use proper module paths
+    // For this example, we assume fixiplug is served from the root
+    import { fixiplug } from '../fixiplug.js';
+    import honoSync from '../plugins/hono-sync.js';
+    import stateTracker, { COMMON_STATES } from '../plugins/state-tracker.js';
+
+    let currentMode = 'headers';
+    let honoSyncInstance = null;
+
+    // Initialize FixiPlug
+    fixiplug.use(stateTracker);
+
+    // Setup initial sync mode
+    setupHonoSync(currentMode);
+
+    // Mode switcher
+    document.querySelectorAll('input[name="mode"]').forEach(radio => {
+      radio.addEventListener('change', (e) => {
+        currentMode = e.target.value;
+        setupHonoSync(currentMode);
+        logEvent(`Switched to ${currentMode} mode`, 'info');
+      });
+    });
+
+    function setupHonoSync(mode) {
+      // Remove old instance if exists
+      if (honoSyncInstance) {
+        fixiplug.unuse('hono-sync');
+      }
+
+      // Create new instance with selected mode
+      honoSyncInstance = honoSync({
+        mode,
+        sseEndpoint: '/events',
+        wsEndpoint: '/ws',
+        getClientState: () => {
+          return document.getElementById('clientState').textContent;
+        },
+        onServerState: (state) => {
+          updateServerStateUI(state);
+        }
+      });
+
+      fixiplug.use(honoSyncInstance);
+    }
+
+    // UI Update Plugin
+    fixiplug.use(function uiPlugin(ctx) {
+      // Server state changes
+      ctx.on('hono:server:state', (event) => {
+        logEvent(`Server state: ${event.state}`, 'server');
+      });
+
+      // Server events
+      ctx.on('hono:server:dataLoaded', (event) => {
+        logEvent(`Data loaded: ${event.count} items`, 'success');
+      });
+
+      ctx.on('hono:server:stateChanged', (event) => {
+        logEvent(`State changed: ${event.previousState} → ${event.state}`, 'server');
+      });
+
+      ctx.on('hono:server:error', (event) => {
+        logEvent(`Server error: ${event.message}`, 'error');
+      });
+
+      // Client state transitions
+      ctx.on('state:transition', (event) => {
+        updateClientStateUI(event.to);
+        logEvent(`Client state: ${event.from} → ${event.to}`, 'client');
+      });
+
+      // Connection events
+      ctx.on('hono:sse:connected', () => {
+        document.getElementById('sseStatus').className = 'connection-status connected';
+        document.getElementById('sseStatus').textContent = 'Connected';
+        logEvent('SSE connected', 'info');
+      });
+
+      ctx.on('hono:sse:error', () => {
+        document.getElementById('sseStatus').className = 'connection-status disconnected';
+        document.getElementById('sseStatus').textContent = 'Disconnected';
+        logEvent('SSE disconnected', 'error');
+      });
+
+      ctx.on('hono:ws:connected', () => {
+        document.getElementById('wsStatus').className = 'connection-status connected';
+        document.getElementById('wsStatus').textContent = 'Connected';
+        logEvent('WebSocket connected', 'info');
+      });
+
+      ctx.on('hono:ws:disconnected', () => {
+        document.getElementById('wsStatus').className = 'connection-status disconnected';
+        document.getElementById('wsStatus').textContent = 'Disconnected';
+        logEvent('WebSocket disconnected', 'error');
+      });
+    });
+
+    // UI Helper Functions
+    function updateServerStateUI(state) {
+      const el = document.getElementById('serverState');
+      el.textContent = state;
+      el.className = `state-badge state-${state}`;
+    }
+
+    function updateClientStateUI(state) {
+      const el = document.getElementById('clientState');
+      el.textContent = state;
+      el.className = `state-badge state-${state}`;
+    }
+
+    function logEvent(message, type = 'info') {
+      const list = document.getElementById('eventsList');
+      const item = document.createElement('div');
+      item.className = 'event-item';
+
+      const time = document.createElement('div');
+      time.className = 'event-time';
+      time.textContent = new Date().toLocaleTimeString();
+
+      const msg = document.createElement('div');
+      msg.className = 'event-message';
+      msg.textContent = `[${type.toUpperCase()}] ${message}`;
+
+      item.appendChild(time);
+      item.appendChild(msg);
+      list.prepend(item);
+
+      // Keep only last 50 events
+      while (list.children.length > 50) {
+        list.removeChild(list.lastChild);
+      }
+    }
+
+    function displayData(data) {
+      const display = document.getElementById('dataDisplay');
+      display.textContent = JSON.stringify(data, null, 2);
+      display.style.display = 'block';
+    }
+
+    // API Functions
+    window.fetchData = async () => {
+      try {
+        await fixiplug.dispatch('api:setState', { state: COMMON_STATES.LOADING });
+
+        const response = await fetch('http://localhost:3000/api/data', {
+          headers: {
+            'X-FX-Client-State': document.getElementById('clientState').textContent
+          }
+        });
+
+        const data = await response.json();
+        displayData(data);
+
+        await fixiplug.dispatch('api:setState', { state: COMMON_STATES.SUCCESS });
+        logEvent('Data fetched successfully', 'success');
+      } catch (error) {
+        await fixiplug.dispatch('api:setState', { state: COMMON_STATES.ERROR });
+        logEvent(`Fetch error: ${error.message}`, 'error');
+      }
+    };
+
+    window.triggerError = async () => {
+      try {
+        await fixiplug.dispatch('api:setState', { state: COMMON_STATES.LOADING });
+
+        const response = await fetch('http://localhost:3000/api/error');
+        const data = await response.json();
+
+        await fixiplug.dispatch('api:setState', { state: COMMON_STATES.ERROR });
+        logEvent(`Server error: ${data.message}`, 'error');
+      } catch (error) {
+        logEvent(`Request error: ${error.message}`, 'error');
+      }
+    };
+
+    window.checkHealth = async () => {
+      try {
+        const response = await fetch('http://localhost:3000/health');
+        const data = await response.json();
+        displayData(data);
+        logEvent('Health check successful', 'success');
+      } catch (error) {
+        logEvent(`Health check failed: ${error.message}`, 'error');
+      }
+    };
+
+    window.setClientState = async (state) => {
+      await fixiplug.dispatch('api:setState', { state });
+    };
+
+    window.setServerState = async (state) => {
+      try {
+        const response = await fetch('http://localhost:3000/api/state', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'X-FX-Client-State': document.getElementById('clientState').textContent
+          },
+          body: JSON.stringify({ state })
+        });
+
+        const data = await response.json();
+        logEvent(`Server state updated to: ${data.state}`, 'success');
+      } catch (error) {
+        logEvent(`Failed to update server state: ${error.message}`, 'error');
+      }
+    };
+
+    window.clearEvents = () => {
+      document.getElementById('eventsList').innerHTML = '';
+      logEvent('Events cleared', 'info');
+    };
+
+    // Initial log
+    logEvent('FixiPlug + Hono client initialized', 'info');
+  </script>
+</body>
+</html>
