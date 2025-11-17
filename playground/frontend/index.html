@@ -1,0 +1,166 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FixiPlug Agent Playground</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <div class="container">
+    <!-- Header -->
+    <header class="header">
+      <h1>🤖 FixiPlug Agent Playground</h1>
+      <p class="subtitle">Interactive multi-LLM agent with tool execution</p>
+      <div class="connection-status">
+        <span class="status-dot" id="connectionStatus"></span>
+        <span id="connectionText">Connecting...</span>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <div class="main-content">
+      <!-- Sidebar -->
+      <aside class="sidebar">
+        <!-- Provider Selection -->
+        <section class="section">
+          <h3>Provider</h3>
+          <div class="provider-buttons">
+            <button class="provider-btn active" data-provider="openai" id="providerOpenAI">
+              <span class="provider-icon">🟢</span>
+              OpenAI
+            </button>
+            <button class="provider-btn" data-provider="anthropic" id="providerAnthropic">
+              <span class="provider-icon">🟣</span>
+              Anthropic
+            </button>
+          </div>
+        </section>
+
+        <!-- Model Selection -->
+        <section class="section">
+          <h3>Model</h3>
+          <select id="modelSelect" class="model-select">
+            <optgroup label="OpenAI">
+              <option value="gpt-4" selected>GPT-4</option>
+              <option value="gpt-4-turbo">GPT-4 Turbo</option>
+              <option value="gpt-3.5-turbo">GPT-3.5 Turbo</option>
+            </optgroup>
+            <optgroup label="Anthropic">
+              <option value="claude-3-5-sonnet-20241022">Claude 3.5 Sonnet</option>
+              <option value="claude-3-opus-20240229">Claude 3 Opus</option>
+              <option value="claude-3-sonnet-20240229">Claude 3 Sonnet</option>
+              <option value="claude-3-haiku-20240307">Claude 3 Haiku</option>
+            </optgroup>
+          </select>
+        </section>
+
+        <!-- Streaming Toggle -->
+        <section class="section">
+          <h3>Options</h3>
+          <label class="toggle">
+            <input type="checkbox" id="streamingToggle" checked>
+            <span class="toggle-label">Enable Streaming</span>
+          </label>
+          <label class="toggle">
+            <input type="checkbox" id="websocketToggle" checked>
+            <span class="toggle-label">Use WebSocket</span>
+          </label>
+        </section>
+
+        <!-- Capabilities -->
+        <section class="section">
+          <h3>Capabilities</h3>
+          <button class="btn btn-secondary" id="discoverBtn">
+            🔍 Discover
+          </button>
+          <div id="capabilitiesInfo" class="info-box"></div>
+        </section>
+
+        <!-- Conversations -->
+        <section class="section">
+          <h3>Conversations</h3>
+          <button class="btn btn-secondary" id="newConversationBtn">
+            ➕ New
+          </button>
+          <button class="btn btn-secondary" id="listConversationsBtn">
+            📋 List
+          </button>
+          <div id="conversationsList" class="conversations-list"></div>
+        </section>
+
+        <!-- Stats -->
+        <section class="section">
+          <h3>Statistics</h3>
+          <div id="statsInfo" class="stats-box">
+            <div class="stat-item">
+              <span class="stat-label">Messages:</span>
+              <span class="stat-value" id="statMessages">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Tools:</span>
+              <span class="stat-value" id="statTools">0</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Tokens:</span>
+              <span class="stat-value" id="statTokens">0</span>
+            </div>
+          </div>
+        </section>
+      </aside>
+
+      <!-- Chat Area -->
+      <main class="chat-area">
+        <!-- Messages Container -->
+        <div class="messages-container" id="messagesContainer">
+          <div class="welcome-message">
+            <h2>Welcome to FixiPlug Agent Playground</h2>
+            <p>Start a conversation with an AI agent. The agent has access to various tools including:</p>
+            <ul>
+              <li>🔍 Capability discovery</li>
+              <li>🔧 Tool execution</li>
+              <li>📊 State management</li>
+              <li>⚙️ Workflow orchestration</li>
+            </ul>
+            <p>Try asking: <em>"What capabilities do you have?"</em> or <em>"Discover your tools"</em></p>
+          </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="input-area">
+          <textarea
+            id="messageInput"
+            class="message-input"
+            placeholder="Type your message here..."
+            rows="3"
+          ></textarea>
+          <div class="input-controls">
+            <button class="btn btn-primary" id="sendBtn">
+              Send ➤
+            </button>
+            <button class="btn btn-secondary" id="clearBtn">
+              Clear
+            </button>
+          </div>
+        </div>
+      </main>
+    </div>
+  </div>
+
+  <!-- Modal for Conversations List -->
+  <div class="modal" id="conversationsModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Conversations</h2>
+        <button class="modal-close" id="modalClose">&times;</button>
+      </div>
+      <div class="modal-body" id="modalBody">
+        <!-- Populated dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Scripts -->
+  <script type="module" src="js/app.js"></script>
+</body>
+</html>
