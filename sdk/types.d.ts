@@ -14,6 +14,12 @@ export interface AgentOptions {
   enableCaching?: boolean;
 
   /**
+   * Cache time-to-live in milliseconds
+   * @default 300000 (5 minutes)
+   */
+  cacheTTL?: number;
+
+  /**
    * Track performance metrics for all API calls
    * @default false
    */
@@ -24,6 +30,31 @@ export interface AgentOptions {
    * @default 5000
    */
   defaultTimeout?: number;
+
+  /**
+   * Maximum number of retry attempts
+   * @default 3
+   */
+  maxRetries?: number;
+
+  /**
+   * Initial retry delay in milliseconds
+   * @default 100
+   */
+  retryDelay?: number;
+
+  /**
+   * Exponential backoff multiplier
+   * @default 2
+   */
+  retryBackoff?: number;
+
+  /**
+   * Hooks that should be retried on error
+   * Empty array means all hooks are retryable
+   * @default []
+   */
+  retryableHooks?: string[];
 }
 
 /**
@@ -318,6 +349,21 @@ export interface PerformanceStats {
   averageTime: string;
 
   /**
+   * Total number of retries attempted
+   */
+  retries: number;
+
+  /**
+   * Number of cache hits
+   */
+  cacheHits: number;
+
+  /**
+   * Number of cache misses
+   */
+  cacheMisses: number;
+
+  /**
    * Individual call records
    */
   calls: Array<{
@@ -325,7 +371,49 @@ export interface PerformanceStats {
     duration: string;
     error?: string;
     timestamp: number;
+    attempts?: number;
+    retriesExhausted?: boolean;
   }>;
+}
+
+/**
+ * Cache information
+ */
+export interface CacheInfo {
+  /**
+   * Whether caching is enabled
+   */
+  enabled: boolean;
+
+  /**
+   * Whether cache is currently valid
+   */
+  valid: boolean;
+
+  /**
+   * Whether cache has data
+   */
+  hasData: boolean;
+
+  /**
+   * Timestamp when cache was created
+   */
+  timestamp: number | null;
+
+  /**
+   * Timestamp when cache expires
+   */
+  expiresAt: number | null;
+
+  /**
+   * Time until cache expires (milliseconds)
+   */
+  ttl: number;
+
+  /**
+   * Maximum configured TTL
+   */
+  maxTTL: number;
 }
 
 /**
@@ -439,6 +527,139 @@ export class FixiPlugAgent {
    * Reset performance statistics
    */
   resetStats(): void;
+
+  /**
+   * Invalidate cached capabilities
+   * Forces the next discover() call to fetch fresh data
+   */
+  invalidateCache(): void;
+
+  /**
+   * Warm the cache by performing an initial discovery
+   * Useful for reducing latency on first capability check
+   * @returns Capabilities object
+   */
+  warmCache(): Promise<Capabilities>;
+
+  /**
+   * Get cache information
+   * @returns Cache status and metadata
+   */
+  getCacheInfo(): CacheInfo;
 }
 
 export default FixiPlugAgent;
+
+/**
+ * Executable workflow with execute method
+ */
+export interface ExecutableWorkflow {
+  /**
+   * Execute the workflow
+   * @returns Workflow execution result
+   */
+  execute(): Promise<WorkflowResult & { skipped?: string[] }>;
+
+  /**
+   * Get the workflow definition
+   * @returns Workflow definition
+   */
+  getDefinition(): {
+    steps: Array<{
+      name: string;
+      hook: string;
+      hasParams: boolean;
+      hasState: boolean;
+      hasCondition: boolean;
+      retry: boolean;
+    }>;
+    options: WorkflowOptions;
+  };
+}
+
+/**
+ * Fluent workflow builder for constructing complex workflows
+ */
+export class WorkflowBuilder {
+  /**
+   * Create a new WorkflowBuilder
+   * @param agent - FixiPlugAgent instance
+   */
+  constructor(agent: FixiPlugAgent);
+
+  /**
+   * Add a new step to the workflow
+   * @param name - Step name
+   * @param hook - Hook to dispatch
+   * @returns this for chaining
+   */
+  step(name: string, hook: string): this;
+
+  /**
+   * Set parameters for the current step
+   * @param params - Parameters to pass
+   * @returns this for chaining
+   */
+  params(params: any | ((context: WorkflowContext) => any)): this;
+
+  /**
+   * Set state for the current step
+   * @param state - State to set before executing
+   * @returns this for chaining
+   */
+  state(state: string): this;
+
+  /**
+   * Add a condition for executing the current step
+   * @param condition - Function returning boolean
+   * @returns this for chaining
+   */
+  when(condition: (context: WorkflowContext) => boolean): this;
+
+  /**
+   * Disable retry for the current step
+   * @returns this for chaining
+   */
+  noRetry(): this;
+
+  /**
+   * Continue workflow on errors instead of stopping
+   * @returns this for chaining
+   */
+  continueOnError(): this;
+
+  /**
+   * Stop workflow on first error (default)
+   * @returns this for chaining
+   */
+  stopOnError(): this;
+
+  /**
+   * Add an error handler
+   * @param handler - Function receiving error and context
+   * @returns this for chaining
+   */
+  onError(handler: (error: Error, context: WorkflowContext) => void | Promise<void>): this;
+
+  /**
+   * Add a before-execution handler
+   * @param handler - Function receiving step and context
+   * @returns this for chaining
+   */
+  before(handler: (step: WorkflowStep, context: WorkflowContext) => void | Promise<void>): this;
+
+  /**
+   * Add an after-execution handler
+   * @param handler - Function receiving step, result, and context
+   * @returns this for chaining
+   */
+  after(
+    handler: (step: WorkflowStep, result: any, context: WorkflowContext) => void | Promise<void>
+  ): this;
+
+  /**
+   * Build and return the executable workflow
+   * @returns Executable workflow
+   */
+  build(): ExecutableWorkflow;
+}

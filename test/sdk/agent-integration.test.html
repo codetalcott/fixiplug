@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FixiPlug Agent SDK - Integration Tests</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 2em;
+      max-width: 1200px;
+    }
+    h1 { color: #333; }
+    h2 { color: #666; margin-top: 2em; }
+    .test {
+      margin: 1em 0;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      background: #f9f9f9;
+    }
+    .test.pass {
+      border-color: #28a745;
+      background: #d4edda;
+    }
+    .test.fail {
+      border-color: #dc3545;
+      background: #f8d7da;
+    }
+    .summary {
+      margin: 2em 0;
+      padding: 1em;
+      background: #e9ecef;
+      border-radius: 4px;
+    }
+    .error {
+      color: #721c24;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+    .info {
+      color: #004085;
+      background: #cce5ff;
+      padding: 0.5em;
+      margin: 0.5em 0;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>FixiPlug Agent SDK - Integration Tests</h1>
+  <p class="info">These tests use a real FixiPlug instance with actual plugins</p>
+  <div id="results"></div>
+  <div id="summary" class="summary"></div>
+
+  <script type="module">
+    import { FixiPlugAgent } from '../../sdk/agent-client.js';
+    import { WorkflowBuilder } from '../../sdk/workflow-builder.js';
+    import { createFixiplug } from '../../builder/fixiplug-factory.js';
+    import introspectionPlugin from '../../plugins/introspection.js';
+    import stateTrackerPlugin from '../../plugins/state-tracker.js';
+
+    const results = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+
+    let passed = 0;
+    let failed = 0;
+
+    function test(name, fn) {
+      const testEl = document.createElement('div');
+      testEl.className = 'test';
+
+      const title = document.createElement('strong');
+      title.textContent = name;
+      testEl.appendChild(title);
+
+      results.appendChild(testEl);
+
+      return Promise.resolve()
+        .then(fn)
+        .then(() => {
+          testEl.classList.add('pass');
+          testEl.innerHTML += ' ✓';
+          passed++;
+        })
+        .catch(error => {
+          testEl.classList.add('fail');
+          const errorEl = document.createElement('div');
+          errorEl.className = 'error';
+          errorEl.textContent = error.stack || error.message;
+          testEl.appendChild(errorEl);
+          failed++;
+        });
+    }
+
+    function assert(condition, message) {
+      if (!condition) {
+        throw new Error(message || 'Assertion failed');
+      }
+    }
+
+    function assertEquals(actual, expected, message) {
+      if (actual !== expected) {
+        throw new Error(
+          `${message || 'Values not equal'}
+Expected: ${expected}
+Actual: ${actual}`
+        );
+      }
+    }
+
+    // Create real fixiplug instance
+    const fixiplug = createFixiplug({
+      features: ['logging']
+    });
+
+    fixiplug.use(introspectionPlugin);
+    fixiplug.use(stateTrackerPlugin);
+
+    console.log('=== FixiPlug Agent SDK - Integration Tests ===');
+    console.log('Using real FixiPlug instance');
+
+    // Run tests
+    (async () => {
+      // ==================================================
+      // Test Group: Real FixiPlug Integration
+      // ==================================================
+      results.innerHTML += '<h2>Real FixiPlug Integration</h2>';
+
+      await test('Agent works with real fixiplug instance', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        assert(agent.fixi === fixiplug, 'Should store fixiplug instance');
+      });
+
+      await test('discover() fetches real capabilities', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const caps = await agent.discover();
+
+        assert(caps.plugins.length >= 2, 'Should have at least 2 plugins');
+        assert(caps.plugins.some(p => p.name === 'fixiplug-introspection'), 'Should have introspection');
+        assert(caps.plugins.some(p => p.name === 'fixiplug-state-tracker'), 'Should have state tracker');
+        assert(Object.keys(caps.hooks).length > 0, 'Should have hooks');
+      });
+
+      await test('hasCapability() works with real plugins', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+
+        const hasIntrospection = await agent.hasCapability('fixiplug-introspection');
+        assert(hasIntrospection === true, 'Should find introspection plugin');
+
+        const hasStateTracker = await agent.hasCapability('fixiplug-state-tracker');
+        assert(hasStateTracker === true, 'Should find state tracker plugin');
+
+        const hasApiIntrospect = await agent.hasCapability('api:introspect');
+        assert(hasApiIntrospect === true, 'Should find api:introspect hook');
+      });
+
+      // ==================================================
+      // Test Group: Real State Management
+      // ==================================================
+      results.innerHTML += '<h2>Real State Management</h2>';
+
+      await test('getCurrentState() returns real state', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const state = await agent.getCurrentState();
+
+        assert(state, 'Should return state');
+        assert(typeof state.state === 'string', 'Should have state string');
+        assert(typeof state.timestamp === 'number', 'Should have timestamp');
+        assert(typeof state.age === 'number', 'Should have age');
+      });
+
+      await test('setState() changes real state', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+
+        const initial = await agent.getCurrentState();
+        await agent.setState('testing');
+        const updated = await agent.getCurrentState();
+
+        assertEquals(updated.state, 'testing', 'State should be "testing"');
+        assert(updated.timestamp >= initial.timestamp, 'Timestamp should update');
+
+        // Reset
+        await agent.setState('idle');
+      });
+
+      await test('withState() manages real state automatically', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+
+        let stateInside;
+        const result = await agent.withState('processing', async () => {
+          stateInside = await agent.getCurrentState();
+          return 'done';
+        });
+
+        assertEquals(result, 'done', 'Should return function result');
+        assertEquals(stateInside.state, 'processing', 'State should be processing inside');
+
+        const final = await agent.getCurrentState();
+        assertEquals(final.state, 'complete', 'Should be complete after');
+      });
+
+      await test('waitForState() waits for real state change', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+
+        await agent.setState('waiting');
+
+        setTimeout(async () => {
+          await agent.setState('ready');
+        }, 100);
+
+        const start = Date.now();
+        const result = await agent.waitForState('ready', { timeout: 3000 });
+        const elapsed = Date.now() - start;
+
+        assertEquals(result.state, 'ready', 'Should reach ready state');
+        assert(elapsed >= 90, 'Should have waited at least 90ms');
+        assert(elapsed < 3000, 'Should not timeout');
+
+        await agent.setState('idle');
+      });
+
+      // ==================================================
+      // Test Group: Real Workflow Execution
+      // ==================================================
+      results.innerHTML += '<h2>Real Workflow Execution</h2>';
+
+      await test('executeWorkflow() works with real hooks', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+
+        const workflow = await agent.executeWorkflow([
+          {
+            name: 'initialize',
+            hook: 'api:setState',
+            params: { state: 'initialized' }
+          },
+          {
+            name: 'check',
+            hook: 'api:getCurrentState',
+            params: {}
+          },
+          {
+            name: 'finalize',
+            hook: 'api:setState',
+            params: { state: 'idle' }
+          }
+        ]);
+
+        assertEquals(workflow.success, true, 'Should succeed');
+        assertEquals(workflow.completed.length, 3, 'Should complete 3 steps');
+        assertEquals(workflow.errors.length, 0, 'Should have no errors');
+        assertEquals(workflow.results.check.state, 'initialized', 'Check should see initialized state');
+      });
+
+      await test('executeWorkflow() handles step dependencies', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+
+        const workflow = await agent.executeWorkflow([
+          {
+            name: 'getState',
+            hook: 'api:getCurrentState',
+            params: {}
+          },
+          {
+            name: 'setState',
+            hook: 'api:setState',
+            params: (ctx) => ({
+              state: ctx.results.getState.state === 'idle' ? 'working' : 'idle'
+            })
+          },
+          {
+            name: 'verify',
+            hook: 'api:getCurrentState',
+            params: {}
+          }
+        ]);
+
+        assertEquals(workflow.success, true, 'Should succeed');
+        assert(
+          workflow.results.verify.state === 'working' || workflow.results.verify.state === 'idle',
+          'State should be changed based on previous step'
+        );
+
+        await agent.setState('idle');
+      });
+
+      // ==================================================
+      // Test Group: WorkflowBuilder with Real FixiPlug
+      // ==================================================
+      results.innerHTML += '<h2>WorkflowBuilder with Real FixiPlug</h2>';
+
+      await test('WorkflowBuilder works with real hooks', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+
+        const workflow = new WorkflowBuilder(agent)
+          .step('start', 'api:setState')
+            .params({ state: 'building' })
+          .step('check', 'api:getCurrentState')
+            .params({})
+          .step('end', 'api:setState')
+            .params({ state: 'idle' })
+          .build();
+
+        const result = await workflow.execute();
+
+        assertEquals(result.success, true, 'Should succeed');
+        assertEquals(result.completed.length, 3, 'Should complete all steps');
+        assertEquals(result.results.check.state, 'building', 'Should capture building state');
+      });
+
+      await test('WorkflowBuilder conditional steps work', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+
+        const workflow = new WorkflowBuilder(agent)
+          .step('check', 'api:getCurrentState')
+            .params({})
+          .step('conditional', 'api:setState')
+            .params({ state: 'conditional-ran' })
+            .when(ctx => ctx.results.check.state === 'idle')
+          .step('final', 'api:setState')
+            .params({ state: 'idle' })
+          .build();
+
+        const result = await workflow.execute();
+
+        assertEquals(result.success, true, 'Should succeed');
+        assert(
+          result.completed.includes('conditional') || result.skipped.includes('conditional'),
+          'Conditional step should run or skip'
+        );
+      });
+
+      await test('WorkflowBuilder error handlers work', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+
+        let errorHandlerCalled = false;
+
+        const workflow = new WorkflowBuilder(agent)
+          .continueOnError()
+          .step('valid', 'api:getCurrentState')
+            .params({})
+          .step('invalid', 'api:nonexistentHook')
+            .params({})
+          .step('recovery', 'api:setState')
+            .params({ state: 'recovered' })
+          .onError((error, ctx) => {
+            errorHandlerCalled = true;
+          })
+          .build();
+
+        const result = await workflow.execute();
+
+        assertEquals(result.success, false, 'Should fail overall');
+        assertEquals(result.errors.length, 1, 'Should have one error');
+        assertEquals(errorHandlerCalled, true, 'Error handler should be called');
+        assert(result.completed.includes('recovery'), 'Should continue after error');
+
+        await agent.setState('idle');
+      });
+
+      // ==================================================
+      // Test Group: Performance Tracking
+      // ==================================================
+      results.innerHTML += '<h2>Performance Tracking</h2>';
+
+      await test('Performance tracking works with real operations', async () => {
+        const agent = new FixiPlugAgent(fixiplug, { trackPerformance: true });
+        agent.resetStats();
+
+        await agent.discover();
+        await agent.getCurrentState();
+        await agent.setState('test');
+        await agent.setState('idle');
+
+        const stats = agent.getStats();
+
+        assert(stats.apiCalls >= 4, 'Should track all API calls');
+        assert(stats.totalTime > 0, 'Should track time');
+        assertEquals(stats.calls.length, stats.apiCalls, 'Should record all calls');
+      });
+
+      // ==================================================
+      // Test Group: Caching with Real Data
+      // ==================================================
+      results.innerHTML += '<h2>Caching with Real Data</h2>';
+
+      await test('Cache works with real introspection data', async () => {
+        const agent = new FixiPlugAgent(fixiplug, {
+          enableCaching: true,
+          cacheTTL: 10000,
+          trackPerformance: true
+        });
+        agent.resetStats();
+
+        const caps1 = await agent.discover();
+        const caps2 = await agent.discover();
+
+        assert(caps1 === caps2, 'Should return same cached object');
+
+        const stats = agent.getStats();
+        assertEquals(stats.cacheHits, 1, 'Should have 1 cache hit');
+        assertEquals(stats.cacheMisses, 1, 'Should have 1 cache miss');
+      });
+
+      await test('Cache invalidation works', async () => {
+        const agent = new FixiPlugAgent(fixiplug, {
+          enableCaching: true,
+          trackPerformance: true
+        });
+        agent.resetStats();
+
+        const caps1 = await agent.discover();
+        agent.invalidateCache();
+        const caps2 = await agent.discover();
+
+        assert(caps1 !== caps2, 'Should return new object after invalidation');
+
+        const stats = agent.getStats();
+        assertEquals(stats.cacheMisses, 2, 'Should have 2 cache misses');
+        assertEquals(stats.cacheHits, 0, 'Should have 0 cache hits');
+      });
+
+      await test('Cache TTL expires correctly', async () => {
+        const agent = new FixiPlugAgent(fixiplug, {
+          enableCaching: true,
+          cacheTTL: 100, // 100ms
+          trackPerformance: true
+        });
+        agent.resetStats();
+
+        const caps1 = await agent.discover();
+        await new Promise(resolve => setTimeout(resolve, 150));
+        const caps2 = await agent.discover();
+
+        assert(caps1 !== caps2, 'Should return new object after TTL expires');
+
+        const stats = agent.getStats();
+        assertEquals(stats.cacheMisses, 2, 'Should have 2 cache misses');
+      });
+
+      await test('warmCache() preloads capabilities', async () => {
+        const agent = new FixiPlugAgent(fixiplug, {
+          enableCaching: true,
+          trackPerformance: true
+        });
+        agent.resetStats();
+
+        await agent.warmCache();
+
+        const cacheInfo = agent.getCacheInfo();
+        assertEquals(cacheInfo.valid, true, 'Cache should be valid');
+        assertEquals(cacheInfo.hasData, true, 'Cache should have data');
+
+        const caps = await agent.discover();
+
+        const stats = agent.getStats();
+        assertEquals(stats.cacheHits, 1, 'Should hit cache after warming');
+      });
+
+      await test('getCacheInfo() returns accurate information', async () => {
+        const agent = new FixiPlugAgent(fixiplug, {
+          enableCaching: true,
+          cacheTTL: 5000
+        });
+
+        const infoBefore = agent.getCacheInfo();
+        assertEquals(infoBefore.enabled, true, 'Caching should be enabled');
+        assertEquals(infoBefore.valid, false, 'Cache should not be valid initially');
+        assertEquals(infoBefore.hasData, false, 'Cache should not have data initially');
+
+        await agent.discover();
+
+        const infoAfter = agent.getCacheInfo();
+        assertEquals(infoAfter.valid, true, 'Cache should be valid after discover');
+        assertEquals(infoAfter.hasData, true, 'Cache should have data after discover');
+        assert(infoAfter.ttl > 0, 'TTL should be positive');
+        assert(infoAfter.ttl <= 5000, 'TTL should be <= configured max');
+      });
+
+      // Show summary
+      summaryEl.innerHTML = `
+        <strong>Test Results:</strong><br>
+        Passed: ${passed}<br>
+        Failed: ${failed}<br>
+        Total: ${passed + failed}<br>
+        <strong>Status: ${failed === 0 ? '✅ All tests passed!' : '❌ Some tests failed'}</strong>
+      `;
+
+      if (failed === 0) {
+        summaryEl.style.background = '#d4edda';
+        summaryEl.style.borderLeft = '4px solid #28a745';
+      } else {
+        summaryEl.style.background = '#f8d7da';
+        summaryEl.style.borderLeft = '4px solid #dc3545';
+      }
+
+      console.log(`\n=== Integration Test Summary ===`);
+      console.log(`Passed: ${passed}`);
+      console.log(`Failed: ${failed}`);
+      console.log(`Total: ${passed + failed}`);
+    })();
+  </script>
+</body>
+</html>

@@ -34,8 +34,13 @@ export class FixiPlugAgent {
    * @param {Object} fixiplugInstance - The fixiplug instance to interact with
    * @param {Object} [options={}] - Configuration options
    * @param {boolean} [options.enableCaching=true] - Cache introspection results
+   * @param {number} [options.cacheTTL=300000] - Cache time-to-live in milliseconds (default: 5 minutes)
    * @param {boolean} [options.trackPerformance=false] - Track API call performance
    * @param {number} [options.defaultTimeout=5000] - Default timeout for state waiting (ms)
+   * @param {number} [options.maxRetries=3] - Maximum number of retry attempts
+   * @param {number} [options.retryDelay=100] - Initial retry delay in milliseconds
+   * @param {number} [options.retryBackoff=2] - Exponential backoff multiplier
+   * @param {Array<string>} [options.retryableHooks=[]] - Hooks that should be retried on error
    */
   constructor(fixiplugInstance, options = {}) {
     if (!fixiplugInstance) {
@@ -48,17 +53,26 @@ export class FixiPlugAgent {
 
     this.fixi = fixiplugInstance;
     this.capabilities = null;
+    this.cacheExpiry = null;
     this.options = {
       enableCaching: options.enableCaching !== false,
+      cacheTTL: options.cacheTTL || 300000, // 5 minutes default
       trackPerformance: options.trackPerformance || false,
-      defaultTimeout: options.defaultTimeout || 5000
+      defaultTimeout: options.defaultTimeout || 5000,
+      maxRetries: options.maxRetries ?? 3,
+      retryDelay: options.retryDelay || 100,
+      retryBackoff: options.retryBackoff || 2,
+      retryableHooks: options.retryableHooks || []
     };
 
     // Performance tracking
     this.stats = {
       apiCalls: 0,
       totalTime: 0,
-      calls: []
+      calls: [],
+      retries: 0,
+      cacheHits: 0,
+      cacheMisses: 0
     };
   }
 
@@ -66,7 +80,7 @@ export class FixiPlugAgent {
    * Discover available capabilities from the fixiplug instance
    *
    * Queries the introspection API to understand what plugins, hooks,
-   * and features are available. Results are cached by default.
+   * and features are available. Results are cached by default with TTL.
    *
    * @param {Object} [options={}] - Discovery options
    * @param {boolean} [options.refresh=false] - Force refresh cached capabilities
@@ -80,9 +94,22 @@ export class FixiPlugAgent {
   async discover(options = {}) {
     const { refresh = false } = options;
 
-    // Return cached if available and not forcing refresh
-    if (this.capabilities && !refresh && this.options.enableCaching) {
+    // Check if cache is valid
+    const now = Date.now();
+    const cacheValid = this.capabilities &&
+                       this.cacheExpiry &&
+                       now < this.cacheExpiry;
+
+    // Return cached if available, valid, and not forcing refresh
+    if (cacheValid && !refresh && this.options.enableCaching) {
+      if (this.options.trackPerformance) {
+        this.stats.cacheHits++;
+      }
       return this.capabilities;
+    }
+
+    if (this.options.trackPerformance) {
+      this.stats.cacheMisses++;
     }
 
     try {
@@ -92,7 +119,7 @@ export class FixiPlugAgent {
         throw new Error(`Discovery failed: ${result.error}`);
       }
 
-      // Store capabilities
+      // Store capabilities with expiry
       this.capabilities = {
         version: result.fixiplug?.version || 'unknown',
         features: result.fixiplug?.features || [],
@@ -101,6 +128,9 @@ export class FixiPlugAgent {
         methods: result.methods || [],
         timestamp: Date.now()
       };
+
+      // Set cache expiry
+      this.cacheExpiry = Date.now() + this.options.cacheTTL;
 
       return this.capabilities;
     } catch (error) {
@@ -383,6 +413,7 @@ export class FixiPlugAgent {
       averageTime: this.stats.apiCalls > 0
         ? (this.stats.totalTime / this.stats.apiCalls).toFixed(2)
         : 0,
+      retries: this.stats.retries,
       calls: this.stats.calls
     };
   }
@@ -394,55 +425,159 @@ export class FixiPlugAgent {
     this.stats = {
       apiCalls: 0,
       totalTime: 0,
-      calls: []
+      calls: [],
+      retries: 0,
+      cacheHits: 0,
+      cacheMisses: 0
     };
   }
 
   /**
-   * Internal dispatch method with performance tracking
+   * Invalidate cached capabilities
+   *
+   * Forces the next discover() call to fetch fresh data
+   *
+   * @example
+   * agent.invalidateCache();
+   * const freshCaps = await agent.discover();
+   */
+  invalidateCache() {
+    this.capabilities = null;
+    this.cacheExpiry = null;
+  }
+
+  /**
+   * Warm the cache by performing an initial discovery
+   *
+   * Useful for reducing latency on first capability check
+   *
+   * @returns {Promise<Object>} Capabilities object
+   *
+   * @example
+   * await agent.warmCache();
+   * // Now subsequent discover() calls will be instant
+   */
+  async warmCache() {
+    return await this.discover({ refresh: true });
+  }
+
+  /**
+   * Get cache information
+   *
+   * @returns {Object} Cache status and metadata
+   *
+   * @example
+   * const cacheInfo = agent.getCacheInfo();
+   * console.log('Cache valid:', cacheInfo.valid);
+   * console.log('Time until expiry:', cacheInfo.ttl);
+   */
+  getCacheInfo() {
+    const now = Date.now();
+    const valid = this.capabilities &&
+                  this.cacheExpiry &&
+                  now < this.cacheExpiry;
+
+    return {
+      enabled: this.options.enableCaching,
+      valid: valid,
+      hasData: !!this.capabilities,
+      timestamp: this.capabilities?.timestamp || null,
+      expiresAt: this.cacheExpiry,
+      ttl: valid ? this.cacheExpiry - now : 0,
+      maxTTL: this.options.cacheTTL
+    };
+  }
+
+  /**
+   * Internal dispatch method with performance tracking and retry logic
    *
    * @private
    * @param {string} hook - Hook name to dispatch
    * @param {Object} params - Parameters to pass
+   * @param {Object} [options={}] - Dispatch options
+   * @param {boolean} [options.retry=true] - Enable retry logic
    * @returns {Promise<*>} Result from dispatch
    */
-  async _dispatch(hook, params) {
+  async _dispatch(hook, params, options = {}) {
+    const { retry = true } = options;
     const startTime = this.options.trackPerformance ? performance.now() : 0;
 
-    try {
-      const result = await this.fixi.dispatch(hook, params);
+    // Determine if this hook should be retried
+    const shouldRetry = retry && (
+      this.options.retryableHooks.length === 0 ||
+      this.options.retryableHooks.includes(hook)
+    );
 
-      if (this.options.trackPerformance) {
-        const endTime = performance.now();
-        const duration = endTime - startTime;
+    let lastError;
+    let attempt = 0;
+    const maxAttempts = shouldRetry ? this.options.maxRetries + 1 : 1;
 
-        this.stats.apiCalls++;
-        this.stats.totalTime += duration;
-        this.stats.calls.push({
-          hook,
-          duration: duration.toFixed(2),
-          timestamp: Date.now()
-        });
+    while (attempt < maxAttempts) {
+      try {
+        const result = await this.fixi.dispatch(hook, params);
+
+        if (this.options.trackPerformance) {
+          const endTime = performance.now();
+          const duration = endTime - startTime;
+
+          this.stats.apiCalls++;
+          this.stats.totalTime += duration;
+          this.stats.calls.push({
+            hook,
+            duration: duration.toFixed(2),
+            timestamp: Date.now(),
+            attempts: attempt + 1
+          });
+        }
+
+        return result;
+      } catch (error) {
+        lastError = error;
+        attempt++;
+
+        if (attempt < maxAttempts) {
+          // Calculate exponential backoff delay
+          const delay = this.options.retryDelay * Math.pow(this.options.retryBackoff, attempt - 1);
+
+          if (this.options.trackPerformance) {
+            this.stats.retries++;
+          }
+
+          // Wait before retrying
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
       }
-
-      return result;
-    } catch (error) {
-      if (this.options.trackPerformance) {
-        const endTime = performance.now();
-        const duration = endTime - startTime;
-
-        this.stats.apiCalls++;
-        this.stats.totalTime += duration;
-        this.stats.calls.push({
-          hook,
-          duration: duration.toFixed(2),
-          error: error.message,
-          timestamp: Date.now()
-        });
-      }
-
-      throw error;
     }
+
+    // All attempts failed
+    if (this.options.trackPerformance) {
+      const endTime = performance.now();
+      const duration = endTime - startTime;
+
+      this.stats.apiCalls++;
+      this.stats.totalTime += duration;
+      this.stats.calls.push({
+        hook,
+        duration: duration.toFixed(2),
+        error: lastError.message,
+        timestamp: Date.now(),
+        attempts: attempt,
+        retriesExhausted: attempt > 1
+      });
+    }
+
+    throw lastError;
+  }
+
+  /**
+   * Sleep utility for retry delays
+   *
+   * @private
+   * @param {number} ms - Milliseconds to sleep
+   * @returns {Promise<void>}
+   */
+  _sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 
