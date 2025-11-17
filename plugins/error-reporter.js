@@ -1,12 +1,4 @@
-// At the top of each plugin file
 /** @typedef {import('../types').FixiPlug.PluginContext} PluginContext */
-
-/**
- * @typedef {Object} PluginContext
- * @property {function(string, function): void} on - Registers a hook listener.
- * @property {function(function): void} registerCleanup - Registers a cleanup function.
- * @property {Map<string, any>} [storage] - Shared storage map for the plugin.
- */
 
 /**
  * Error reporter plugin for Fixiplug.

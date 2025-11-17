@@ -1,0 +1,642 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Morphlex vs Idiomorph Experiment</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 2em;
+      max-width: 1400px;
+    }
+
+    h1 { color: #333; margin-bottom: 0.5em; }
+    .subtitle { color: #666; margin-bottom: 2em; }
+
+    .comparison-container {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 2em;
+      margin-top: 2em;
+    }
+
+    .test-panel {
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      padding: 1.5em;
+      background: #fafafa;
+    }
+
+    .test-panel h2 {
+      margin-top: 0;
+      color: #444;
+      font-size: 1.5em;
+      border-bottom: 2px solid #e0e0e0;
+      padding-bottom: 0.5em;
+    }
+
+    .idiomorph-panel { border-color: #4CAF50; }
+    .idiomorph-panel h2 { color: #4CAF50; border-color: #4CAF50; }
+
+    .morphlex-panel { border-color: #2196F3; }
+    .morphlex-panel h2 { color: #2196F3; border-color: #2196F3; }
+
+    .test-section {
+      margin: 1.5em 0;
+      padding: 1em;
+      background: white;
+      border-radius: 4px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+
+    .test-section h3 {
+      margin-top: 0;
+      font-size: 1.1em;
+      color: #555;
+    }
+
+    button {
+      background: #007bff;
+      color: white;
+      border: none;
+      padding: 0.6em 1.2em;
+      margin: 0.3em;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 0.95em;
+      transition: background 0.2s;
+    }
+
+    button:hover {
+      background: #0056b3;
+    }
+
+    button:active {
+      transform: translateY(1px);
+    }
+
+    button.secondary {
+      background: #6c757d;
+    }
+
+    button.secondary:hover {
+      background: #545b62;
+    }
+
+    video {
+      width: 100%;
+      max-width: 400px;
+      border-radius: 4px;
+      margin: 0.5em 0;
+    }
+
+    .content-box {
+      padding: 1em;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      background: #f9f9f9;
+      margin: 0.5em 0;
+      min-height: 3em;
+    }
+
+    .form-group {
+      margin: 0.8em 0;
+    }
+
+    .form-group label {
+      display: block;
+      margin-bottom: 0.3em;
+      font-weight: 500;
+      color: #555;
+    }
+
+    .form-group input,
+    .form-group textarea,
+    .form-group select {
+      width: 100%;
+      padding: 0.5em;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 0.95em;
+      box-sizing: border-box;
+    }
+
+    .form-group textarea {
+      min-height: 80px;
+      resize: vertical;
+    }
+
+    .performance-metrics {
+      background: #fff3cd;
+      padding: 1em;
+      border-radius: 4px;
+      margin-top: 1em;
+      border: 1px solid #ffc107;
+    }
+
+    .performance-metrics h4 {
+      margin: 0 0 0.5em 0;
+      color: #856404;
+    }
+
+    .metric-row {
+      display: flex;
+      justify-content: space-between;
+      padding: 0.3em 0;
+      border-bottom: 1px solid #ffecb5;
+    }
+
+    .metric-row:last-child {
+      border-bottom: none;
+    }
+
+    .metric-label {
+      font-weight: 500;
+      color: #856404;
+    }
+
+    .metric-value {
+      font-family: 'Courier New', monospace;
+      color: #533f03;
+    }
+
+    .test-results {
+      margin-top: 2em;
+      padding: 1.5em;
+      background: white;
+      border-radius: 8px;
+      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .test-results h3 {
+      margin-top: 0;
+      color: #333;
+    }
+
+    .result-item {
+      padding: 0.8em;
+      margin: 0.5em 0;
+      border-radius: 4px;
+      border-left: 4px solid #ccc;
+    }
+
+    .result-item.pass {
+      background: #d4edda;
+      border-color: #28a745;
+    }
+
+    .result-item.fail {
+      background: #f8d7da;
+      border-color: #dc3545;
+    }
+
+    .result-item.info {
+      background: #d1ecf1;
+      border-color: #17a2b8;
+    }
+
+    code {
+      background: #f4f4f4;
+      padding: 0.2em 0.4em;
+      border-radius: 3px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9em;
+    }
+  </style>
+</head>
+<body>
+  <h1>Morphlex vs Idiomorph: Drop-in Replacement Experiment</h1>
+  <p class="subtitle">
+    This experiment tests whether <strong>Morphlex</strong> can serve as a drop-in replacement for <strong>Idiomorph</strong>
+    by comparing their behavior side-by-side across multiple test scenarios.
+  </p>
+
+  <div class="comparison-container">
+    <!-- Idiomorph Panel -->
+    <div class="test-panel idiomorph-panel">
+      <h2>Idiomorph (Control)</h2>
+
+      <!-- Video Test -->
+      <div class="test-section">
+        <h3>Test 1: Video State Preservation</h3>
+        <div id="idiomorph-video-container">
+          <h4 id="idiomorph-video-title">Big Buck Bunny</h4>
+          <video id="idiomorph-video" controls>
+            <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+          </video>
+        </div>
+        <button onclick="updateIdiomorphVideo()">Toggle Title Position</button>
+        <div id="idiomorph-content" class="content-box">
+          <p>Original content. Video state should be preserved during updates.</p>
+        </div>
+      </div>
+
+      <!-- Form Test -->
+      <div class="test-section">
+        <h3>Test 2: Form Input Preservation</h3>
+        <div id="idiomorph-form-container">
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" id="idiomorph-name" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label>Favorite Color:</label>
+            <select id="idiomorph-color">
+              <option value="">Select...</option>
+              <option value="red">Red</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Comments:</label>
+            <textarea id="idiomorph-comments" placeholder="Write something..."></textarea>
+          </div>
+        </div>
+        <button onclick="updateIdiomorphForm()">Update Form DOM</button>
+      </div>
+
+      <!-- Performance Metrics -->
+      <div class="performance-metrics">
+        <h4>Performance Metrics</h4>
+        <div class="metric-row">
+          <span class="metric-label">Last Swap Time:</span>
+          <span class="metric-value" id="idiomorph-swap-time">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Average Time:</span>
+          <span class="metric-value" id="idiomorph-avg-time">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Operations:</span>
+          <span class="metric-value" id="idiomorph-ops">0</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Morphlex Panel -->
+    <div class="test-panel morphlex-panel">
+      <h2>Morphlex (Experimental)</h2>
+
+      <!-- Video Test -->
+      <div class="test-section">
+        <h3>Test 1: Video State Preservation</h3>
+        <div id="morphlex-video-container">
+          <h4 id="morphlex-video-title">Big Buck Bunny</h4>
+          <video id="morphlex-video" controls>
+            <source src="https://www.w3schools.com/html/mov_bbb.mp4" type="video/mp4">
+          </video>
+        </div>
+        <button onclick="updateMorphlexVideo()">Toggle Title Position</button>
+        <div id="morphlex-content" class="content-box">
+          <p>Original content. Video state should be preserved during updates.</p>
+        </div>
+      </div>
+
+      <!-- Form Test -->
+      <div class="test-section">
+        <h3>Test 2: Form Input Preservation</h3>
+        <div id="morphlex-form-container">
+          <div class="form-group">
+            <label>Name:</label>
+            <input type="text" id="morphlex-name" placeholder="Enter your name">
+          </div>
+          <div class="form-group">
+            <label>Favorite Color:</label>
+            <select id="morphlex-color">
+              <option value="">Select...</option>
+              <option value="red">Red</option>
+              <option value="blue">Blue</option>
+              <option value="green">Green</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Comments:</label>
+            <textarea id="morphlex-comments" placeholder="Write something..."></textarea>
+          </div>
+        </div>
+        <button onclick="updateMorphlexForm()">Update Form DOM</button>
+      </div>
+
+      <!-- Performance Metrics -->
+      <div class="performance-metrics">
+        <h4>Performance Metrics</h4>
+        <div class="metric-row">
+          <span class="metric-label">Last Swap Time:</span>
+          <span class="metric-value" id="morphlex-swap-time">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Average Time:</span>
+          <span class="metric-value" id="morphlex-avg-time">-</span>
+        </div>
+        <div class="metric-row">
+          <span class="metric-label">Operations:</span>
+          <span class="metric-value" id="morphlex-ops">0</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Test Results -->
+  <div class="test-results">
+    <h3>Automated Test Results</h3>
+    <button onclick="runAllTests()">Run All Tests</button>
+    <button class="secondary" onclick="clearResults()">Clear Results</button>
+    <div id="test-results-container"></div>
+  </div>
+
+  <script type="module">
+    import fixiplug from '../fixiplug.js';
+    import createIdiomorphSwap from '../plugins/swap-idiomorph.js';
+    import createMorphlexSwap from '../plugins/swap-morphlex.js';
+
+    // Performance tracking
+    const performanceData = {
+      idiomorph: { times: [], ops: 0 },
+      morphlex: { times: [], ops: 0 }
+    };
+
+    // Initialize plugins
+    const idiomorphPlugin = createIdiomorphSwap();
+    const morphlexPlugin = createMorphlexSwap();
+
+    fixiplug.use(idiomorphPlugin);
+    fixiplug.use(morphlexPlugin);
+
+    // Video state tracking
+    let idiomorphTitleAbove = true;
+    let morphlexTitleAbove = true;
+
+    // Update functions for Idiomorph
+    window.updateIdiomorphVideo = async function() {
+      const video = document.getElementById('idiomorph-video');
+      const currentTime = video.currentTime;
+      const videoContainer = document.getElementById('idiomorph-video-container');
+      const videoTitle = document.getElementById('idiomorph-video-title');
+      const contentContainer = document.getElementById('idiomorph-content');
+
+      const startTime = performance.now();
+
+      // Toggle title position
+      if (idiomorphTitleAbove) {
+        videoContainer.appendChild(videoTitle);
+      } else {
+        videoContainer.insertBefore(videoTitle, videoContainer.firstChild);
+      }
+      idiomorphTitleAbove = !idiomorphTitleAbove;
+
+      // Update content
+      const newContent = `
+        <p>Content updated at ${new Date().toLocaleTimeString()}</p>
+        <p>Video was at <strong>${currentTime.toFixed(2)}s</strong> when updated.</p>
+      `;
+
+      await fixiplug.dispatch('fx:after', {
+        detail: {
+          target: contentContainer,
+          content: newContent
+        }
+      });
+
+      const endTime = performance.now();
+      updatePerformanceMetrics('idiomorph', endTime - startTime);
+    };
+
+    window.updateIdiomorphForm = async function() {
+      const container = document.getElementById('idiomorph-form-container');
+      const startTime = performance.now();
+
+      // Create updated form HTML (structure slightly changed)
+      const newFormHTML = `
+        <div class="form-group">
+          <label>Name:</label>
+          <input type="text" id="idiomorph-name" placeholder="Enter your name">
+        </div>
+        <div class="form-group">
+          <label>Favorite Color:</label>
+          <select id="idiomorph-color">
+            <option value="">Select...</option>
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+            <option value="yellow">Yellow</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Comments:</label>
+          <textarea id="idiomorph-comments" placeholder="Write something..."></textarea>
+        </div>
+        <p style="color: #666; font-size: 0.9em;">Form updated at ${new Date().toLocaleTimeString()}</p>
+      `;
+
+      await fixiplug.dispatch('fx:after', {
+        detail: {
+          target: container,
+          content: newFormHTML
+        }
+      });
+
+      const endTime = performance.now();
+      updatePerformanceMetrics('idiomorph', endTime - startTime);
+    };
+
+    // Update functions for Morphlex
+    window.updateMorphlexVideo = async function() {
+      const video = document.getElementById('morphlex-video');
+      const currentTime = video.currentTime;
+      const videoContainer = document.getElementById('morphlex-video-container');
+      const videoTitle = document.getElementById('morphlex-video-title');
+      const contentContainer = document.getElementById('morphlex-content');
+
+      const startTime = performance.now();
+
+      // Toggle title position
+      if (morphlexTitleAbove) {
+        videoContainer.appendChild(videoTitle);
+      } else {
+        videoContainer.insertBefore(videoTitle, videoContainer.firstChild);
+      }
+      morphlexTitleAbove = !morphlexTitleAbove;
+
+      // Update content
+      const newContent = `
+        <p>Content updated at ${new Date().toLocaleTimeString()}</p>
+        <p>Video was at <strong>${currentTime.toFixed(2)}s</strong> when updated.</p>
+      `;
+
+      await fixiplug.dispatch('fx:after', {
+        detail: {
+          target: contentContainer,
+          content: newContent
+        }
+      });
+
+      const endTime = performance.now();
+      updatePerformanceMetrics('morphlex', endTime - startTime);
+    };
+
+    window.updateMorphlexForm = async function() {
+      const container = document.getElementById('morphlex-form-container');
+      const startTime = performance.now();
+
+      // Create updated form HTML (structure slightly changed)
+      const newFormHTML = `
+        <div class="form-group">
+          <label>Name:</label>
+          <input type="text" id="morphlex-name" placeholder="Enter your name">
+        </div>
+        <div class="form-group">
+          <label>Favorite Color:</label>
+          <select id="morphlex-color">
+            <option value="">Select...</option>
+            <option value="red">Red</option>
+            <option value="blue">Blue</option>
+            <option value="green">Green</option>
+            <option value="yellow">Yellow</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Comments:</label>
+          <textarea id="morphlex-comments" placeholder="Write something..."></textarea>
+        </div>
+        <p style="color: #666; font-size: 0.9em;">Form updated at ${new Date().toLocaleTimeString()}</p>
+      `;
+
+      await fixiplug.dispatch('fx:after', {
+        detail: {
+          target: container,
+          content: newFormHTML
+        }
+      });
+
+      const endTime = performance.now();
+      updatePerformanceMetrics('morphlex', endTime - startTime);
+    };
+
+    // Performance tracking
+    function updatePerformanceMetrics(library, time) {
+      performanceData[library].times.push(time);
+      performanceData[library].ops++;
+
+      const avg = performanceData[library].times.reduce((a, b) => a + b, 0) /
+                  performanceData[library].times.length;
+
+      document.getElementById(`${library}-swap-time`).textContent = `${time.toFixed(2)}ms`;
+      document.getElementById(`${library}-avg-time`).textContent = `${avg.toFixed(2)}ms`;
+      document.getElementById(`${library}-ops`).textContent = performanceData[library].ops;
+    }
+
+    // Test automation
+    function addTestResult(testName, passed, message) {
+      const container = document.getElementById('test-results-container');
+      const resultDiv = document.createElement('div');
+      resultDiv.className = `result-item ${passed ? 'pass' : 'fail'}`;
+      resultDiv.innerHTML = `
+        <strong>${passed ? '✓' : '✗'} ${testName}</strong><br>
+        ${message}
+      `;
+      container.appendChild(resultDiv);
+    }
+
+    function addInfoResult(message) {
+      const container = document.getElementById('test-results-container');
+      const resultDiv = document.createElement('div');
+      resultDiv.className = 'result-item info';
+      resultDiv.innerHTML = message;
+      container.appendChild(resultDiv);
+    }
+
+    window.clearResults = function() {
+      document.getElementById('test-results-container').innerHTML = '';
+    };
+
+    window.runAllTests = async function() {
+      clearResults();
+      addInfoResult('<strong>Starting automated test suite...</strong>');
+
+      // Test 1: Basic video state preservation
+      addInfoResult('<br><strong>Test Suite 1: Video State Preservation</strong>');
+
+      const idiomorphVideo = document.getElementById('idiomorph-video');
+      const morphlexVideo = document.getElementById('morphlex-video');
+
+      idiomorphVideo.currentTime = 5.0;
+      morphlexVideo.currentTime = 5.0;
+
+      await updateIdiomorphVideo();
+      await updateMorphlexVideo();
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const idiomorphPreserved = Math.abs(idiomorphVideo.currentTime - 5.0) < 1.0;
+      const morphlexPreserved = Math.abs(morphlexVideo.currentTime - 5.0) < 1.0;
+
+      addTestResult(
+        'Idiomorph: Video time preserved',
+        idiomorphPreserved,
+        `Video time: ${idiomorphVideo.currentTime.toFixed(2)}s (expected ~5.0s)`
+      );
+
+      addTestResult(
+        'Morphlex: Video time preserved',
+        morphlexPreserved,
+        `Video time: ${morphlexVideo.currentTime.toFixed(2)}s (expected ~5.0s)`
+      );
+
+      // Test 2: Form input preservation
+      addInfoResult('<br><strong>Test Suite 2: Form Input Preservation</strong>');
+
+      const idiomorphName = document.getElementById('idiomorph-name');
+      const morphlexName = document.getElementById('morphlex-name');
+
+      idiomorphName.value = 'Test User';
+      morphlexName.value = 'Test User';
+
+      await updateIdiomorphForm();
+      await updateMorphlexForm();
+
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const idiomorphNamePreserved = document.getElementById('idiomorph-name').value === 'Test User';
+      const morphlexNamePreserved = document.getElementById('morphlex-name').value === 'Test User';
+
+      addTestResult(
+        'Idiomorph: Input value preserved',
+        idiomorphNamePreserved,
+        `Input value: "${document.getElementById('idiomorph-name').value}"`
+      );
+
+      addTestResult(
+        'Morphlex: Input value preserved',
+        morphlexNamePreserved,
+        `Input value: "${document.getElementById('morphlex-name').value}"`
+      );
+
+      // Test 3: Performance comparison
+      addInfoResult('<br><strong>Test Suite 3: Performance Comparison</strong>');
+
+      const idiomorphAvg = performanceData.idiomorph.times.reduce((a, b) => a + b, 0) /
+                           performanceData.idiomorph.times.length;
+      const morphlexAvg = performanceData.morphlex.times.reduce((a, b) => a + b, 0) /
+                          performanceData.morphlex.times.length;
+
+      const performanceRatio = (morphlexAvg / idiomorphAvg * 100).toFixed(1);
+      const faster = morphlexAvg < idiomorphAvg ? 'Morphlex' : 'Idiomorph';
+      const diff = Math.abs(morphlexAvg - idiomorphAvg).toFixed(2);
+
+      addInfoResult(`
+        <strong>Performance Results:</strong><br>
+        Idiomorph average: ${idiomorphAvg.toFixed(2)}ms<br>
+        Morphlex average: ${morphlexAvg.toFixed(2)}ms<br>
+        ${faster} is faster by ${diff}ms (Morphlex is ${performanceRatio}% of Idiomorph's time)
+      `);
+
+      addInfoResult('<br><strong>All tests completed!</strong>');
+    };
+
+    // Expose fixiplug for debugging
+    window.fixiplug = fixiplug;
+  </script>
+</body>
+</html>

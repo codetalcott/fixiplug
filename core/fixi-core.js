@@ -21,6 +21,7 @@ export class Fixi {
     // GET/DELETE params
     if (/GET|DELETE/.test(m) && b instanceof FormData) {
       // build query string from FormData
+      // @ts-ignore - FormData entries can contain Files, but we only use string values for query params
       const p = new URLSearchParams(Array.from(b.entries()));
       if (p.toString()) url += (url.includes('?') ? '&' : '?') + p;
       b = null;

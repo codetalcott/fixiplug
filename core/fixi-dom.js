@@ -63,6 +63,7 @@ import { Fixi } from './fixi-core.js';
 
       // handle GET/DELETE automatic param build
       if (/GET|DELETE/.test(cfg.method)) {
+        // @ts-ignore - cfg.body can be FormData which URLSearchParams accepts
         let params = new URLSearchParams(cfg.body);
         if (params.size)
           cfg.action += (/\?/.test(cfg.action) ? '&' : '?') + params;

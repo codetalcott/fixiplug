@@ -3,9 +3,10 @@
 /**
  * Offline plugin for FixiPlug.
  * Enables saving form or text editor inputs when offline and retrying when online.
- * @param {PluginContext} ctx - The plugin context provided by FixiPlug.
+ * @param {PluginContext} ctx - The plugin context provided by Fixiplug.
  */
 export default function offlinePlug(ctx) {
+  // @ts-ignore - OfflineDatabase class is defined elsewhere or loaded dynamically
   const db = new OfflineDatabase('fixiplugOfflineDB', 'offlineQueue');
 
   async function retryQueue() {

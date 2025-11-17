@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FixiPlug Agent SDK Tests</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 2em;
+      max-width: 1200px;
+    }
+    h1 { color: #333; }
+    .test {
+      margin: 1em 0;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      background: #f9f9f9;
+    }
+    .test.pass {
+      border-color: #28a745;
+      background: #d4edda;
+    }
+    .test.fail {
+      border-color: #dc3545;
+      background: #f8d7da;
+    }
+    .summary {
+      margin: 2em 0;
+      padding: 1em;
+      background: #e9ecef;
+      border-radius: 4px;
+    }
+    .error {
+      color: #721c24;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+  </style>
+</head>
+<body>
+  <h1>FixiPlug Agent SDK Tests</h1>
+  <div id="results"></div>
+  <div id="summary" class="summary"></div>
+
+  <script type="module">
+    import { FixiPlugAgent } from '../../sdk/agent-client.js';
+
+    const results = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+
+    let passed = 0;
+    let failed = 0;
+
+    function test(name, fn) {
+      const testEl = document.createElement('div');
+      testEl.className = 'test';
+
+      const title = document.createElement('strong');
+      title.textContent = name;
+      testEl.appendChild(title);
+
+      results.appendChild(testEl);
+
+      return Promise.resolve()
+        .then(fn)
+        .then(() => {
+          testEl.classList.add('pass');
+          testEl.innerHTML += ' ✓';
+          passed++;
+        })
+        .catch(error => {
+          testEl.classList.add('fail');
+          const errorEl = document.createElement('div');
+          errorEl.className = 'error';
+          errorEl.textContent = error.stack || error.message;
+          testEl.appendChild(errorEl);
+          failed++;
+        });
+    }
+
+    function assert(condition, message) {
+      if (!condition) {
+        throw new Error(message || 'Assertion failed');
+      }
+    }
+
+    function assertEquals(actual, expected, message) {
+      if (actual !== expected) {
+        throw new Error(
+          `${message || 'Values not equal'}
+Expected: ${expected}
+Actual: ${actual}`
+        );
+      }
+    }
+
+    // Mock fixiplug instance
+    function createMockFixiplug() {
+      const hooks = {};
+      const plugins = [];
+
+      return {
+        dispatch: async (hook, params) => {
+          if (hook === 'api:introspect') {
+            return {
+              fixiplug: {
+                version: '0.0.3',
+                features: ['dom', 'logging']
+              },
+              plugins: plugins,
+              hooks: hooks,
+              methods: ['dispatch', 'use', 'off']
+            };
+          }
+
+          if (hook === 'api:getCurrentState') {
+            return {
+              state: 'idle',
+              timestamp: Date.now(),
+              age: 0
+            };
+          }
+
+          if (hook === 'api:setState') {
+            return {
+              success: true,
+              from: 'idle',
+              to: params.state
+            };
+          }
+
+          if (hook === 'api:waitForState') {
+            return new Promise(resolve => {
+              setTimeout(() => {
+                resolve({
+                  state: params.state,
+                  waited: 50,
+                  timestamp: Date.now()
+                });
+              }, 50);
+            });
+          }
+
+          if (hook === 'test:echo') {
+            return { echo: params };
+          }
+
+          return { error: `Unknown hook: ${hook}` };
+        },
+
+        // Helper methods for test setup
+        _setPlugins(p) { plugins.length = 0; plugins.push(...p); },
+        _setHooks(h) { Object.assign(hooks, h); }
+      };
+    }
+
+    // Run tests
+    (async () => {
+      // Test: Constructor validation
+      await test('Constructor requires fixiplug instance', () => {
+        let error;
+        try {
+          new FixiPlugAgent(null);
+        } catch (e) {
+          error = e;
+        }
+        assert(error, 'Should throw error for null instance');
+        assert(
+          error.message.includes('requires a fixiplug instance'),
+          'Should have correct error message'
+        );
+      });
+
+      await test('Constructor validates dispatch method', () => {
+        let error;
+        try {
+          new FixiPlugAgent({});
+        } catch (e) {
+          error = e;
+        }
+        assert(error, 'Should throw error for invalid instance');
+        assert(
+          error.message.includes('missing dispatch method'),
+          'Should mention missing dispatch'
+        );
+      });
+
+      await test('Constructor accepts valid instance', () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi);
+        assert(agent, 'Should create agent');
+        assert(agent.fixi === fixi, 'Should store fixiplug instance');
+      });
+
+      // Test: Discovery
+      await test('discover() fetches capabilities', async () => {
+        const fixi = createMockFixiplug();
+        fixi._setPlugins([
+          { name: 'test-plugin', enabled: true }
+        ]);
+
+        const agent = new FixiPlugAgent(fixi);
+        const caps = await agent.discover();
+
+        assert(caps, 'Should return capabilities');
+        assert(caps.version === '0.0.3', 'Should have version');
+        assert(Array.isArray(caps.plugins), 'Should have plugins array');
+        assert(caps.plugins.length === 1, 'Should have one plugin');
+        assert(caps.plugins[0].name === 'test-plugin', 'Should have correct plugin');
+      });
+
+      await test('discover() caches results by default', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi);
+
+        const caps1 = await agent.discover();
+        const caps2 = await agent.discover();
+
+        assert(caps1 === caps2, 'Should return same object');
+        assert(agent.capabilities !== null, 'Should cache capabilities');
+      });
+
+      await test('discover() can force refresh', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi);
+
+        const caps1 = await agent.discover();
+        fixi._setPlugins([
+          { name: 'new-plugin', enabled: true }
+        ]);
+        const caps2 = await agent.discover({ refresh: true });
+
+        assert(caps1 !== caps2, 'Should return new object');
+        assert(caps2.plugins.length === 1, 'Should have updated plugins');
+      });
+
+      // Test: Capability checking
+      await test('hasCapability() checks plugins', async () => {
+        const fixi = createMockFixiplug();
+        fixi._setPlugins([
+          { name: 'test-plugin', enabled: true }
+        ]);
+
+        const agent = new FixiPlugAgent(fixi);
+
+        const has = await agent.hasCapability('test-plugin');
+        assert(has === true, 'Should find plugin');
+
+        const hasNot = await agent.hasCapability('missing-plugin');
+        assert(hasNot === false, 'Should not find missing plugin');
+      });
+
+      await test('hasCapability() checks hooks', async () => {
+        const fixi = createMockFixiplug();
+        fixi._setHooks({
+          'test:hook': { handlers: 1 }
+        });
+
+        const agent = new FixiPlugAgent(fixi);
+
+        const has = await agent.hasCapability('test:hook');
+        assert(has === true, 'Should find hook');
+      });
+
+      // Test: State management
+      await test('getCurrentState() returns state', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi);
+
+        const state = await agent.getCurrentState();
+        assert(state, 'Should return state');
+        assert(state.state === 'idle', 'Should have correct state');
+        assert(typeof state.timestamp === 'number', 'Should have timestamp');
+      });
+
+      await test('setState() sets state', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi);
+
+        const result = await agent.setState('loading');
+        assert(result.success === true, 'Should succeed');
+        assert(result.to === 'loading', 'Should transition to loading');
+      });
+
+      await test('waitForState() waits for state', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi);
+
+        const start = Date.now();
+        const result = await agent.waitForState('complete', { timeout: 1000 });
+        const elapsed = Date.now() - start;
+
+        assert(result, 'Should return result');
+        assert(result.state === 'complete', 'Should have correct state');
+        assert(elapsed >= 50, 'Should have waited');
+      });
+
+      // Test: withState execution
+      await test('withState() manages state automatically', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi);
+
+        let executedState = null;
+
+        const result = await agent.withState('processing', async () => {
+          executedState = await agent.getCurrentState();
+          return 'test-result';
+        });
+
+        assert(result === 'test-result', 'Should return function result');
+        assert(executedState.state === 'idle', 'Should have set state');
+      });
+
+      await test('withState() handles errors', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi);
+
+        let error;
+        try {
+          await agent.withState('processing', async () => {
+            throw new Error('Test error');
+          });
+        } catch (e) {
+          error = e;
+        }
+
+        assert(error, 'Should throw error');
+        assert(error.message === 'Test error', 'Should preserve error');
+      });
+
+      // Test: Workflow execution
+      await test('executeWorkflow() runs steps in order', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi);
+
+        const result = await agent.executeWorkflow([
+          {
+            name: 'step1',
+            hook: 'test:echo',
+            params: { value: 1 }
+          },
+          {
+            name: 'step2',
+            hook: 'test:echo',
+            params: { value: 2 }
+          }
+        ]);
+
+        assert(result.success === true, 'Should succeed');
+        assert(result.completed.length === 2, 'Should complete both steps');
+        assert(result.errors.length === 0, 'Should have no errors');
+        assert(result.results.step1.echo.value === 1, 'Should have step1 result');
+        assert(result.results.step2.echo.value === 2, 'Should have step2 result');
+      });
+
+      await test('executeWorkflow() supports function params', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi);
+
+        const result = await agent.executeWorkflow([
+          {
+            name: 'step1',
+            hook: 'test:echo',
+            params: { value: 1 }
+          },
+          {
+            name: 'step2',
+            hook: 'test:echo',
+            params: (ctx) => ({ value: ctx.results.step1.echo.value + 1 })
+          }
+        ]);
+
+        assert(result.results.step2.echo.value === 2, 'Should use previous result');
+      });
+
+      await test('executeWorkflow() handles errors', async () => {
+        const fixi = createMockFixiplug();
+        fixi.dispatch = async (hook) => {
+          if (hook === 'test:fail') {
+            return { error: 'Test error' };
+          }
+          return { success: true };
+        };
+
+        const agent = new FixiPlugAgent(fixi);
+
+        const result = await agent.executeWorkflow([
+          {
+            name: 'step1',
+            hook: 'test:fail'
+          }
+        ]);
+
+        assert(result.success === false, 'Should fail');
+        assert(result.errors.length === 1, 'Should have one error');
+        assert(result.errors[0].step === 'step1', 'Should identify failed step');
+      });
+
+      // Test: Performance tracking
+      await test('Performance tracking works when enabled', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi, { trackPerformance: true });
+
+        await agent.discover();
+
+        const stats = agent.getStats();
+        assert(stats.apiCalls === 1, 'Should track API call');
+        assert(stats.totalTime > 0, 'Should track time');
+        assert(stats.calls.length === 1, 'Should record call');
+      });
+
+      await test('Performance tracking disabled by default', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi);
+
+        await agent.discover();
+
+        const stats = agent.getStats();
+        assert(stats.error, 'Should return error object');
+      });
+
+      await test('resetStats() clears statistics', async () => {
+        const fixi = createMockFixiplug();
+        const agent = new FixiPlugAgent(fixi, { trackPerformance: true });
+
+        await agent.discover();
+        agent.resetStats();
+
+        const stats = agent.getStats();
+        assert(stats.apiCalls === 0, 'Should reset API calls');
+        assert(stats.calls.length === 0, 'Should clear calls');
+      });
+
+      // Show summary
+      summaryEl.innerHTML = `
+        <strong>Test Results:</strong><br>
+        Passed: ${passed}<br>
+        Failed: ${failed}<br>
+        Total: ${passed + failed}<br>
+        <strong>Status: ${failed === 0 ? '✅ All tests passed!' : '❌ Some tests failed'}</strong>
+      `;
+
+      if (failed === 0) {
+        summaryEl.style.background = '#d4edda';
+        summaryEl.style.borderLeft = '4px solid #28a745';
+      } else {
+        summaryEl.style.background = '#f8d7da';
+        summaryEl.style.borderLeft = '4px solid #dc3545';
+      }
+    })();
+  </script>
+</body>
+</html>

@@ -1,13 +1,6 @@
-// performance.js - A performance monitoring plugin for fixiplug
-
 /** @typedef {import('../types').FixiPlug.PluginContext} PluginContext */
 
-/**
- * @typedef {Object} PluginContext
- * @property {function(string, function, number=): void} on - Registers a hook listener with optional priority.
- * @property {function(function): void} registerCleanup - Registers a cleanup function.
- * @property {boolean} [debug] - Flag indicating debug mode.
- */
+/* global fixiplug */
 
 /**
  * Performance monitoring plugin for Fixiplug.
@@ -16,7 +9,7 @@
 export default function performancePlug(ctx) {
     // Store stats for each plugin/hook combo
     const stats = new Map();
-    
+
     // Track the original dispatch method
     const originalDispatch = fixiplug.dispatch;
     

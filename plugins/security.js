@@ -1,14 +1,6 @@
-// security.js - Essential security protection for fixiplug
-
 /** @typedef {import('../types').FixiPlug.PluginContext} PluginContext */
 
-/**
- * @typedef {Object} PluginContext
- * @property {function(string, function, number=): void} on - Registers a hook listener with optional priority.
- * @property {function(string, function): void} beforeAll - Registers a handler to run before all handlers for a specific hook.
- * @property {function(function): void} registerCleanup - Registers a cleanup function.
- * @property {Object<string, any>} [utils] - Namespace for utility functions.
- */
+/* global fixiplug */
 
 /**
  * Security plugin for Fixiplug.
@@ -18,7 +10,7 @@ export default function securityPlug(ctx) {
   const MAX_EXECUTION_TIME = 100; // ms
   const MAX_OBJECT_DEPTH = 10;
   const DANGEROUS_PROPS = ['__proto__', 'constructor', 'prototype'];
-  
+
   // Store reference to original dispatch
   const originalDispatch = fixiplug.dispatch;
   

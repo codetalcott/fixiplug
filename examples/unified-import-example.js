@@ -33,7 +33,8 @@ console.log('Custom configured version loaded');
 
 // Alternative import methods
 // These imports access the same objects as above but through different entry points
-import coreAlternative from '../core/index.js';
+// @ts-ignore - Using named export Fixi instead of default
+import { Fixi as coreAlternative } from '../core/index.js';
 // Note: Direct test module not available - using main export instead
 import { test as testAlternative } from '../fixiplug.js';
 import { server as serverAlternative } from '../fixiplug.js';

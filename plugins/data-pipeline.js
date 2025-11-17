@@ -293,7 +293,7 @@ export default function createDataPipeline(options = {}) {
 
 /**
  * Helper function to get processed data from an event
- * @param {Event} event - The event object
+ * @param {CustomEvent} event - The event object
  * @returns {any} Processed data
  */
 export function getProcessedData(event) {

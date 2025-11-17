@@ -1,13 +1,6 @@
-// fixiplug/hook-visualizer.js
-
 /** @typedef {import('../types').FixiPlug.PluginContext} PluginContext */
 
-/**
- * @typedef {Object} PluginContext
- * @property {function(string, function, number=): void} on - Registers a hook listener with optional priority.
- * @property {function(function): void} registerCleanup - Registers a cleanup function.
- * @property {Map<string, any>} [storage] - Shared storage map for the plugin.
- */
+/* global fixiplug */
 
 /**
  * Hook visualizer plugin for Fixiplug.

@@ -4,6 +4,7 @@
  * @see {@link types.js} for full type definitions
  * @description Unified entry point providing different configurations for various environments
  */
+/** @typedef {import('./types').FixiPlug.ConfigOptions} ConfigOptions */
 
 import { createFixiplug, FEATURE_SETS, FEATURES } from './builder/fixiplug-factory.js';
 
@@ -49,12 +50,7 @@ export const minimal = createFixiplug({
 
 /**
  * Create a custom fixiplug instance with specified configuration
- * @param {Object} config - Configuration options
- * @param {boolean} [config.logging=true] - Enable logging
- * @param {boolean} [config.dom=false] - Enable DOM integration
- * @param {boolean} [config.test=false] - Enable test features
- * @param {boolean} [config.server=false] - Optimize for server environment
- * @param {Object} [config.advanced] - Advanced configuration options
+ * @param {ConfigOptions} [config={}] - Configuration options
  * @returns {Object} Custom fixiplug instance
  */
 export function configure(config = {}) {

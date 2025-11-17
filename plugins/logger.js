@@ -1,13 +1,6 @@
 /** @typedef {import('../types').FixiPlug.PluginContext} PluginContext */
 
 /**
- * @typedef {Object} PluginContext
- * @property {function(string, function): void} on - Registers a hook listener.
- * @property {function(function): void} registerCleanup - Registers a cleanup function.
- * @property {Map<string, any>} storage - A shared storage map for the plugin.
- */
-
-/**
  * Logger plugin for Fixiplug.
  * @param {PluginContext} ctx - The plugin context provided by Fixiplug.
  */

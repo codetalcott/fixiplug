@@ -2,6 +2,8 @@
  * Factory function to create fixiplug instances with different configurations
  * @module fixiplug/factory
  */
+/** @typedef {import('../types').FixiPlug.ConfigOptions} ConfigOptions */
+
 import { Fixi } from '../core/fixi-core.js';
 import { queueDeferredEvent } from '../core/hooks.js';
 
@@ -15,9 +17,7 @@ export const FEATURES = {
 
 /**
  * Create a new fixiplug instance
- * @param {Object} options - Configuration options
- * @param {Array<string>} [options.features=[]] - List of features to enable
- * @param {Object} [options.advanced={}] - Advanced configuration options
+ * @param {ConfigOptions} [options={}] - Configuration options
  * @returns {Object} Configured fixiplug instance
  */
 export function createFixiplug(options = {}) {
