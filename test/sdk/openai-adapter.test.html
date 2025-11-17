@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>FixiPlug OpenAI Adapter - Tests</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      margin: 2em;
+      max-width: 1200px;
+    }
+    h1 { color: #333; }
+    h2 { color: #666; margin-top: 2em; }
+    .test {
+      margin: 1em 0;
+      padding: 1em;
+      border-left: 4px solid #ccc;
+      background: #f9f9f9;
+    }
+    .test.pass {
+      border-color: #28a745;
+      background: #d4edda;
+    }
+    .test.fail {
+      border-color: #dc3545;
+      background: #f8d7da;
+    }
+    .summary {
+      margin: 2em 0;
+      padding: 1em;
+      background: #e9ecef;
+      border-radius: 4px;
+    }
+    .error {
+      color: #721c24;
+      font-family: monospace;
+      white-space: pre-wrap;
+    }
+    .info {
+      color: #004085;
+      background: #cce5ff;
+      padding: 0.5em;
+      margin: 0.5em 0;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <h1>FixiPlug OpenAI Adapter - Tests</h1>
+  <p class="info">Testing OpenAI function calling integration with FixiPlug Agent SDK</p>
+  <div id="results"></div>
+  <div id="summary" class="summary"></div>
+
+  <script type="module">
+    import { FixiPlugAgent } from '../../sdk/agent-client.js';
+    import { OpenAIAdapter } from '../../sdk/adapters/openai-adapter.js';
+    import { createFixiplug } from '../../builder/fixiplug-factory.js';
+    import introspectionPlugin from '../../plugins/introspection.js';
+    import stateTrackerPlugin from '../../plugins/state-tracker.js';
+
+    const results = document.getElementById('results');
+    const summaryEl = document.getElementById('summary');
+
+    let passed = 0;
+    let failed = 0;
+
+    function test(name, fn) {
+      const testEl = document.createElement('div');
+      testEl.className = 'test';
+
+      const title = document.createElement('strong');
+      title.textContent = name;
+      testEl.appendChild(title);
+
+      results.appendChild(testEl);
+
+      return Promise.resolve()
+        .then(fn)
+        .then(() => {
+          testEl.classList.add('pass');
+          testEl.innerHTML += ' ✓';
+          passed++;
+        })
+        .catch(error => {
+          testEl.classList.add('fail');
+          const errorEl = document.createElement('div');
+          errorEl.className = 'error';
+          errorEl.textContent = error.stack || error.message;
+          testEl.appendChild(errorEl);
+          failed++;
+        });
+    }
+
+    function assert(condition, message) {
+      if (!condition) {
+        throw new Error(message || 'Assertion failed');
+      }
+    }
+
+    function assertEquals(actual, expected, message) {
+      if (actual !== expected) {
+        throw new Error(
+          `${message || 'Values not equal'}
+Expected: ${expected}
+Actual: ${actual}`
+        );
+      }
+    }
+
+    // Create real fixiplug instance
+    const fixiplug = createFixiplug({ features: ['logging'] });
+    fixiplug.use(introspectionPlugin);
+    fixiplug.use(stateTrackerPlugin);
+
+    console.log('=== OpenAI Adapter Tests ===');
+
+    // Run tests
+    (async () => {
+      // ==================================================
+      // Test Group: Constructor and Initialization
+      // ==================================================
+      results.innerHTML += '<h2>Constructor and Initialization</h2>';
+
+      await test('Constructor requires agent', () => {
+        let error;
+        try {
+          new OpenAIAdapter(null);
+        } catch (e) {
+          error = e;
+        }
+        assert(error, 'Should throw error for null agent');
+        assert(
+          error.message.includes('requires a FixiPlugAgent instance'),
+          'Should have correct error message'
+        );
+      });
+
+      await test('Constructor accepts valid agent', () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+        assert(adapter.agent === agent, 'Should store agent instance');
+        assert(adapter.options.includeCoreTools === true, 'Core tools enabled by default');
+        assert(adapter.options.includeWorkflowTools === true, 'Workflow tools enabled by default');
+        assert(adapter.options.includeCacheTools === true, 'Cache tools enabled by default');
+        assert(adapter.options.includePluginHooks === false, 'Plugin hooks disabled by default');
+      });
+
+      await test('Constructor accepts options', () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent, {
+          includeCoreTools: false,
+          includePluginHooks: true
+        });
+        assert(adapter.options.includeCoreTools === false, 'Core tools disabled');
+        assert(adapter.options.includePluginHooks === true, 'Plugin hooks enabled');
+      });
+
+      // ==================================================
+      // Test Group: Tool Definitions
+      // ==================================================
+      results.innerHTML += '<h2>Tool Definitions</h2>';
+
+      await test('getToolDefinitions() returns core tools', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const tools = await adapter.getToolDefinitions();
+
+        assert(Array.isArray(tools), 'Should return array');
+        assert(tools.length >= 5, 'Should have at least 5 core tools');
+
+        // Check discover_capabilities tool
+        const discoverTool = tools.find(t => t.function.name === 'discover_capabilities');
+        assert(discoverTool, 'Should have discover_capabilities tool');
+        assert(discoverTool.type === 'function', 'Should have correct type');
+        assert(discoverTool.function.description, 'Should have description');
+        assert(discoverTool.function.parameters, 'Should have parameters');
+      });
+
+      await test('getToolDefinitions() includes all tool types', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent, {
+          includeCoreTools: true,
+          includeWorkflowTools: true,
+          includeCacheTools: true
+        });
+
+        const tools = await adapter.getToolDefinitions();
+
+        const toolNames = tools.map(t => t.function.name);
+
+        // Core tools
+        assert(toolNames.includes('discover_capabilities'), 'Should have discover_capabilities');
+        assert(toolNames.includes('check_capability'), 'Should have check_capability');
+        assert(toolNames.includes('get_current_state'), 'Should have get_current_state');
+        assert(toolNames.includes('set_state'), 'Should have set_state');
+
+        // Workflow tools
+        assert(toolNames.includes('execute_workflow'), 'Should have execute_workflow');
+
+        // Cache tools
+        assert(toolNames.includes('warm_cache'), 'Should have warm_cache');
+        assert(toolNames.includes('invalidate_cache'), 'Should have invalidate_cache');
+        assert(toolNames.includes('get_cache_info'), 'Should have get_cache_info');
+      });
+
+      await test('getToolDefinitions() respects options', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent, {
+          includeCoreTools: true,
+          includeWorkflowTools: false,
+          includeCacheTools: false
+        });
+
+        const tools = await adapter.getToolDefinitions();
+        const toolNames = tools.map(t => t.function.name);
+
+        assert(toolNames.includes('discover_capabilities'), 'Should have core tools');
+        assert(!toolNames.includes('execute_workflow'), 'Should not have workflow tools');
+        assert(!toolNames.includes('warm_cache'), 'Should not have cache tools');
+      });
+
+      await test('getFunctionDefinitions() returns legacy format', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const functions = await adapter.getFunctionDefinitions();
+
+        assert(Array.isArray(functions), 'Should return array');
+        assert(functions.length > 0, 'Should have functions');
+
+        const discoverFunc = functions.find(f => f.name === 'discover_capabilities');
+        assert(discoverFunc, 'Should have discover_capabilities');
+        assert(!discoverFunc.type, 'Should not have type field (legacy format)');
+        assert(discoverFunc.description, 'Should have description');
+        assert(discoverFunc.parameters, 'Should have parameters');
+      });
+
+      // ==================================================
+      // Test Group: Function Execution
+      // ==================================================
+      results.innerHTML += '<h2>Function Execution</h2>';
+
+      await test('executeFunctionCall() - discover_capabilities', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const result = await adapter.executeFunctionCall({
+          name: 'discover_capabilities',
+          arguments: '{}'
+        });
+
+        assert(result, 'Should return result');
+        assert(result.plugins, 'Should have plugins');
+        assert(result.hooks, 'Should have hooks');
+        assert(result.version, 'Should have version');
+      });
+
+      await test('executeFunctionCall() - check_capability', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const result = await adapter.executeFunctionCall({
+          name: 'check_capability',
+          arguments: JSON.stringify({ capability: 'fixiplug-introspection' })
+        });
+
+        assert(result, 'Should return result');
+        assertEquals(result.available, true, 'Should find introspection plugin');
+      });
+
+      await test('executeFunctionCall() - get_current_state', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const result = await adapter.executeFunctionCall({
+          name: 'get_current_state',
+          arguments: '{}'
+        });
+
+        assert(result, 'Should return result');
+        assert(result.state, 'Should have state');
+        assert(typeof result.timestamp === 'number', 'Should have timestamp');
+      });
+
+      await test('executeFunctionCall() - set_state', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const result = await adapter.executeFunctionCall({
+          name: 'set_state',
+          arguments: JSON.stringify({ state: 'testing' })
+        });
+
+        assert(result, 'Should return result');
+        assert(result.success || result.to === 'testing', 'Should set state');
+
+        // Reset
+        await agent.setState('idle');
+      });
+
+      await test('executeFunctionCall() - execute_workflow', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const result = await adapter.executeFunctionCall({
+          name: 'execute_workflow',
+          arguments: JSON.stringify({
+            steps: [
+              { name: 'step1', hook: 'api:getCurrentState', params: {} },
+              { name: 'step2', hook: 'api:setState', params: { state: 'idle' } }
+            ]
+          })
+        });
+
+        assert(result, 'Should return result');
+        assertEquals(result.success, true, 'Workflow should succeed');
+        assertEquals(result.completed.length, 2, 'Should complete both steps');
+      });
+
+      await test('executeFunctionCall() - warm_cache', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const result = await adapter.executeFunctionCall({
+          name: 'warm_cache',
+          arguments: '{}'
+        });
+
+        assert(result, 'Should return result');
+        assert(result.plugins, 'Should have warmed cache');
+      });
+
+      await test('executeFunctionCall() - invalidate_cache', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const result = await adapter.executeFunctionCall({
+          name: 'invalidate_cache',
+          arguments: '{}'
+        });
+
+        assert(result, 'Should return result');
+        assertEquals(result.success, true, 'Should succeed');
+      });
+
+      await test('executeFunctionCall() - get_cache_info', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const result = await adapter.executeFunctionCall({
+          name: 'get_cache_info',
+          arguments: '{}'
+        });
+
+        assert(result, 'Should return result');
+        assert('enabled' in result, 'Should have enabled field');
+        assert('valid' in result, 'Should have valid field');
+      });
+
+      await test('executeFunctionCall() - handles invalid arguments', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const result = await adapter.executeFunctionCall({
+          name: 'discover_capabilities',
+          arguments: 'not valid json'
+        });
+
+        assert(result.error, 'Should return error');
+        assert(result.error.includes('Invalid function arguments'), 'Should have error message');
+      });
+
+      await test('executeFunctionCall() - handles unknown function', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        let error;
+        try {
+          await adapter.executeFunctionCall({
+            name: 'unknown_function',
+            arguments: '{}'
+          });
+        } catch (e) {
+          error = e;
+        }
+
+        assert(error, 'Should throw error');
+        assert(error.message.includes('Unknown function'), 'Should have error message');
+      });
+
+      await test('executeToolCall() works with tool format', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const result = await adapter.executeToolCall({
+          id: 'call_123',
+          type: 'function',
+          function: {
+            name: 'get_current_state',
+            arguments: '{}'
+          }
+        });
+
+        assert(result, 'Should return result');
+        assert(result.state, 'Should have state');
+      });
+
+      // ==================================================
+      // Test Group: Call History
+      // ==================================================
+      results.innerHTML += '<h2>Call History</h2>';
+
+      await test('Tracks function call history', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        adapter.clearCallHistory();
+
+        await adapter.executeFunctionCall({
+          name: 'discover_capabilities',
+          arguments: '{}'
+        });
+
+        await adapter.executeFunctionCall({
+          name: 'get_current_state',
+          arguments: '{}'
+        });
+
+        const history = adapter.getCallHistory();
+
+        assertEquals(history.length, 2, 'Should have 2 calls');
+        assertEquals(history[0].name, 'discover_capabilities', 'First call should be discover');
+        assertEquals(history[1].name, 'get_current_state', 'Second call should be getState');
+        assert(history[0].success, 'First call should succeed');
+        assert(history[1].success, 'Second call should succeed');
+      });
+
+      await test('Records errors in history', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        adapter.clearCallHistory();
+
+        try {
+          await adapter.executeFunctionCall({
+            name: 'unknown_function',
+            arguments: '{}'
+          });
+        } catch (e) {
+          // Expected
+        }
+
+        const history = adapter.getCallHistory();
+
+        assertEquals(history.length, 1, 'Should have 1 call');
+        assertEquals(history[0].success, false, 'Call should fail');
+        assert(history[0].error, 'Should have error message');
+      });
+
+      await test('clearCallHistory() clears history', async () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        await adapter.executeFunctionCall({
+          name: 'discover_capabilities',
+          arguments: '{}'
+        });
+
+        adapter.clearCallHistory();
+
+        const history = adapter.getCallHistory();
+        assertEquals(history.length, 0, 'History should be empty');
+      });
+
+      // ==================================================
+      // Test Group: Message Creation
+      // ==================================================
+      results.innerHTML += '<h2>Message Creation</h2>';
+
+      await test('createToolMessage() creates correct format', () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const toolCall = {
+          id: 'call_abc123',
+          type: 'function',
+          function: {
+            name: 'get_current_state',
+            arguments: '{}'
+          }
+        };
+
+        const result = { state: 'idle', timestamp: 123456 };
+
+        const message = adapter.createToolMessage(toolCall, result);
+
+        assertEquals(message.role, 'tool', 'Should have tool role');
+        assertEquals(message.tool_call_id, 'call_abc123', 'Should have correct ID');
+        assert(message.content, 'Should have content');
+
+        const parsed = JSON.parse(message.content);
+        assertEquals(parsed.state, 'idle', 'Should have state in content');
+      });
+
+      await test('createFunctionMessage() creates correct format', () => {
+        const agent = new FixiPlugAgent(fixiplug);
+        const adapter = new OpenAIAdapter(agent);
+
+        const result = { available: true };
+
+        const message = adapter.createFunctionMessage('check_capability', result);
+
+        assertEquals(message.role, 'function', 'Should have function role');
+        assertEquals(message.name, 'check_capability', 'Should have correct name');
+        assert(message.content, 'Should have content');
+
+        const parsed = JSON.parse(message.content);
+        assertEquals(parsed.available, true, 'Should have result in content');
+      });
+
+      // Show summary
+      summaryEl.innerHTML = `
+        <strong>Test Results:</strong><br>
+        Passed: ${passed}<br>
+        Failed: ${failed}<br>
+        Total: ${passed + failed}<br>
+        <strong>Status: ${failed === 0 ? '✅ All tests passed!' : '❌ Some tests failed'}</strong>
+      `;
+
+      if (failed === 0) {
+        summaryEl.style.background = '#d4edda';
+        summaryEl.style.borderLeft = '4px solid #28a745';
+      } else {
+        summaryEl.style.background = '#f8d7da';
+        summaryEl.style.borderLeft = '4px solid #dc3545';
+      }
+
+      console.log(`\n=== OpenAI Adapter Test Summary ===`);
+      console.log(`Passed: ${passed}`);
+      console.log(`Failed: ${failed}`);
+      console.log(`Total: ${passed + failed}`);
+    })();
+  </script>
+</body>
+</html>

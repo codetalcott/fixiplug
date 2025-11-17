@@ -663,3 +663,203 @@ export class WorkflowBuilder {
    */
   build(): ExecutableWorkflow;
 }
+
+/**
+ * OpenAI adapter options
+ */
+export interface OpenAIAdapterOptions {
+  /**
+   * Include core Agent SDK tools
+   * @default true
+   */
+  includeCoreTools?: boolean;
+
+  /**
+   * Include workflow tools
+   * @default true
+   */
+  includeWorkflowTools?: boolean;
+
+  /**
+   * Include cache management tools
+   * @default true
+   */
+  includeCacheTools?: boolean;
+
+  /**
+   * Include discovered plugin hooks as tools
+   * @default false
+   */
+  includePluginHooks?: boolean;
+}
+
+/**
+ * OpenAI tool definition (new format)
+ */
+export interface OpenAITool {
+  type: 'function';
+  function: {
+    name: string;
+    description: string;
+    parameters: {
+      type: 'object';
+      properties: Record<string, any>;
+      required?: string[];
+    };
+  };
+}
+
+/**
+ * OpenAI function definition (legacy format)
+ */
+export interface OpenAIFunction {
+  name: string;
+  description: string;
+  parameters: {
+    type: 'object';
+    properties: Record<string, any>;
+    required?: string[];
+  };
+}
+
+/**
+ * OpenAI function call
+ */
+export interface OpenAIFunctionCall {
+  name: string;
+  arguments: string;
+}
+
+/**
+ * OpenAI tool call
+ */
+export interface OpenAIToolCall {
+  id: string;
+  type: 'function';
+  function: OpenAIFunctionCall;
+}
+
+/**
+ * Function call history record
+ */
+export interface FunctionCallRecord {
+  name: string;
+  arguments: any;
+  timestamp: number;
+  result?: any;
+  error?: string;
+  success: boolean;
+}
+
+/**
+ * OpenAI message (tool format)
+ */
+export interface OpenAIToolMessage {
+  role: 'tool';
+  tool_call_id: string;
+  content: string;
+}
+
+/**
+ * OpenAI message (function format)
+ */
+export interface OpenAIFunctionMessage {
+  role: 'function';
+  name: string;
+  content: string;
+}
+
+/**
+ * OpenAI Adapter for FixiPlug Agent SDK
+ *
+ * Provides integration between FixiPlug Agent SDK and OpenAI's function calling API
+ */
+export class OpenAIAdapter {
+  /**
+   * The FixiPlug agent instance
+   */
+  readonly agent: FixiPlugAgent;
+
+  /**
+   * Adapter configuration options
+   */
+  readonly options: Required<OpenAIAdapterOptions>;
+
+  /**
+   * Function call history
+   */
+  callHistory: FunctionCallRecord[];
+
+  /**
+   * Create a new OpenAI adapter
+   *
+   * @param agent - FixiPlugAgent instance
+   * @param options - Adapter options
+   * @throws {Error} If agent is invalid
+   */
+  constructor(agent: FixiPlugAgent, options?: OpenAIAdapterOptions);
+
+  /**
+   * Get OpenAI-compatible tool definitions (tools format)
+   *
+   * @param options - Generation options
+   * @returns Array of OpenAI tool definitions
+   */
+  getToolDefinitions(options?: { refresh?: boolean }): Promise<OpenAITool[]>;
+
+  /**
+   * Get OpenAI-compatible function definitions (legacy functions format)
+   *
+   * @param options - Generation options
+   * @returns Array of OpenAI function definitions
+   */
+  getFunctionDefinitions(options?: { refresh?: boolean }): Promise<OpenAIFunction[]>;
+
+  /**
+   * Execute an OpenAI function call
+   *
+   * @param functionCall - OpenAI function call object
+   * @returns Function execution result
+   * @throws {Error} If function execution fails
+   */
+  executeFunctionCall(functionCall: OpenAIFunctionCall): Promise<any>;
+
+  /**
+   * Execute a tool call (OpenAI tools format)
+   *
+   * @param toolCall - OpenAI tool call object
+   * @returns Tool execution result
+   * @throws {Error} If tool execution fails
+   */
+  executeToolCall(toolCall: OpenAIToolCall): Promise<any>;
+
+  /**
+   * Get function call history
+   *
+   * @returns Array of function call records
+   */
+  getCallHistory(): FunctionCallRecord[];
+
+  /**
+   * Clear function call history
+   */
+  clearCallHistory(): void;
+
+  /**
+   * Create a message for OpenAI from a function result (tools format)
+   *
+   * @param toolCall - The tool call object
+   * @param result - The function execution result
+   * @returns OpenAI-compatible tool message
+   */
+  createToolMessage(toolCall: OpenAIToolCall, result: any): OpenAIToolMessage;
+
+  /**
+   * Create a message for OpenAI from a function result (legacy format)
+   *
+   * @param functionName - The function name
+   * @param result - The function execution result
+   * @returns OpenAI-compatible function message
+   */
+  createFunctionMessage(functionName: string, result: any): OpenAIFunctionMessage;
+}
