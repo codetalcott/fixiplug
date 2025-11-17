@@ -863,3 +863,148 @@ export class OpenAIAdapter {
    */
   createFunctionMessage(functionName: string, result: any): OpenAIFunctionMessage;
 }
+
+/**
+ * Anthropic adapter options
+ */
+export interface AnthropicAdapterOptions {
+  /**
+   * Include core Agent SDK tools
+   * @default true
+   */
+  includeCoreTools?: boolean;
+
+  /**
+   * Include workflow tools
+   * @default true
+   */
+  includeWorkflowTools?: boolean;
+
+  /**
+   * Include cache management tools
+   * @default true
+   */
+  includeCacheTools?: boolean;
+
+  /**
+   * Include discovered plugin hooks as tools
+   * @default false
+   */
+  includePluginHooks?: boolean;
+}
+
+/**
+ * Anthropic tool definition
+ */
+export interface AnthropicTool {
+  name: string;
+  description: string;
+  input_schema: {
+    type: 'object';
+    properties: Record<string, any>;
+    required?: string[];
+  };
+}
+
+/**
+ * Anthropic tool use object
+ */
+export interface AnthropicToolUse {
+  id: string;
+  type: 'tool_use';
+  name: string;
+  input: Record<string, any>;
+}
+
+/**
+ * Anthropic tool result content block
+ */
+export interface AnthropicToolResult {
+  type: 'tool_result';
+  tool_use_id: string;
+  content: string;
+  is_error?: boolean;
+}
+
+/**
+ * Tool use history record
+ */
+export interface ToolUseRecord {
+  id: string;
+  name: string;
+  input: any;
+  timestamp: number;
+  result?: any;
+  error?: string;
+  success: boolean;
+}
+
+/**
+ * Anthropic Adapter for FixiPlug Agent SDK
+ *
+ * Provides integration between FixiPlug Agent SDK and Anthropic's Claude tool use API
+ */
+export class AnthropicAdapter {
+  /**
+   * The FixiPlug agent instance
+   */
+  readonly agent: FixiPlugAgent;
+
+  /**
+   * Adapter configuration options
+   */
+  readonly options: Required<AnthropicAdapterOptions>;
+
+  /**
+   * Tool use history
+   */
+  useHistory: ToolUseRecord[];
+
+  /**
+   * Create a new Anthropic adapter
+   *
+   * @param agent - FixiPlugAgent instance
+   * @param options - Adapter options
+   * @throws {Error} If agent is invalid
+   */
+  constructor(agent: FixiPlugAgent, options?: AnthropicAdapterOptions);
+
+  /**
+   * Get Anthropic-compatible tool definitions
+   *
+   * @param options - Generation options
+   * @returns Array of Anthropic tool definitions
+   */
+  getToolDefinitions(options?: { refresh?: boolean }): Promise<AnthropicTool[]>;
+
+  /**
+   * Execute an Anthropic tool use
+   *
+   * @param toolUse - Anthropic tool use object
+   * @returns Tool execution result
+   * @throws {Error} If tool execution fails
+   */
+  executeToolUse(toolUse: AnthropicToolUse): Promise<any>;
+
+  /**
+   * Get tool use history
+   *
+   * @returns Array of tool use records
+   */
+  getUseHistory(): ToolUseRecord[];
+
+  /**
+   * Clear tool use history
+   */
+  clearUseHistory(): void;
+
+  /**
+   * Create a tool result message for Anthropic
+   *
+   * @param toolUseId - The tool use ID
+   * @param result - The tool execution result
+   * @param isError - Whether this is an error result
+   * @returns Anthropic-compatible tool result content block
+   */
+  createToolResult(toolUseId: string, result: any, isError?: boolean): AnthropicToolResult;
+}
