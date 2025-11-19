@@ -47,6 +47,7 @@ export class Fixi {
 // Attach hook methods and properties to the Fixi class
 Fixi.hooks = hooks.hooks;
 Fixi.pluginRegistry = hooks.pluginRegistry;
+Fixi.skillRegistry = hooks.skillRegistry;
 Fixi.PRIORITY = hooks.PRIORITY;
 
 // Static hook methods
@@ -97,4 +98,19 @@ Fixi.getHooks = function() {
 Fixi.getDisabledPlugins = function() {
   // Return a copy to prevent mutation
   return new Set(hooks.disabledPlugins);
+};
+
+// Skill registry methods
+Fixi.getSkillRegistry = function() {
+  // Return a copy to prevent mutation
+  return hooks.getAllSkills();
+};
+
+Fixi.getSkill = function(pluginName) {
+  return hooks.getSkill(pluginName);
+};
+
+Fixi.registerSkill = function(pluginName, skillMetadata) {
+  hooks.registerSkill(pluginName, skillMetadata);
+  return this;
 };

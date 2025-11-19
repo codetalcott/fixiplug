@@ -9,6 +9,9 @@ const hooks = {};
 // Plugin registry
 const pluginRegistry = new Map();
 
+// Skill metadata registry (stores skill metadata from plugins)
+const skillRegistry = new Map();
+
 // Disabled plugins
 const disabledPlugins = new Set();
 
@@ -284,5 +287,41 @@ export function enablePlugin(pluginName) {
   disabledPlugins.delete(pluginName);
 }
 
+/**
+ * Register skill metadata for a plugin
+ * @param {string} pluginName - The plugin name
+ * @param {Object} skillMetadata - The skill metadata object
+ */
+export function registerSkill(pluginName, skillMetadata) {
+  if (skillMetadata && typeof skillMetadata === 'object') {
+    skillRegistry.set(pluginName, skillMetadata);
+  }
+}
+
+/**
+ * Unregister skill metadata for a plugin
+ * @param {string} pluginName - The plugin name
+ */
+export function unregisterSkill(pluginName) {
+  skillRegistry.delete(pluginName);
+}
+
+/**
+ * Get skill metadata for a plugin
+ * @param {string} pluginName - The plugin name
+ * @returns {Object|null} The skill metadata or null
+ */
+export function getSkill(pluginName) {
+  return skillRegistry.get(pluginName) || null;
+}
+
+/**
+ * Get all registered skills
+ * @returns {Map} Map of plugin names to skill metadata
+ */
+export function getAllSkills() {
+  return new Map(skillRegistry);
+}
+
 // Export storage
-export { hooks, pluginRegistry, disabledPlugins };
+export { hooks, pluginRegistry, skillRegistry, disabledPlugins };

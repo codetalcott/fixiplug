@@ -10,6 +10,7 @@
  * @module playground/backend/server
  */
 
+import 'dotenv/config';
 import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
@@ -20,8 +21,11 @@ import { AnthropicAdapter } from '../../sdk/adapters/anthropic-adapter.js';
 import { createFixiplug } from '../../builder/fixiplug-factory.js';
 import introspectionPlugin from '../../plugins/introspection.js';
 import stateTrackerPlugin from '../../plugins/state-tracker.js';
+import fixiAgentPlugin from '../../plugins/fixi-agent.js';
 import { ConversationManager } from './services/conversation-manager.js';
 import { LLMProviderService } from './services/llm-provider.js';
+import { ClaudeAgentService } from './services/claude-agent-service.js';
+import { createFixiPlugMcpServer } from './services/fixiplug-mcp-server.js';
 import { setupWebSocket } from './websocket/handlers.js';
 
 // Configuration
@@ -36,7 +40,7 @@ const httpServer = createServer(app);
 // Middleware
 app.use(cors());
 app.use(express.json());
-app.use(express.static('playground/frontend'));
+app.use(express.static('frontend'));
 
 // Initialize FixiPlug with plugins
 const fixiplug = createFixiplug({
@@ -45,6 +49,7 @@ const fixiplug = createFixiplug({
 
 fixiplug.use(introspectionPlugin);
 fixiplug.use(stateTrackerPlugin);
+fixiplug.use(fixiAgentPlugin);
 
 // Initialize Agent and Adapters
 const agent = new FixiPlugAgent(fixiplug, {
@@ -61,8 +66,13 @@ const openaiAdapter = new OpenAIAdapter(agent, {
 const anthropicAdapter = new AnthropicAdapter(agent, {
   includeCoreTools: true,
   includeWorkflowTools: true,
-  includeCacheTools: true
+  includeCacheTools: true,
+  includePluginHooks: true  // Enable automatic plugin hook discovery (fixi-agent hooks)
 });
+
+// Create FixiPlug SDK MCP Server
+console.log('Creating FixiPlug MCP server...');
+const fixiplugMcpServer = await createFixiPlugMcpServer(agent, anthropicAdapter);
 
 // Initialize services
 const conversationManager = new ConversationManager();
@@ -71,9 +81,14 @@ const llmProvider = new LLMProviderService({
   anthropic: { apiKey: ANTHROPIC_API_KEY }
 });
 
+const claudeAgentService = new ClaudeAgentService({
+  apiKey: ANTHROPIC_API_KEY,
+  mcpServer: fixiplugMcpServer  // Add FixiPlug tools
+});
+
 // WebSocket setup
 const wss = new WebSocketServer({ server: httpServer });
-setupWebSocket(wss, { agent, conversationManager, llmProvider });
+setupWebSocket(wss, { agent, conversationManager, llmProvider, claudeAgentService });
 
 // ============================================================
 // Health Check Endpoint
@@ -85,7 +100,8 @@ app.get('/health', (req, res) => {
     version: '1.0.0',
     providers: {
       openai: !!OPENAI_API_KEY,
-      anthropic: !!ANTHROPIC_API_KEY
+      anthropic: !!ANTHROPIC_API_KEY,
+      claudeAgent: claudeAgentService.isAvailable()
     },
     agent: {
       plugins: fixiplug.plugins?.size || 0,
@@ -139,7 +155,7 @@ app.get('/api/tools/:provider', async (req, res) => {
 
 app.post('/api/chat/openai', async (req, res) => {
   try {
-    const { messages, model = 'gpt-4', stream = false } = req.body;
+    const { messages, model = 'gpt-5-nano-2025-08-07', stream = false } = req.body;
 
     if (!OPENAI_API_KEY) {
       return res.status(400).json({
@@ -248,7 +264,7 @@ app.post('/api/chat/openai', async (req, res) => {
 
 app.post('/api/chat/anthropic', async (req, res) => {
   try {
-    const { messages, model = 'claude-3-5-sonnet-20241022', stream = false } = req.body;
+    const { messages, model = 'claude-haiku-4-5-20251001', stream = false } = req.body;
 
     if (!ANTHROPIC_API_KEY) {
       return res.status(400).json({
@@ -472,6 +488,123 @@ app.post('/api/workflow/execute', async (req, res) => {
     res.json({
       success: true,
       result
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================================
+// Claude Agent SDK Endpoints
+// ============================================================
+
+app.post('/api/claude-agent/query', async (req, res) => {
+  try {
+    const {
+      prompt,
+      sessionId,
+      stream = false,
+      permissionMode = 'default',
+      allowedTools,
+      disallowedTools
+    } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({
+        success: false,
+        error: 'Prompt is required'
+      });
+    }
+
+    if (!claudeAgentService.isAvailable()) {
+      return res.status(400).json({
+        success: false,
+        error: 'Claude Agent SDK not available - ANTHROPIC_API_KEY not configured'
+      });
+    }
+
+    if (stream) {
+      // Server-sent events for streaming
+      res.setHeader('Content-Type', 'text/event-stream');
+      res.setHeader('Cache-Control', 'no-cache');
+      res.setHeader('Connection', 'keep-alive');
+
+      for await (const message of claudeAgentService.executeQuery({
+        prompt,
+        sessionId,
+        stream: true,
+        permissionMode,
+        allowedTools,
+        disallowedTools
+      })) {
+        res.write(`data: ${JSON.stringify(message)}\n\n`);
+      }
+
+      res.write('data: [DONE]\n\n');
+      res.end();
+    } else {
+      // Non-streaming response
+      const messages = await claudeAgentService.executeSingleQuery({
+        prompt,
+        sessionId,
+        permissionMode,
+        allowedTools,
+        disallowedTools
+      });
+
+      // Find the result message
+      const resultMessage = messages.find(m => m.type === 'sdk/result');
+      const errorMessage = messages.find(m => m.type === 'sdk/error');
+
+      if (errorMessage) {
+        return res.status(500).json({
+          success: false,
+          error: errorMessage.error.message,
+          messages
+        });
+      }
+
+      res.json({
+        success: true,
+        result: resultMessage,
+        messages,
+        messageCount: messages.length
+      });
+    }
+  } catch (error) {
+    console.error('Claude Agent SDK query error:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/claude-agent/sessions', (req, res) => {
+  try {
+    res.json({
+      success: true,
+      sessionCount: claudeAgentService.getSessionCount()
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.delete('/api/claude-agent/sessions/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    claudeAgentService.clearSession(id);
+
+    res.json({
+      success: true,
+      message: 'Session cleared'
     });
   } catch (error) {
     res.status(500).json({

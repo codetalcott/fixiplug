@@ -37,6 +37,7 @@ export function setupWebSocket(wss, services) {
     ws.on('message', async (data) => {
       try {
         const message = JSON.parse(data.toString());
+        console.log('WebSocket received message:', message.type, message.provider || '');
         await handleMessage(ws, message, services);
       } catch (error) {
         console.error('WebSocket message error:', error);
@@ -106,6 +107,10 @@ async function handleMessage(ws, message, services) {
       await handleListConversations(ws, conversationManager);
       break;
 
+    case 'claude_agent':
+      await handleClaudeAgentQuery(ws, message, services);
+      break;
+
     default:
       ws.send(JSON.stringify({
         type: 'error',
@@ -120,6 +125,8 @@ async function handleMessage(ws, message, services) {
 async function handleChatMessage(ws, message, services) {
   const { llmProvider, conversationManager } = services;
   const { provider, model, messages, conversationId, stream = true } = message;
+
+  console.log(`Handling chat for provider: ${provider}, model: ${model}, messages: ${messages.length}`);
 
   try {
     // Create conversation if needed
@@ -143,6 +150,7 @@ async function handleChatMessage(ws, message, services) {
     }
 
   } catch (error) {
+    console.error('Chat error:', error);
     ws.send(JSON.stringify({
       type: 'chat_error',
       error: error.message
@@ -209,9 +217,13 @@ async function handleAnthropicChat(ws, options, services) {
   const { llmProvider, conversationManager } = services;
   const { provider, model, messages, conversationId, stream } = options;
 
+  console.log('Getting Anthropic adapter...');
   const adapter = services.anthropicAdapter || await getAnthropicAdapter(services.agent);
+  console.log('Getting tool definitions...');
   const tools = await adapter.getToolDefinitions();
+  console.log(`Got ${tools.length} tools`);
 
+  console.log('Calling Anthropic API...');
   const response = await llmProvider.createMessage({
     provider,
     model,
@@ -220,6 +232,7 @@ async function handleAnthropicChat(ws, options, services) {
     stream,
     max_tokens: 4096
   });
+  console.log('Got response from Anthropic API');
 
   if (stream) {
     for await (const chunk of response) {
@@ -439,6 +452,146 @@ async function getAnthropicAdapter(agent) {
     includeWorkflowTools: true,
     includeCacheTools: true
   });
+}
+
+/**
+ * Handle Claude Agent SDK query
+ */
+async function handleClaudeAgentQuery(ws, message, services) {
+  const { conversationManager, claudeAgentService } = services;
+  const {
+    prompt,
+    sessionId,
+    stream = true,
+    permissionMode = 'default',
+    allowedTools,
+    disallowedTools
+  } = message;
+
+  console.log('Handling Claude Agent SDK query:', prompt.substring(0, 50) + '...');
+
+  try {
+    // Check if service is available
+    if (!claudeAgentService || !claudeAgentService.isAvailable()) {
+      throw new Error('Claude Agent SDK not available - ANTHROPIC_API_KEY not configured');
+    }
+
+    // Create conversation if needed
+    const convId = sessionId || conversationManager.createConversation();
+    ws.metadata.conversationId = convId;
+
+    // Send start event
+    ws.send(JSON.stringify({
+      type: 'claude_agent_start',
+      conversationId: convId,
+      sessionId: convId,
+      timestamp: Date.now()
+    }));
+
+    // Execute query with buffered streaming to prevent overwhelming frontend
+    let textBuffer = '';
+    let lastSentTime = Date.now();
+    let currentMessageId = null;
+
+    const flushBuffer = () => {
+      if (textBuffer.length > 0) {
+        ws.send(JSON.stringify({
+          type: 'claude_agent_stream',
+          conversationId: convId,
+          text: textBuffer,
+          messageId: currentMessageId
+        }));
+        textBuffer = '';
+        lastSentTime = Date.now();
+      }
+    };
+
+    for await (const sdkMessage of claudeAgentService.executeQuery({
+      prompt,
+      sessionId: convId,
+      stream,
+      permissionMode,
+      allowedTools,
+      disallowedTools
+    })) {
+      console.log('SDK Message received:', sdkMessage.type);
+
+      // Handle stream_event messages for progressive text display
+      if (sdkMessage.type === 'stream_event') {
+        const event = sdkMessage.event;
+
+        // Handle text streaming
+        if (event?.type === 'content_block_delta' && event.delta?.type === 'text_delta') {
+          textBuffer += event.delta.text;
+
+          // Send buffered text every 100ms or every 50 characters
+          const timeSinceLastSend = Date.now() - lastSentTime;
+          if (timeSinceLastSend > 100 || textBuffer.length > 50) {
+            flushBuffer();
+          }
+        }
+
+        // Track message ID for streaming
+        else if (event?.type === 'message_start') {
+          currentMessageId = event.message?.id;
+        }
+
+        // Flush buffer at content block boundaries
+        else if (event?.type === 'content_block_stop') {
+          flushBuffer();
+        }
+
+        // Don't forward low-level stream events to frontend
+        continue;
+      }
+
+      // Send high-level messages to frontend
+      ws.send(JSON.stringify({
+        type: 'claude_agent_message',
+        conversationId: convId,
+        message: sdkMessage
+      }));
+
+      // Handle final result
+      if (sdkMessage.type === 'result') {
+        // Flush any remaining text
+        flushBuffer();
+
+        // Send completion
+        ws.send(JSON.stringify({
+          type: 'claude_agent_complete',
+          conversationId: convId,
+          result: sdkMessage,
+          timestamp: Date.now()
+        }));
+      }
+      // Handle errors
+      else if (sdkMessage.type === 'error') {
+        ws.send(JSON.stringify({
+          type: 'claude_agent_error',
+          conversationId: convId,
+          error: sdkMessage.error || sdkMessage.message
+        }));
+      }
+    }
+
+    // Final flush in case loop ends without result
+    flushBuffer();
+
+  } catch (error) {
+    console.error('Claude Agent SDK error:', error);
+    console.error('Error stack:', error.stack);
+
+    try {
+      ws.send(JSON.stringify({
+        type: 'claude_agent_error',
+        error: error.message,
+        stack: error.stack
+      }));
+    } catch (sendError) {
+      console.error('Failed to send error to client:', sendError);
+    }
+  }
 }
 
 export default setupWebSocket;

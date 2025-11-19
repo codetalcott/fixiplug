@@ -15,12 +15,14 @@ class AgentPlayground {
     this.wsURL = `ws://${window.location.host}`;
 
     // State
-    this.currentProvider = 'openai';
-    this.currentModel = 'gpt-4';
+    this.currentProvider = 'claude-agent';  // Default to Claude Agent SDK
+    this.currentModel = 'claude-haiku-4-5-20251001';  // Default to Haiku 4.5
     this.conversationId = null;
     this.messages = [];
     this.useWebSocket = true;
     this.streaming = true;
+    this.streamingMessageElement = null;  // Track current streaming message element
+    this.lastStreamedContent = null;  // Track last streamed message content to prevent duplicates
 
     // Stats
     this.stats = {
@@ -63,6 +65,7 @@ class AgentPlayground {
       // Provider & Model
       providerOpenAI: document.getElementById('providerOpenAI'),
       providerAnthropic: document.getElementById('providerAnthropic'),
+      providerClaudeAgent: document.getElementById('providerClaudeAgent'),
       modelSelect: document.getElementById('modelSelect'),
 
       // Options
@@ -103,6 +106,7 @@ class AgentPlayground {
     // Provider selection
     this.elements.providerOpenAI.addEventListener('click', () => this.selectProvider('openai'));
     this.elements.providerAnthropic.addEventListener('click', () => this.selectProvider('anthropic'));
+    this.elements.providerClaudeAgent.addEventListener('click', () => this.selectProvider('claude-agent'));
 
     // Model selection
     this.elements.modelSelect.addEventListener('change', (e) => {
@@ -210,6 +214,33 @@ class AgentPlayground {
       this.elements.messageInput.disabled = false;
     });
 
+    this.wsClient.on('claude_agent_stream', (data) => {
+      this.handleClaudeAgentStream(data);
+    });
+
+    this.wsClient.on('claude_agent_message', (data) => {
+      this.handleClaudeAgentMessage(data.message);
+    });
+
+    this.wsClient.on('claude_agent_complete', (data) => {
+      this.handleClaudeAgentComplete(data);
+      this.elements.sendBtn.disabled = false;
+      this.elements.messageInput.disabled = false;
+    });
+
+    this.wsClient.on('claude_agent_error', (data) => {
+      this.showError(data.error || 'Claude Agent SDK error');
+
+      // Clear streaming message on error
+      if (this.streamingMessageElement) {
+        this.streamingMessageElement.remove();
+        this.streamingMessageElement = null;
+      }
+
+      this.elements.sendBtn.disabled = false;
+      this.elements.messageInput.disabled = false;
+    });
+
     this.wsClient.on('error', (error) => {
       this.showError(error.error || error.message);
     });
@@ -243,13 +274,24 @@ class AgentPlayground {
       btn.classList.remove('active');
     });
 
-    const activeBtn = provider === 'openai' ? this.elements.providerOpenAI : this.elements.providerAnthropic;
-    activeBtn.classList.add('active');
+    const activeBtnMap = {
+      'openai': this.elements.providerOpenAI,
+      'anthropic': this.elements.providerAnthropic,
+      'claude-agent': this.elements.providerClaudeAgent
+    };
+    const activeBtn = activeBtnMap[provider];
+    if (activeBtn) {
+      activeBtn.classList.add('active');
+    }
 
     // Update model select
-    const options = this.elements.modelSelect.querySelectorAll('option');
-    const firstModel = provider === 'openai' ? 'gpt-4' : 'claude-3-5-sonnet-20241022';
+    const defaultModels = {
+      'openai': 'gpt-5-nano-2025-08-07',
+      'anthropic': 'claude-haiku-4-5-20251001',
+      'claude-agent': 'claude-haiku-4-5-20251001'
+    };
 
+    const firstModel = defaultModels[provider] || 'claude-haiku-4-5-20251001';
     this.currentModel = firstModel;
     this.elements.modelSelect.value = firstModel;
   }
@@ -388,14 +430,26 @@ ${Object.keys(capabilities.hooks).length > 10 ? '...' : ''}
    * Send via WebSocket
    */
   async sendViaWebSocket() {
-    this.wsClient.send({
-      type: 'chat',
-      provider: this.currentProvider,
-      model: this.currentModel,
-      messages: this.messages,
-      conversationId: this.conversationId,
-      stream: this.streaming
-    });
+    if (this.currentProvider === 'claude-agent') {
+      // Send to Claude Agent SDK handler
+      this.wsClient.send({
+        type: 'claude_agent',
+        prompt: this.messages[this.messages.length - 1].content,
+        sessionId: this.conversationId,
+        stream: this.streaming,
+        permissionMode: 'bypassPermissions'  // Allow tool execution without prompts
+      });
+    } else {
+      // Send to standard chat handler (OpenAI/Anthropic)
+      this.wsClient.send({
+        type: 'chat',
+        provider: this.currentProvider,
+        model: this.currentModel,
+        messages: this.messages,
+        conversationId: this.conversationId,
+        stream: this.streaming
+      });
+    }
   }
 
   /**
@@ -505,6 +559,241 @@ ${Object.keys(capabilities.hooks).length > 10 ? '...' : ''}
   }
 
   /**
+   * Handle Claude Agent SDK streaming text chunks
+   */
+  handleClaudeAgentStream(data) {
+    console.log('Claude Agent stream chunk:', data.text?.length || 0, 'chars');
+
+    // Create or get streaming message element
+    if (!this.streamingMessageElement) {
+      // Create new assistant message element for streaming
+      const messageEl = document.createElement('div');
+      messageEl.className = 'message assistant streaming';
+
+      const avatar = document.createElement('div');
+      avatar.className = 'message-avatar';
+      avatar.textContent = '🤖';
+
+      const content = document.createElement('div');
+      content.className = 'message-content';
+
+      // Create text container (will accumulate text)
+      const textContent = document.createElement('div');
+      textContent.className = 'streaming-text';
+
+      const metadata = document.createElement('div');
+      metadata.className = 'message-metadata';
+      metadata.textContent = new Date().toLocaleTimeString();
+
+      content.appendChild(textContent);
+      content.appendChild(metadata);
+      messageEl.appendChild(avatar);
+      messageEl.appendChild(content);
+
+      // Remove welcome message if present
+      const welcomeMsg = this.elements.messagesContainer.querySelector('.welcome-message');
+      if (welcomeMsg) {
+        welcomeMsg.remove();
+      }
+
+      this.elements.messagesContainer.appendChild(messageEl);
+      this.streamingMessageElement = messageEl;
+    }
+
+    // Append text chunk to streaming message
+    const textContainer = this.streamingMessageElement.querySelector('.streaming-text');
+    if (textContainer && data.text) {
+      // Append the text (already escaped by backend or browser)
+      textContainer.textContent += data.text;
+    }
+
+    // Auto-scroll to bottom
+    this.scrollToBottom();
+  }
+
+  /**
+   * Handle Claude Agent SDK message
+   */
+  handleClaudeAgentMessage(message) {
+    console.log('Claude Agent message:', message);
+
+    switch (message.type) {
+      case 'system':
+        // System initialization message
+        if (message.session_id) {
+          this.conversationId = message.session_id;
+        }
+        break;
+
+      case 'assistant':
+        // Assistant text response
+        // Skip if we're already streaming this message
+        if (this.streamingMessageElement) {
+          // Just update token stats if available
+          if (message.message?.usage) {
+            this.stats.tokens += message.message.usage.output_tokens || 0;
+            this.updateStats();
+          }
+          break;
+        }
+
+        if (message.message?.content) {
+          const textContent = message.message.content
+            .filter(c => c.type === 'text')
+            .map(c => c.text)
+            .join('\n');
+
+          // Skip if this is the same content we just streamed
+          if (textContent && textContent === this.lastStreamedContent) {
+            this.lastStreamedContent = null; // Clear for next message
+            // Still update token stats if available
+            if (message.message.usage) {
+              this.stats.tokens += message.message.usage.output_tokens || 0;
+              this.updateStats();
+            }
+            break;
+          }
+
+          if (textContent) {
+            const assistantMessage = {
+              role: 'assistant',
+              content: textContent
+            };
+            this.messages.push(assistantMessage);
+            this.displayMessage(assistantMessage);
+
+            // Update token stats
+            if (message.message.usage) {
+              this.stats.tokens += message.message.usage.output_tokens || 0;
+              this.updateStats();
+            }
+          }
+        }
+        break;
+
+      case 'tool_use':
+        // Tool execution (for Anthropic-style tool use)
+        this.stats.tools++;
+        this.updateStats();
+
+        const toolName = message.tool_use?.name || 'unknown';
+        const toolInput = message.tool_use?.input ?
+          JSON.stringify(message.tool_use.input, null, 2) : '';
+
+        const toolMessage = `
+          <div class="tool-execution">
+            <div class="tool-name">🔧 ${toolName}</div>
+            <div class="tool-result">${this.escapeHTML(toolInput)}</div>
+          </div>
+        `;
+
+        this.displayMessage({
+          role: 'system',
+          content: toolMessage,
+          isHTML: true
+        });
+        break;
+
+      case 'tool_result':
+        // Tool execution completed
+        const resultToolName = message.tool_use?.name || 'unknown';
+        const result = typeof message.result === 'string' ?
+          message.result : JSON.stringify(message.result, null, 2);
+
+        const resultMessage = `
+          <div class="tool-execution success">
+            <div class="tool-name">✓ ${resultToolName}</div>
+            <div class="tool-result">${this.escapeHTML(result)}</div>
+          </div>
+        `;
+
+        this.displayMessage({
+          role: 'system',
+          content: resultMessage,
+          isHTML: true
+        });
+        break;
+
+      case 'stream_event':
+        // Streaming event - accumulate text deltas
+        if (message.event?.type === 'content_block_delta' &&
+            message.event?.delta?.type === 'text_delta') {
+          // For now, just log - could implement real-time streaming display
+          console.log('Text delta:', message.event.delta.text);
+        }
+        break;
+
+      case 'result':
+        // Final result
+        if (message.result) {
+          const finalMessage = {
+            role: 'assistant',
+            content: typeof message.result === 'string' ?
+              message.result : JSON.stringify(message.result, null, 2)
+          };
+          // Only add if not already added by 'assistant' message
+          if (this.messages[this.messages.length - 1]?.content !== finalMessage.content) {
+            this.messages.push(finalMessage);
+            this.displayMessage(finalMessage);
+          }
+
+          // Show usage stats
+          if (message.usage) {
+            this.stats.tokens += message.usage.output_tokens || 0;
+            this.updateStats();
+          }
+        }
+        break;
+
+      case 'error':
+        // Error occurred
+        this.showError(message.error?.message || message.message || 'Unknown error');
+        break;
+    }
+  }
+
+  /**
+   * Handle Claude Agent SDK completion
+   */
+  handleClaudeAgentComplete(data) {
+    console.log('Claude Agent complete:', data);
+
+    // Finalize streaming message if present
+    if (this.streamingMessageElement) {
+      // Remove streaming class
+      this.streamingMessageElement.classList.remove('streaming');
+
+      // Get the final text content
+      const textContainer = this.streamingMessageElement.querySelector('.streaming-text');
+      if (textContainer && textContainer.textContent) {
+        const markdownText = textContainer.textContent;
+
+        // Save this content to prevent duplicate display
+        this.lastStreamedContent = markdownText;
+
+        // Render the accumulated text as markdown
+        textContainer.innerHTML = this.renderMarkdown(markdownText);
+        textContainer.classList.add('markdown-content');
+
+        // Add to messages array
+        this.messages.push({
+          role: 'assistant',
+          content: markdownText
+        });
+
+        // Update stats
+        this.stats.messages++;
+        this.updateStats();
+      }
+
+      // Clear the streaming message reference
+      this.streamingMessageElement = null;
+    }
+
+    this.showInfo('Query completed');
+  }
+
+  /**
    * Display message
    */
   displayMessage(message) {
@@ -524,6 +813,10 @@ ${Object.keys(capabilities.hooks).length > 10 ? '...' : ''}
 
     if (message.isHTML) {
       content.innerHTML = message.content;
+    } else if (message.role === 'assistant') {
+      // Render assistant messages as markdown
+      content.innerHTML = this.renderMarkdown(message.content);
+      content.classList.add('markdown-content');
     } else {
       content.textContent = message.content;
     }
@@ -614,6 +907,48 @@ ${Object.keys(capabilities.hooks).length > 10 ? '...' : ''}
     const div = document.createElement('div');
     div.textContent = str;
     return div.innerHTML;
+  }
+
+  /**
+   * Render markdown to sanitized HTML
+   */
+  renderMarkdown(markdown) {
+    // Check if marked and DOMPurify are available
+    if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') {
+      console.warn('Markdown libraries not loaded, falling back to plain text');
+      return this.escapeHTML(markdown);
+    }
+
+    try {
+      // Configure marked for better rendering
+      marked.setOptions({
+        breaks: true,  // Convert line breaks to <br>
+        gfm: true,     // GitHub Flavored Markdown
+        headerIds: false,  // Don't add IDs to headers
+        mangle: false  // Don't escape autolinked emails
+      });
+
+      // Parse markdown to HTML
+      const rawHTML = marked.parse(markdown);
+
+      // Sanitize HTML to prevent XSS attacks
+      const cleanHTML = DOMPurify.sanitize(rawHTML, {
+        ALLOWED_TAGS: [
+          'p', 'br', 'strong', 'em', 'u', 'code', 'pre',
+          'h1', 'h2', 'h3', 'h4', 'h5', 'h6',
+          'ul', 'ol', 'li',
+          'blockquote',
+          'a', 'img',
+          'table', 'thead', 'tbody', 'tr', 'th', 'td'
+        ],
+        ALLOWED_ATTR: ['href', 'src', 'alt', 'title', 'class']
+      });
+
+      return cleanHTML;
+    } catch (error) {
+      console.error('Markdown rendering error:', error);
+      return this.escapeHTML(markdown);
+    }
   }
 }
 

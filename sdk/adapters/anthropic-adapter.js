@@ -39,6 +39,7 @@ export class AnthropicAdapter {
    * @param {boolean} [options.includeWorkflowTools=true] - Include workflow tools
    * @param {boolean} [options.includeCacheTools=true] - Include cache management tools
    * @param {boolean} [options.includePluginHooks=false] - Include discovered plugin hooks
+   * @param {boolean} [options.includeSkills=false] - Include skills in context generation
    */
   constructor(agent, options = {}) {
     if (!agent) {
@@ -50,7 +51,8 @@ export class AnthropicAdapter {
       includeCoreTools: options.includeCoreTools !== false,
       includeWorkflowTools: options.includeWorkflowTools !== false,
       includeCacheTools: options.includeCacheTools !== false,
-      includePluginHooks: options.includePluginHooks || false
+      includePluginHooks: options.includePluginHooks || false,
+      includeSkills: options.includeSkills || false
     };
 
     // Track tool use history
@@ -188,6 +190,115 @@ export class AnthropicAdapter {
   }
 
   /**
+   * Get skills context for Claude system message
+   *
+   * Retrieves all registered skills and formats them as markdown documentation
+   * suitable for injection into Claude's system context. This teaches Claude
+   * how to orchestrate FixiPlug tools effectively.
+   *
+   * @param {Object} [options={}] - Context generation options
+   * @param {string} [options.format='full'] - Detail level: 'metadata' (name/desc only), 'summary' (name/desc/tags), 'full' (includes instructions)
+   * @param {Array<string>} [options.includeOnly] - Only include specific skills by name
+   * @param {Array<string>} [options.exclude] - Exclude specific skills by name
+   * @returns {Promise<string>} Formatted skills context as markdown
+   *
+   * @example
+   * const adapter = new AnthropicAdapter(agent, { includeSkills: true });
+   *
+   * // Get full skills context
+   * const context = await adapter.getSkillsContext();
+   *
+   * // Get metadata only (lighter weight)
+   * const metadata = await adapter.getSkillsContext({ format: 'metadata' });
+   *
+   * // Include in system message
+   * const response = await anthropic.messages.create({
+   *   model: 'claude-3-5-sonnet-20241022',
+   *   system: context,
+   *   messages: [...],
+   *   tools: await adapter.getToolDefinitions()
+   * });
+   */
+  async getSkillsContext(options = {}) {
+    const {
+      format = 'full',
+      includeOnly = null,
+      exclude = []
+    } = options;
+
+    try {
+      // Get skills manifest via introspection
+      const manifest = await this.agent.fixi.dispatch('api:getSkillsManifest', {});
+
+      if (!manifest || !manifest.skills || manifest.skills.length === 0) {
+        return ''; // No skills available
+      }
+
+      let skills = manifest.skills;
+
+      // Filter skills if requested
+      if (includeOnly && Array.isArray(includeOnly)) {
+        skills = skills.filter(s => includeOnly.includes(s.skill.name));
+      }
+
+      if (exclude && Array.isArray(exclude)) {
+        skills = skills.filter(s => !exclude.includes(s.skill.name));
+      }
+
+      if (skills.length === 0) {
+        return ''; // No skills after filtering
+      }
+
+      // Build context based on format
+      const sections = [];
+
+      sections.push('# FixiPlug Skills\n');
+      sections.push('The following skills provide guidance on how to orchestrate FixiPlug tools effectively.\n');
+
+      for (const { pluginName, skill } of skills) {
+        sections.push(`\n## ${skill.name || pluginName}`);
+
+        // Always include description
+        if (skill.description) {
+          sections.push(`\n${skill.description}\n`);
+        }
+
+        // Metadata format: just name and description
+        if (format === 'metadata') {
+          continue;
+        }
+
+        // Summary format: add tags and references
+        if (format === 'summary' || format === 'full') {
+          if (skill.tags && skill.tags.length > 0) {
+            sections.push(`\n**Tags**: ${skill.tags.join(', ')}`);
+          }
+
+          if (skill.references && skill.references.length > 0) {
+            sections.push(`\n**Related Plugins**: ${skill.references.join(', ')}`);
+          }
+
+          if (skill.level) {
+            sections.push(`\n**Level**: ${skill.level}`);
+          }
+        }
+
+        // Full format: include complete instructions
+        if (format === 'full' && skill.instructions) {
+          sections.push(`\n${skill.instructions}`);
+        }
+      }
+
+      return sections.join('\n');
+
+    } catch (error) {
+      // If introspection fails, return empty string (graceful degradation)
+      console.warn('Failed to retrieve skills context:', error);
+      return '';
+    }
+  }
+
+  /**
    * Get core Agent SDK tools
    *
    * @private
@@ -197,26 +308,26 @@ export class AnthropicAdapter {
     return [
       {
         name: 'discover_capabilities',
-        description: 'Discover available capabilities, plugins, and hooks from the FixiPlug instance. Use this first to understand what\'s available.',
+        description: 'Discover all FixiPlug capabilities. Use this FIRST to learn what plugins (modules) and hooks (events) are available. Returns: {version: "0.0.3", plugins: [{name: "introspectionPlugin", enabled: true, hooks: [...]}], hooks: {"api:introspect": {name, handlerCount, plugins, schema, description}}, methods: [{name: "use", description, params, returns}], timestamp: 1234567890}. Plugins extend FixiPlug by listening to hooks. Hooks are named events like "api:introspect" or "state:transition".',
         input_schema: {
           type: 'object',
           properties: {
             refresh: {
               type: 'boolean',
-              description: 'Force refresh cached capabilities (default: false)'
+              description: 'Force refresh cached capabilities (default: false). Use true after plugins change or to bypass cache.'
             }
           }
         }
       },
       {
         name: 'check_capability',
-        description: 'Check if a specific capability (plugin or hook) is available',
+        description: 'Check if a plugin or hook exists. Parameters: {capability: "introspectionPlugin"} or {capability: "api:introspect"}. Returns: boolean (true if capability exists). Faster than discover_capabilities when you only need to check one thing. Example: check_capability("api:setState") returns true if state tracker plugin is loaded.',
         input_schema: {
           type: 'object',
           properties: {
             capability: {
               type: 'string',
-              description: 'Name of the capability to check (plugin name or hook name)'
+              description: 'Plugin name (e.g., "introspectionPlugin") or hook name (e.g., "api:introspect") to check'
             }
           },
           required: ['capability']
@@ -224,7 +335,7 @@ export class AnthropicAdapter {
       },
       {
         name: 'get_current_state',
-        description: 'Get the current application state',
+        description: 'Get current application state from singleton state machine. Returns: {state: "loading", data: {progress: 50}, timestamp: 1234567890, age: 1500}. State is shared across all plugins. Age is milliseconds since last state change. Common states: "idle", "loading", "success", "error", "complete". Use this to understand what the app is currently doing.',
         input_schema: {
           type: 'object',
           properties: {}
@@ -232,17 +343,17 @@ export class AnthropicAdapter {
       },
       {
         name: 'set_state',
-        description: 'Set the application state',
+        description: 'Change application state. Parameters: {state: "loading", metadata: {progress: 50}}. Metadata becomes data in state. Returns: {success: true, state: "loading", previousState: "idle", timestamp: 1234567890, transition: {from: "idle", to: "loading"}}. If state schema is registered, validates transitions. Error on invalid: {error: "Invalid transition: idle -> complete", validTransitions: ["loading"]}. Other plugins can listen to state changes via "state:transition" event.',
         input_schema: {
           type: 'object',
           properties: {
             state: {
               type: 'string',
-              description: 'The state to set (e.g., "loading", "processing", "complete")'
+              description: 'State name to set. Common: "idle", "loading", "processing", "success", "error", "complete"'
             },
             metadata: {
               type: 'object',
-              description: 'Optional metadata to include with state change'
+              description: 'Optional data to attach to state (accessible via get_current_state().data)'
             }
           },
           required: ['state']
@@ -250,17 +361,17 @@ export class AnthropicAdapter {
       },
       {
         name: 'wait_for_state',
-        description: 'Wait for the application to reach a specific state',
+        description: 'Wait for state to change to target value. Useful for coordinating async operations. Parameters: {state: "complete", timeout: 30000}. Returns promise: {success: true, state: "complete", data: {...}, timestamp: 1234567890, waited: 2500}. Timeout error: {error: "Timeout waiting for state: complete", timeout: 30000, waited: 30000}. Default timeout: 30000ms. Example: Start async op with set_state("loading"), trigger work, then wait_for_state("complete").',
         input_schema: {
           type: 'object',
           properties: {
             state: {
               type: 'string',
-              description: 'The state to wait for'
+              description: 'State value to wait for (e.g., "complete", "success")'
             },
             timeout: {
               type: 'number',
-              description: 'Timeout in milliseconds (default: 5000)'
+              description: 'Max wait time in milliseconds. Default: 30000 (30 seconds)'
             }
           },
           required: ['state']
@@ -279,31 +390,31 @@ export class AnthropicAdapter {
     return [
       {
         name: 'execute_workflow',
-        description: 'Execute a multi-step workflow with automatic state management and error handling',
+        description: 'Execute a multi-step workflow by dispatching hooks in sequence. Each step can access results from previous steps. Returns: {success: boolean, completed: ["step1", "step2"], results: {step1: {...}, step2: {...}}, errors: [{step, error, index}], stoppedAt?: "stepName"}. Example: [{name: "validate", hook: "api:getCurrentState", params: {}}, {name: "process", hook: "api:setState", params: {state: "loading"}}]. If stopOnError=false, continues after errors.',
         input_schema: {
           type: 'object',
           properties: {
             steps: {
               type: 'array',
-              description: 'Array of workflow steps to execute',
+              description: 'Array of workflow steps to execute sequentially. Each step dispatches a hook and stores results by name.',
               items: {
                 type: 'object',
                 properties: {
                   name: {
                     type: 'string',
-                    description: 'Step name for result tracking'
+                    description: 'Step name for tracking results (accessible in context.results.stepName)'
                   },
                   hook: {
                     type: 'string',
-                    description: 'Hook to dispatch for this step'
+                    description: 'Hook name to dispatch (e.g., "api:getCurrentState", "api:setState")'
                   },
                   params: {
                     type: 'object',
-                    description: 'Parameters to pass to the hook'
+                    description: 'Parameters object to pass to the hook. Can reference previous results.'
                   },
                   state: {
                     type: 'string',
-                    description: 'Optional state to set before executing this step'
+                    description: 'Optional state to set before executing this step (e.g., "processing")'
                   }
                 },
                 required: ['name', 'hook']
@@ -311,7 +422,7 @@ export class AnthropicAdapter {
             },
             stopOnError: {
               type: 'boolean',
-              description: 'Whether to stop workflow on first error (default: true)'
+              description: 'Stop workflow on first error (true) or continue executing remaining steps (false). Default: true. Failed steps are recorded in errors array.'
             }
           },
           required: ['steps']
@@ -330,7 +441,7 @@ export class AnthropicAdapter {
     return [
       {
         name: 'warm_cache',
-        description: 'Warm the capabilities cache by performing an initial discovery. Use at startup for better performance.',
+        description: 'Pre-load capabilities cache to improve performance of future discover_capabilities calls. Use this at session start or before running multiple capability checks. No parameters required. Returns: {version, plugins, hooks, methods, timestamp}. Makes discover_capabilities calls instant until cache expires (default: 5 minutes).',
         input_schema: {
           type: 'object',
           properties: {}
@@ -338,7 +449,7 @@ export class AnthropicAdapter {
       },
       {
         name: 'invalidate_cache',
-        description: 'Invalidate the capabilities cache, forcing the next discovery to fetch fresh data',
+        description: 'Clear capabilities cache to force fresh discovery on next call. Use when plugins are dynamically added/removed or you suspect stale data. No parameters required. Returns nothing. Performance impact: Next discover_capabilities will be slower as it must re-fetch. Example: After calling fixiplug.use(newPlugin), invalidate cache to see new capabilities.',
         input_schema: {
           type: 'object',
           properties: {}
@@ -346,7 +457,7 @@ export class AnthropicAdapter {
       },
       {
         name: 'get_cache_info',
-        description: 'Get information about the current cache state',
+        description: 'Get cache metadata and status. No parameters required. Returns: {enabled: true, valid: boolean, hasData: boolean, timestamp: 1234567890, expiresAt: 1234872890, ttl: 300000, maxTTL: 300000}. Valid=true means cache is fresh. TTL is milliseconds until expiry. Use this to debug caching behavior.',
         input_schema: {
           type: 'object',
           properties: {}
@@ -366,14 +477,30 @@ export class AnthropicAdapter {
     const capabilities = await this.agent.discover({ refresh });
     const tools = [];
 
+    // Core hooks that are already covered by dedicated tools
+    const coreHooks = new Set([
+      'api:introspect',
+      'api:getPluginCapabilities',
+      'api:getAvailableHooks',
+      'api:getPluginDetails',
+      'api:getHookSchema',
+      'api:getCurrentState',
+      'api:setState',
+      'api:waitForState',
+      'api:registerStateSchema',
+      'api:getCommonStates',
+      'api:getStateHistory',
+      'api:clearStateHistory'
+    ]);
+
     // Convert each hook into a tool definition
     for (const [hookName, hookInfo] of Object.entries(capabilities.hooks)) {
-      // Skip API hooks (they're covered by core tools)
-      if (hookName.startsWith('api:')) continue;
+      // Skip core hooks that are covered by dedicated tools
+      if (coreHooks.has(hookName)) continue;
 
       const tool = {
         name: `hook_${hookName.replace(/:/g, '_')}`,
-        description: hookInfo.schema?.description ||
+        description: hookInfo.description || hookInfo.schema?.description ||
                     `Execute the ${hookName} hook` +
                     (hookInfo.plugins?.length ? ` (provided by: ${hookInfo.plugins.join(', ')})` : ''),
         input_schema: {

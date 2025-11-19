@@ -517,4 +517,791 @@ export default function agentCommands(ctx) {
 
     return true;
   }
+
+  // ========================================
+  // Skill Metadata
+  // ========================================
+
+  return {
+    skill: {
+      name: 'agent-commands',
+
+      description: 'High-level imperative API for LLM agents to interact with web applications without DOM manipulation. Use when you need to fill forms, click buttons, query tables, extract data, or navigate - provides a clean abstraction over low-level browser APIs.',
+
+      instructions: `# Agent Command Interface Skill
+
+## Overview
+
+The Agent Command Interface provides high-level, declarative commands for common web interaction patterns. Instead of writing low-level DOM manipulation code, you can use simple commands like \`agent:fillForm\`, \`agent:clickButton\`, and \`agent:queryTable\`.
+
+**Key Principle**: Focus on WHAT you want to do, not HOW to do it.
+
+## Core Commands
+
+### 1. agent:fillForm - Fill Form Fields
+
+**Purpose**: Fill multiple form fields with data in one command.
+
+**Use When**:
+- Filling user registration forms
+- Updating profile information
+- Entering search criteria
+- Batch data entry
+
+**Parameters**:
+- \`form\` - Form identifier (name, id, or CSS selector)
+- \`data\` - Object with field names and values
+
+**Example**:
+\`\`\`javascript
+await fixiplug.dispatch('agent:fillForm', {
+  form: 'product-form',
+  data: {
+    name: 'Laptop',
+    price: 999.99,
+    category: 'Electronics',
+    in_stock: true
+  }
+});
+
+// Returns:
+// {
+//   success: true,
+//   form: 'product-form',
+//   filled: ['name', 'price', 'category', 'in_stock']
+// }
+\`\`\`
+
+**Supported Input Types**:
+- Text, email, number, date, etc. (sets \`value\`)
+- Checkboxes (sets \`checked\`)
+- Radio buttons (checks matching value)
+- Select dropdowns (selects option by value or text)
+- Textareas (sets content)
+
+**Error Handling**:
+\`\`\`javascript
+const result = await fixiplug.dispatch('agent:fillForm', {
+  form: 'missing-form',
+  data: { name: 'Test' }
+});
+
+if (!result.success) {
+  console.error('Form error:', result.error);
+  // Handle: form not found, fields missing, etc.
+}
+
+// Partial success:
+// {
+//   success: false,
+//   filled: ['name', 'price'],
+//   errors: [
+//     { field: 'category', error: 'Field not found' }
+//   ]
+// }
+\`\`\`
+
+---
+
+### 2. agent:clickButton - Click Buttons by Intent
+
+**Purpose**: Click buttons without knowing exact selectors.
+
+**Use When**:
+- Submitting forms
+- Triggering actions
+- Navigation
+- Modal interactions
+
+**Parameters**:
+- \`text\` - Button text content (fuzzy match)
+- \`role\` - ARIA role attribute
+- \`selector\` - CSS selector (fallback)
+
+**Example**:
+\`\`\`javascript
+// Click by text (case-insensitive partial match)
+await fixiplug.dispatch('agent:clickButton', {
+  text: 'Submit'
+});
+
+// Click by ARIA role
+await fixiplug.dispatch('agent:clickButton', {
+  role: 'submit'
+});
+
+// Click by selector
+await fixiplug.dispatch('agent:clickButton', {
+  selector: '#save-button'
+});
+
+// Returns:
+// {
+//   success: true,
+//   clicked: 'Submit Form',
+//   element: 'button'
+// }
+\`\`\`
+
+**Search Priority**:
+1. \`selector\` (if provided)
+2. \`role\` attribute
+3. \`text\` content (fuzzy match on buttons and [role="button"])
+
+---
+
+### 3. agent:queryTable - Query Table Data
+
+**Purpose**: Extract and filter data from FixiPlug tables (requires table plugin).
+
+**Use When**:
+- Searching for specific records
+- Filtering data by criteria
+- Extracting table contents
+- Validating data presence
+
+**Parameters**:
+- \`table\` - Table identifier (data-model, name, id, or selector)
+- \`filter\` - Django-style filter object (optional)
+- \`limit\` - Max rows to return (default: 100)
+
+**Example**:
+\`\`\`javascript
+// Get all products
+const result = await fixiplug.dispatch('agent:queryTable', {
+  table: 'products'
+});
+
+// Filter with Django-style operators
+const expensive = await fixiplug.dispatch('agent:queryTable', {
+  table: 'products',
+  filter: {
+    price__gte: 100,           // price >= 100
+    category__icontains: 'tech', // category contains 'tech' (case-insensitive)
+    in_stock: true             // exact match
+  },
+  limit: 50
+});
+
+// Returns:
+// {
+//   success: true,
+//   table: 'products',
+//   count: 12,
+//   data: [
+//     { id: 1, name: 'Laptop', price: 999, category: 'Technology', in_stock: true },
+//     { id: 5, name: 'Tablet', price: 499, category: 'Technology', in_stock: true },
+//     ...
+//   ],
+//   columns: ['id', 'name', 'price', 'category', 'in_stock']
+// }
+\`\`\`
+
+**Supported Filter Operators**:
+- \`exact\` - Exact match (default)
+- \`iexact\` - Case-insensitive exact match
+- \`contains\` - Substring match
+- \`icontains\` - Case-insensitive substring match
+- \`gt\` - Greater than
+- \`gte\` - Greater than or equal
+- \`lt\` - Less than
+- \`lte\` - Less than or equal
+- \`in\` - Value in array
+- \`isnull\` - Is null/undefined
+
+**Example Filters**:
+\`\`\`javascript
+// Complex filter
+{
+  name__icontains: 'pro',        // Name contains 'pro' (any case)
+  price__gte: 50,                // Price >= 50
+  price__lt: 200,                // Price < 200
+  category__in: ['Electronics', 'Computers'], // Category in list
+  discontinued__isnull: true     // discontinued is null
+}
+\`\`\`
+
+---
+
+### 4. agent:extract - Extract Structured Data
+
+**Purpose**: Extract data from DOM elements into structured objects.
+
+**Use When**:
+- Scraping page content
+- Extracting search results
+- Reading product listings
+- Gathering form values
+
+**Parameters**:
+- \`selector\` - CSS selector for container elements
+- \`fields\` - Array or object defining fields to extract
+- \`format\` - 'array' (default) or 'object'
+
+**Array Format** (uses data attributes):
+\`\`\`javascript
+// HTML:
+// <div class="product">
+//   <span data-field="name">Laptop</span>
+//   <span data-field="price">$999</span>
+// </div>
+
+const result = await fixiplug.dispatch('agent:extract', {
+  selector: '.product',
+  fields: ['name', 'price', 'stock']
+});
+
+// Returns:
+// {
+//   success: true,
+//   count: 1,
+//   data: [
+//     { name: 'Laptop', price: '$999', stock: null }
+//   ]
+// }
+\`\`\`
+
+**Object Format** (uses CSS selectors):
+\`\`\`javascript
+// HTML:
+// <tr>
+//   <td>1</td>
+//   <td>Laptop</td>
+//   <td>$999</td>
+// </tr>
+
+const result = await fixiplug.dispatch('agent:extract', {
+  selector: 'tr',
+  fields: {
+    id: 'td:nth-child(1)',
+    name: 'td:nth-child(2)',
+    price: 'td:nth-child(3)'
+  }
+});
+
+// Returns:
+// {
+//   success: true,
+//   count: 5,
+//   data: [
+//     { id: '1', name: 'Laptop', price: '$999' },
+//     { id: '2', name: 'Mouse', price: '$29' },
+//     ...
+//   ],
+//   fieldsFormat: 'object'
+// }
+\`\`\`
+
+**Field Resolution Strategy** (array format):
+1. \`[data-field="fieldname"]\` element text
+2. \`[name="fieldname"]\` input value
+3. \`[data-fieldname]\` element text
+4. \`data-fieldname\` attribute value
+
+---
+
+### 5. agent:navigate - Navigate or Trigger Actions
+
+**Purpose**: Navigate to URLs or trigger fx-action elements.
+
+**Use When**:
+- Page navigation
+- Triggering AJAX requests
+- Deep linking
+- App routing
+
+**Parameters**:
+- \`url\` - URL to navigate to (full page load)
+- \`action\` - fx-action endpoint to trigger (AJAX)
+- \`trigger\` - Event type (default: 'click')
+
+**Example**:
+\`\`\`javascript
+// Full page navigation
+await fixiplug.dispatch('agent:navigate', {
+  url: '/products'
+});
+
+// Trigger fx-action AJAX request
+await fixiplug.dispatch('agent:navigate', {
+  action: '/api/products/',
+  trigger: 'click'
+});
+
+// Returns:
+// {
+//   success: true,
+//   action: 'trigger',
+//   endpoint: '/api/products/'
+// }
+\`\`\`
+
+---
+
+### 6. agent:waitFor - Wait for Conditions
+
+**Purpose**: Wait for elements to appear or conditions to be met.
+
+**Use When**:
+- Waiting for AJAX content
+- Modal dialogs to appear
+- Form validation
+- Dynamic content loading
+
+**Parameters**:
+- \`element\` - CSS selector to wait for
+- \`condition\` - Function that returns boolean
+- \`timeout\` - Max wait time in ms (default: 30000)
+
+**Example**:
+\`\`\`javascript
+// Wait for element
+await fixiplug.dispatch('agent:waitFor', {
+  element: '.success-message',
+  timeout: 5000
+});
+
+// Wait for custom condition
+await fixiplug.dispatch('agent:waitFor', {
+  condition: () => document.querySelectorAll('.product').length > 0,
+  timeout: 10000
+});
+
+// Returns:
+// {
+//   success: true,
+//   element: '.success-message',
+//   found: true,
+//   waited: 1234  // milliseconds
+// }
+\`\`\`
+
+**Timeout Handling**:
+\`\`\`javascript
+const result = await fixiplug.dispatch('agent:waitFor', {
+  element: '.missing-element',
+  timeout: 1000
+});
+
+if (result.error) {
+  console.log('Timeout:', result.waited, 'ms');
+  // { error: 'Timeout waiting for element', waited: 1000 }
+}
+\`\`\`
+
+---
+
+### 7. agent:submitForm - Fill and Submit
+
+**Purpose**: Fill form and submit in one atomic operation.
+
+**Use When**:
+- User registration workflows
+- Login forms
+- Search forms
+- Quick form submission
+
+**Parameters**:
+- \`form\` - Form identifier
+- \`data\` - Field data object
+
+**Example**:
+\`\`\`javascript
+await fixiplug.dispatch('agent:submitForm', {
+  form: 'login-form',
+  data: {
+    username: 'admin',
+    password: 'secret123'
+  }
+});
+
+// Returns:
+// {
+//   success: true,
+//   form: 'login-form',
+//   filled: ['username', 'password'],
+//   submitted: true
+// }
+\`\`\`
+
+**Error Cases**:
+- Form not found
+- Fields missing
+- Submit button not found
+
+## Workflow Patterns
+
+### Pattern 1: Multi-Step Form Workflow
+
+\`\`\`javascript
+// Step 1: Fill registration form
+const fillResult = await fixiplug.dispatch('agent:fillForm', {
+  form: 'registration',
+  data: {
+    email: 'user@example.com',
+    username: 'newuser',
+    password: 'secure123'
+  }
+});
+
+if (!fillResult.success) {
+  throw new Error('Failed to fill form: ' + fillResult.error);
+}
+
+// Step 2: Click submit
+await fixiplug.dispatch('agent:clickButton', {
+  text: 'Register'
+});
+
+// Step 3: Wait for success message
+await fixiplug.dispatch('agent:waitFor', {
+  element: '.registration-success',
+  timeout: 5000
+});
+
+// Step 4: Extract confirmation data
+const confirmation = await fixiplug.dispatch('agent:extract', {
+  selector: '.registration-success',
+  fields: ['message', 'userId']
+});
+
+console.log('Registration complete:', confirmation.data);
+\`\`\`
+
+---
+
+### Pattern 2: Search and Filter Workflow
+
+\`\`\`javascript
+// Step 1: Fill search form
+await fixiplug.dispatch('agent:fillForm', {
+  form: 'product-search',
+  data: {
+    query: 'laptop',
+    min_price: 500,
+    max_price: 2000
+  }
+});
+
+// Step 2: Submit search
+await fixiplug.dispatch('agent:clickButton', {
+  text: 'Search'
+});
+
+// Step 3: Wait for results
+await fixiplug.dispatch('agent:waitFor', {
+  element: '.search-results',
+  timeout: 10000
+});
+
+// Step 4: Query results table
+const results = await fixiplug.dispatch('agent:queryTable', {
+  table: 'search-results',
+  filter: {
+    price__gte: 500,
+    price__lte: 2000,
+    rating__gte: 4.0
+  }
+});
+
+console.log(\`Found \${results.count} matching products\`);
+\`\`\`
+
+---
+
+### Pattern 3: Data Extraction and Processing
+
+\`\`\`javascript
+// Extract product listings
+const products = await fixiplug.dispatch('agent:extract', {
+  selector: '.product-card',
+  fields: {
+    name: '.product-name',
+    price: '.product-price',
+    rating: '.product-rating',
+    inStock: '.stock-status'
+  }
+});
+
+// Filter in-memory
+const availableProducts = products.data.filter(p =>
+  p.inStock === 'In Stock' && parseFloat(p.price.replace('$', '')) < 1000
+);
+
+console.log('Available products under $1000:', availableProducts);
+\`\`\`
+
+---
+
+### Pattern 4: Integration with State Tracker
+
+\`\`\`javascript
+// Track form submission state
+await fixiplug.dispatch('api:setState', {
+  state: 'filling-form',
+  data: { formName: 'checkout' }
+});
+
+await fixiplug.dispatch('agent:fillForm', {
+  form: 'checkout',
+  data: {
+    name: 'John Doe',
+    address: '123 Main St',
+    city: 'Boston'
+  }
+});
+
+await fixiplug.dispatch('api:setState', {
+  state: 'submitting-form'
+});
+
+await fixiplug.dispatch('agent:submitForm', {
+  form: 'checkout',
+  data: { /* already filled */ }
+});
+
+// Wait for state transition to success
+await fixiplug.dispatch('api:waitForState', {
+  state: 'order-complete',
+  timeout: 30000
+});
+
+const state = await fixiplug.dispatch('api:getCurrentState');
+console.log('Order ID:', state.data.orderId);
+\`\`\`
+
+## Best Practices
+
+### 1. Always Check Success
+
+\`\`\`javascript
+// ❌ Don't assume success
+await fixiplug.dispatch('agent:fillForm', { form: 'myform', data: {...} });
+
+// ✅ Do check results
+const result = await fixiplug.dispatch('agent:fillForm', {
+  form: 'myform',
+  data: {...}
+});
+
+if (!result.success) {
+  console.error('Form fill failed:', result.error);
+  // Handle error...
+}
+\`\`\`
+
+### 2. Use Semantic Identifiers
+
+\`\`\`javascript
+// ❌ Don't use fragile selectors
+await fixiplug.dispatch('agent:fillForm', {
+  form: 'body > div:nth-child(3) > form',
+  data: {...}
+});
+
+// ✅ Do use semantic identifiers
+await fixiplug.dispatch('agent:fillForm', {
+  form: 'product-form',  // name or id
+  data: {...}
+});
+\`\`\`
+
+### 3. Combine with State Management
+
+\`\`\`javascript
+// Track operation state
+await fixiplug.dispatch('api:setState', { state: 'searching' });
+
+const results = await fixiplug.dispatch('agent:queryTable', {
+  table: 'products',
+  filter: { category: 'Electronics' }
+});
+
+await fixiplug.dispatch('api:setState', {
+  state: 'results-ready',
+  data: { count: results.count }
+});
+\`\`\`
+
+### 4. Wait for Async Operations
+
+\`\`\`javascript
+// After triggering AJAX
+await fixiplug.dispatch('agent:clickButton', { text: 'Load More' });
+
+// Wait for new content
+await fixiplug.dispatch('agent:waitFor', {
+  element: '.newly-loaded-content',
+  timeout: 5000
+});
+\`\`\`
+
+### 5. Handle Partial Success
+
+\`\`\`javascript
+const result = await fixiplug.dispatch('agent:fillForm', {
+  form: 'contact-form',
+  data: {
+    name: 'John',
+    email: 'john@example.com',
+    phone: '555-1234',
+    country: 'USA'
+  }
+});
+
+// Some fields may fail
+if (result.errors && result.errors.length > 0) {
+  console.log('Filled:', result.filled);
+  console.log('Errors:', result.errors);
+  // Retry failed fields or notify user
+}
+\`\`\`
+
+## Django Integration
+
+### Django-Style Filters
+
+The \`agent:queryTable\` command supports Django ORM-style filter syntax:
+
+\`\`\`javascript
+// Django QuerySet equivalent:
+// Product.objects.filter(price__gte=100, category__icontains='tech')
+
+await fixiplug.dispatch('agent:queryTable', {
+  table: 'products',
+  filter: {
+    price__gte: 100,
+    category__icontains: 'tech'
+  }
+});
+\`\`\`
+
+### Form Field Mapping
+
+Django form fields map directly to agent commands:
+
+\`\`\`python
+# Django form
+class ProductForm(forms.Form):
+    name = forms.CharField(max_length=100)
+    price = forms.DecimalField()
+    category = forms.ChoiceField(choices=CATEGORIES)
+    in_stock = forms.BooleanField()
+\`\`\`
+
+\`\`\`javascript
+// Fill form
+await fixiplug.dispatch('agent:fillForm', {
+  form: 'product-form',
+  data: {
+    name: 'Laptop',
+    price: 999.99,
+    category: 'electronics',
+    in_stock: true
+  }
+});
+\`\`\`
+
+## Common Pitfalls
+
+### ❌ Don't mix high-level and low-level APIs
+
+\`\`\`javascript
+// BAD: Mixing paradigms
+const form = document.querySelector('form');  // Low-level DOM
+await fixiplug.dispatch('agent:fillForm', { form: 'myform', data: {...} });  // High-level
+\`\`\`
+
+### ✅ Do use consistent abstraction level
+
+\`\`\`javascript
+// GOOD: Stick with agent commands
+await fixiplug.dispatch('agent:fillForm', { form: 'myform', data: {...} });
+await fixiplug.dispatch('agent:submitForm', { form: 'myform' });
+\`\`\`
+
+### ❌ Don't ignore timeouts
+
+\`\`\`javascript
+// BAD: No timeout handling
+await fixiplug.dispatch('agent:waitFor', { element: '.result' });
+\`\`\`
+
+### ✅ Do set reasonable timeouts
+
+\`\`\`javascript
+// GOOD: Handle timeout errors
+const result = await fixiplug.dispatch('agent:waitFor', {
+  element: '.result',
+  timeout: 5000
+});
+
+if (result.error) {
+  // Handle timeout...
+}
+\`\`\`
+
+### ❌ Don't forget async operations
+
+\`\`\`javascript
+// BAD: Not waiting for async result
+fixiplug.dispatch('agent:queryTable', { table: 'products' });  // Missing await
+const count = results.count;  // Error: results is a Promise
+\`\`\`
+
+### ✅ Do await all commands
+
+\`\`\`javascript
+// GOOD: Await async operations
+const results = await fixiplug.dispatch('agent:queryTable', {
+  table: 'products'
+});
+console.log('Count:', results.count);
+\`\`\`
+
+## Performance Tips
+
+1. **Batch form fills**: Use \`agent:fillForm\` instead of filling fields one-by-one
+2. **Use filters**: Filter on server/client side with \`agent:queryTable\` instead of extracting all data
+3. **Set limits**: Use \`limit\` parameter to avoid extracting huge datasets
+4. **Reuse queries**: Cache query results instead of re-querying
+5. **Combine operations**: Use \`agent:submitForm\` instead of separate fill + click
+
+## Summary
+
+The Agent Command Interface provides:
+
+- **7 high-level commands** for common web interactions
+- **Django-style filters** for table queries
+- **Flexible extraction** with array or object field definitions
+- **Async coordination** with wait and timeout handling
+- **Error handling** with detailed success/error responses
+
+**When to use**: Prefer agent commands over direct DOM manipulation for cleaner, more maintainable code.
+
+**Integration**: Works seamlessly with state-tracker, table, and fixi-agent plugins.
+`,
+
+      references: [
+        'stateTrackerPlugin',
+        'tablePlugin',
+        'fixiAgentPlugin'
+      ],
+
+      tags: [
+        'agent',
+        'commands',
+        'forms',
+        'tables',
+        'navigation',
+        'extraction',
+        'django',
+        'high-level-api'
+      ],
+
+      version: '1.0.0',
+      author: 'FixiPlug Team',
+      level: 'beginner'
+    }
+  };
 }

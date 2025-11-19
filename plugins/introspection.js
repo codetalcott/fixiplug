@@ -65,14 +65,55 @@ const HOOK_PATTERNS = {
 
 /**
  * Built-in hook documentation
+ *
+ * TERMINOLOGY:
+ * - Plugins: Reusable modules that extend FixiPlug (e.g., 'introspectionPlugin', 'stateTrackerPlugin')
+ * - Hooks: Named events that plugins listen to (e.g., 'api:introspect', 'state:transition')
+ * - State: Application-wide singleton state machine (e.g., 'idle', 'loading', 'complete')
  */
 const HOOK_DOCS = {
-  'api:introspect': 'Returns complete FixiPlug introspection data including version, features, and capabilities',
-  'api:getPluginCapabilities': 'Returns list of all registered plugins with metadata, enabled status, and hooks',
-  'api:getAvailableHooks': 'Returns all available hooks with their handler counts, plugins, and schemas',
-  'api:getPluginDetails': 'Returns detailed information for a specific plugin by name',
-  'api:getHookSchema': 'Returns schema and documentation for a specific hook by name',
-  'pluginError': 'Fired when a plugin handler throws an error during execution'
+  // Introspection hooks
+  'api:introspect': 'Discover all FixiPlug capabilities. Returns: {fixiplug: {version: "0.0.3", capabilities: {plugins: [{name, enabled, hooks}], hooks: {hookName: {...}}, methods: [{name, description}]}, metadata: {timestamp, pluginCount, hookCount}}}. Use this first to understand what plugins and hooks are available.',
+
+  'api:getPluginCapabilities': 'List all registered plugins. Plugins are modules that extend FixiPlug by listening to hooks. Returns: {capabilities: [{name: "introspectionPlugin", enabled: true, hooks: [{hookName: "api:introspect", priority: 10}], metadata: {type, version, description}}]}',
+
+  'api:getAvailableHooks': 'List all event hooks. Hooks are named events (like "api:introspect") that plugins listen to. Returns: {hooks: {"api:introspect": {name, handlerCount: 1, plugins: ["introspectionPlugin"], priorities: [10], schema: {type: "query", returns: "data"}, description: "..."}}}',
+
+  'api:getPluginDetails': 'Get detailed info for one plugin. Parameters: {pluginName: "introspectionPlugin"}. Returns: {name, enabled: true, hooks: [{hookName, priority, handlerCount}], metadata, documentation}. Error if plugin not found: {error: "Plugin \'foo\' not found"}',
+
+  'api:getHookSchema': 'Get schema for one hook. Parameters: {hookName: "api:introspect"}. Returns: {hookName, exists: true, handlerCount: 1, schema: {type: "query", returns: "data", inferred: false}, description: "...", plugins: ["introspectionPlugin"]}',
+
+  // State tracker hooks (application-wide state machine)
+  'api:getCurrentState': 'Get current app state. State is a singleton shared across all plugins. Returns: {state: "loading", data: {progress: 50}, timestamp: 1234567890, age: 1500}. Age is milliseconds since last state change.',
+
+  'api:setState': 'Change app state. Validates transitions if schema registered. Parameters: {state: "loading", data: {progress: 50}, validate: true}. Returns: {success: true, state: "loading", previousState: "idle", timestamp: 1234567890, transition: {from: "idle", to: "loading"}}. Error on invalid transition: {error: "Invalid transition: idle -> complete", validTransitions: ["loading"]}',
+
+  'api:waitForState': 'Wait for app to reach a state. Useful for coordinating async operations. Parameters: {state: "complete", timeout: 30000}. Returns promise: {success: true, state: "complete", data: {...}, timestamp: 1234567890, waited: 2500}. Timeout error: {error: "Timeout waiting for state: complete", timeout: 30000, waited: 30000}. Example: Start async op, then await waitForState("complete").',
+
+  'api:getStateHistory': 'Get recent state transitions (circular buffer). Parameters: {limit: 20}. Default limit: 50. Returns: {history: [{from: "idle", to: "loading", timestamp: 123, age: 500, data: {...}}], currentState: "loading", totalTransitions: 45}',
+
+  'api:registerStateSchema': 'Define valid states and transitions for validation. Parameters: {states: ["idle", "loading", "success", "error"], transitions: {idle: ["loading"], loading: ["success", "error"], success: ["idle"], error: ["idle"]}, initial: "idle"}. Returns: {success: true, schema: {states: [...], transitionCount: 4, initial: "idle"}}. After registration, setState validates transitions. Error on invalid schema: {error: "Invalid state in transitions: foo"}',
+
+  'api:getCommonStates': 'Get predefined state constants for consistency. Returns: {states: {IDLE: "idle", LOADING: "loading", SUCCESS: "success", ERROR: "error", PENDING: "pending", COMPLETE: "complete"}, description: "Predefined common application states"}. Use these strings in setState() calls.',
+
+  'api:clearStateHistory': 'Clear state transition history. Useful to free memory after long sessions. Returns: {success: true, cleared: 50}. Cleared is number of history entries removed.',
+
+  // Fixi-Agent hooks (DOM/fetch capabilities for LLM agents)
+  'api:injectFxHtml': 'Inject HTML with fx- attributes into the DOM. Agents use this to create declarative AJAX elements. Parameters: {html: "<button fx-action=\\"/api/data\\" fx-target=\\"#result\\">Load</button>", selector: "#container", position: "beforeend"}. Returns: {success: true, injected: 123, selector, position}. Position options: "beforebegin", "afterbegin", "beforeend", "afterend". Example: Agent creates a button that fetches data when clicked.',
+
+  'api:readDom': 'Read current DOM content (read-only, safe). Agents use this to understand page state. Parameters: {selector: "#status", property: "textContent"}. Returns: {success: true, value: "...", tagName: "div", attributes: {...}}. Property options: "textContent", "innerHTML", "outerHTML", "value". Error if selector not found: {error: "Selector not found: #foo"}.',
+
+  'api:triggerFxElement': 'Programmatically trigger an existing fx-action element. Agents use this to activate existing AJAX functionality. Parameters: {selector: "#refresh-button"}. Returns: {success: true, triggered: "click", action: "/api/refresh"}. Error if element has no fx-action: {error: "Element does not have fx-action: #foo", suggestion: "Use api:injectFxHtml to create fx-action elements first"}.',
+
+  'api:getFxDocumentation': 'Get complete documentation of the fx- attribute system. Agents call this first to learn how to use fixi. Returns: {description: "...", attributes: {fx-action: {required: true, example: "..."}, fx-method: {...}, fx-target: {...}, fx-swap: {...}, fx-trigger: {...}}, events: {fx:init: {...}, fx:before: {...}, ...}, examples: [{name: "Simple GET", html: "...", description: "..."}], bestPractices: [...], security: [...]}. This teaches agents to write fx-attributed HTML.',
+
+  // Skill discovery hooks
+  'api:getSkillsManifest': 'Get all available skills (workflow guidance). Skills are pedagogical metadata that teach agents how to orchestrate tools effectively. Returns: {skills: [{pluginName: "reactiveUiPatternsSkill", skill: {name: "reactive-ui-patterns", description: "...", instructions: "...", references: [...], tags: [...]}}], skillCount: 1}. Skills can be pure metadata (skill-only plugins) or attached to implementation plugins (hybrid plugins).',
+
+  'api:getPluginSkills': 'Get skills for all plugins. Returns: {plugins: [{name: "stateTrackerPlugin", hasSkill: true, skill: {...}}, {name: "fixiAgentPlugin", hasSkill: false, skill: null}]}. Use this to see which plugins have workflow guidance.',
+
+  // Error handling
+  'pluginError': 'Event fired when a plugin handler throws an error. Handlers receive: {plugin: "pluginName", hookName: "api:introspect", error: Error object, event: original event object}. Listen to this to debug plugin issues.'
 };
 
 /**
@@ -87,6 +128,7 @@ export default function introspectionPlugin(ctx) {
   ctx.on('api:introspect', async () => {
     const pluginCapabilities = await getPluginCapabilities();
     const availableHooks = await getAvailableHooks();
+    const skillsManifest = getSkillsManifest();
 
     return {
       fixiplug: {
@@ -94,12 +136,14 @@ export default function introspectionPlugin(ctx) {
         capabilities: {
           plugins: pluginCapabilities,
           hooks: availableHooks,
+          skills: skillsManifest,
           methods: getFixiplugMethods()
         },
         metadata: {
           timestamp: new Date().toISOString(),
           pluginCount: pluginCapabilities.length,
-          hookCount: Object.keys(availableHooks).length
+          hookCount: Object.keys(availableHooks).length,
+          skillCount: skillsManifest.length
         }
       }
     };
@@ -141,13 +185,15 @@ export default function introspectionPlugin(ctx) {
     const disabled = Fixi.getDisabledPlugins();
     const hooks = getPluginHooks(pluginName);
     const metadata = extractPluginMetadata(pluginData);
+    const skill = Fixi.getSkill(pluginName);
 
     return {
       name: pluginName,
       enabled: !disabled.has(pluginName),
       hooks,
       metadata,
-      documentation: extractPluginDocs(pluginData)
+      documentation: extractPluginDocs(pluginData),
+      skill: skill || null
     };
   });
 
@@ -175,6 +221,58 @@ export default function introspectionPlugin(ctx) {
   });
 
   // ========================================
+  // API: Get Skills Manifest
+  // ========================================
+  ctx.on('api:getSkillsManifest', () => {
+    const skillRegistry = Fixi.getSkillRegistry();
+    const skills = [];
+
+    for (const [pluginName, skill] of skillRegistry.entries()) {
+      skills.push({
+        pluginName,
+        skill
+      });
+    }
+
+    return {
+      skills,
+      skillCount: skills.length
+    };
+  });
+
+  // ========================================
+  // API: Get Plugin Skills
+  // ========================================
+  ctx.on('api:getPluginSkills', (event) => {
+    const { pluginName } = event;
+
+    // If specific plugin requested, return just that one
+    if (pluginName) {
+      const skill = Fixi.getSkill(pluginName);
+      return {
+        name: pluginName,
+        hasSkill: skill !== null,
+        skill: skill || null
+      };
+    }
+
+    // Otherwise return all plugins
+    const registry = Fixi.getPluginRegistry();
+    const plugins = [];
+
+    for (const name of registry.keys()) {
+      const skill = Fixi.getSkill(name);
+      plugins.push({
+        name,
+        hasSkill: skill !== null,
+        skill: skill || null
+      });
+    }
+
+    return { plugins };
+  });
+
+  // ========================================
   // Helper Functions
   // ========================================
 
@@ -196,6 +294,23 @@ export default function introspectionPlugin(ctx) {
     }
 
     return capabilities;
+  }
+
+  /**
+   * Get all skills manifest
+   */
+  function getSkillsManifest() {
+    const skillRegistry = Fixi.getSkillRegistry();
+    const skills = [];
+
+    for (const [pluginName, skill] of skillRegistry.entries()) {
+      skills.push({
+        pluginName,
+        skill
+      });
+    }
+
+    return skills;
   }
 
   /**

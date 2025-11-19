@@ -16,9 +16,10 @@ export class LLMProviderService {
   constructor(config = {}) {
     this.config = config;
     this.providers = {};
+    this.initialized = false;
 
     // Lazy load provider SDKs
-    this._initializeProviders();
+    this._initPromise = this._initializeProviders();
   }
 
   /**
@@ -50,6 +51,18 @@ export class LLMProviderService {
         console.warn('Anthropic SDK not available:', error.message);
       }
     }
+
+    this.initialized = true;
+  }
+
+  /**
+   * Ensure providers are initialized
+   * @private
+   */
+  async _ensureInitialized() {
+    if (!this.initialized) {
+      await this._initPromise;
+    }
   }
 
   /**
@@ -69,6 +82,8 @@ export class LLMProviderService {
    * @returns {Promise<Object>} Completion response
    */
   async chatCompletion(options) {
+    await this._ensureInitialized();
+
     const {
       provider,
       model,
@@ -115,6 +130,8 @@ export class LLMProviderService {
    * @returns {Promise<Object>} Message response
    */
   async createMessage(options) {
+    await this._ensureInitialized();
+
     const {
       provider,
       model,

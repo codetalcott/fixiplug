@@ -123,9 +123,9 @@ export class FixiPlugAgent {
       this.capabilities = {
         version: result.fixiplug?.version || 'unknown',
         features: result.fixiplug?.features || [],
-        plugins: result.plugins || [],
-        hooks: result.hooks || {},
-        methods: result.methods || [],
+        plugins: result.fixiplug?.capabilities?.plugins || [],
+        hooks: result.fixiplug?.capabilities?.hooks || {},
+        methods: result.fixiplug?.capabilities?.methods || [],
         timestamp: Date.now()
       };
 

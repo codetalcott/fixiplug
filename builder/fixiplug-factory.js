@@ -173,14 +173,26 @@ export function createFixiplug(options = {}) {
       // Register in core plugin registry for introspection
       Fixi.use(plugin);
 
-      // Initialize the plugin
+      // Initialize the plugin and capture return value (may contain skill metadata)
       try {
-        setup(context);
+        const pluginReturn = setup(context);
+
+        // If plugin returned an object with skill metadata, register it
+        if (pluginReturn && typeof pluginReturn === 'object' && pluginReturn.skill) {
+          logger.log(`Registering skill for plugin: ${name}`);
+          Fixi.registerSkill(name, pluginReturn.skill);
+
+          // Store skill locally as well
+          const pluginData = plugins.get(name);
+          if (pluginData) {
+            pluginData.skill = pluginReturn.skill;
+          }
+        }
       } catch (err) {
         logger.error(`Error initializing plugin ${name}:`, err);
         this.unuse(name);
       }
-      
+
       return this;
     },
     
@@ -321,9 +333,157 @@ export function createFixiplug(options = {}) {
     // Expose internals for debugging
     get hooks() {
       return Fixi.hooks;
+    },
+
+    get skillRegistry() {
+      return Fixi.skillRegistry;
+    },
+
+    /**
+     * Get all registered skills
+     * @returns {Array<Object>} Array of skill metadata objects
+     */
+    getSkills() {
+      if (!Fixi.skillRegistry) {
+        return [];
+      }
+
+      return Array.from(Fixi.skillRegistry.entries()).map(([pluginName, skill]) => ({
+        pluginName,
+        ...skill
+      }));
+    },
+
+    /**
+     * Get a specific skill by name
+     * @param {string} skillName - The skill name to retrieve
+     * @returns {Object|null} Skill metadata or null if not found
+     */
+    getSkill(skillName) {
+      if (!Fixi.skillRegistry) {
+        return null;
+      }
+
+      // Search by skill name (not plugin name)
+      for (const [pluginName, skill] of Fixi.skillRegistry.entries()) {
+        if (skill.name === skillName) {
+          return {
+            pluginName,
+            ...skill
+          };
+        }
+      }
+
+      return null;
+    },
+
+    /**
+     * Check if a skill exists
+     * @param {string} skillName - The skill name to check
+     * @returns {boolean} True if skill exists
+     */
+    hasSkill(skillName) {
+      return !!this.getSkill(skillName);
+    },
+
+    /**
+     * Get skills by tag
+     * @param {string} tag - Tag to filter by
+     * @returns {Array<Object>} Array of matching skill metadata
+     */
+    getSkillsByTag(tag) {
+      return this.getSkills().filter(skill =>
+        skill.tags && skill.tags.includes(tag)
+      );
+    },
+
+    /**
+     * Get skills by level
+     * @param {string} level - Level to filter by: 'beginner', 'intermediate', 'advanced'
+     * @returns {Array<Object>} Array of matching skill metadata
+     */
+    getSkillsByLevel(level) {
+      return this.getSkills().filter(skill => skill.level === level);
+    },
+
+    /**
+     * Get skills metadata manifest (for LLM context)
+     * @param {Object} [options={}] - Options for metadata format
+     * @param {boolean} [options.includeInstructions=false] - Include full instructions
+     * @param {Array<string>} [options.includeOnly] - Only include specific skill names
+     * @param {Array<string>} [options.excludeSkills=[]] - Exclude specific skill names
+     * @param {Array<string>} [options.tags] - Filter by tags
+     * @param {string} [options.level] - Filter by level
+     * @returns {Object} Skills manifest
+     */
+    getSkillsManifest(options) {
+      options = options || {};
+      const {
+        includeInstructions = false,
+        includeOnly = null,
+        excludeSkills = [],
+        tags = null,
+        level = null
+      } = options;
+
+      let skills = this.getSkills();
+
+      // Apply filters
+      if (includeOnly) {
+        skills = skills.filter(skill => includeOnly.includes(skill.name));
+      }
+
+      if (excludeSkills.length > 0) {
+        skills = skills.filter(skill => !excludeSkills.includes(skill.name));
+      }
+
+      if (tags) {
+        skills = skills.filter(skill =>
+          skill.tags && tags.some(tag => skill.tags.includes(tag))
+        );
+      }
+
+      if (level) {
+        skills = skills.filter(skill => skill.level === level);
+      }
+
+      // Format output
+      const manifest = {
+        count: skills.length,
+        skills: skills.map(skill => {
+          const metadata = {
+            name: skill.name,
+            pluginName: skill.pluginName,
+            description: skill.description,
+            tags: skill.tags || [],
+            level: skill.level || 'intermediate',
+            version: skill.version || '1.0.0',
+            author: skill.author,
+            references: skill.references || []
+          };
+
+          if (includeInstructions) {
+            metadata.instructions = skill.instructions;
+          }
+
+          return metadata;
+        })
+      };
+
+      return manifest;
+    },
+
+    /**
+     * Get skill instructions for LLM context injection
+     * @param {string} skillName - The skill name
+     * @returns {string|null} Full skill instructions or null
+     */
+    getSkillInstructions(skillName) {
+      const skill = this.getSkill(skillName);
+      return skill ? skill.instructions : null;
     }
   };
-  
+
   // Auto-load testing plugin if testing feature is enabled
   if (hasFeature(FEATURES.TESTING)) {
     // We'll dynamically import the testing plugin in an async context

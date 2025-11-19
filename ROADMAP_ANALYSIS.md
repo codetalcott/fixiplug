@@ -2,7 +2,7 @@
 
 ## Executive Summary
 
-After analyzing the existing codebase and the proposed roadmap, **we've already implemented 2 out of 12 proposed plugins**, and several others are partially addressed by existing functionality. This document identifies what's done, what's missing, and what should be prioritized for the dj-fixi integration.
+After analyzing the existing codebase and the proposed roadmap, **we've already implemented 2 out of 12 proposed plugins**, and several others are partially addressed by existing functionality. This document identifies what's done, what's missing, and what should be prioritized for the **dj-fixi (Django)** and **franchise-assessment (FastAPI)** integrations.
 
 ---
 
@@ -17,16 +17,16 @@ After analyzing the existing codebase and the proposed roadmap, **we've already 
 - Emits `state:transition` events
 - Supports state history and validation schemas
 
-**Integration with dj-fixi:**
-- ✅ Can track Django API request states
+**Integration with dj-fixi (Django) and FastAPI:**
+- ✅ Can track Django/FastAPI request states
 - ✅ LLM agents can wait for data to load before querying
 - ✅ Error states are tracked
 
-**Example:**
+**Example (works with both Django and FastAPI):**
 ```javascript
-// Agent waits for Django table to load
+// Agent waits for API table to load
 await fixiplug.dispatch('api:setState', { state: 'loading' });
-const data = await fetch('/api/products/');
+const data = await fetch('/api/products/');  // Django or FastAPI endpoint
 await fixiplug.dispatch('api:setState', { state: 'success', data });
 
 // Other code waits for success
@@ -44,21 +44,22 @@ await fixiplug.dispatch('api:waitForState', { state: 'success' });
 - Auto-generates API documentation
 - Discovers hook schemas automatically
 
-**What's missing for dj-fixi:**
-- ❌ Django endpoints not auto-registered
+**What's missing for dj-fixi and FastAPI:**
+- ❌ Django/FastAPI endpoints not auto-registered
 - ❌ Table/form capabilities not exposed
-- ❌ No JSON schema for Django models
+- ❌ No JSON schema for Django models or Pydantic models
 
 **What we need to add:**
 ```javascript
-// Auto-register Django table capabilities
+// Auto-register Django/FastAPI table capabilities
 fixiplug.dispatch('api:registerCapability', {
   type: 'table',
   endpoint: '/api/products/',
-  model: 'Product',
+  model: 'Product',  // Django model or Pydantic model
   features: ['search', 'sort', 'paginate', 'edit'],
   columns: [...],
-  actions: ['create', 'update', 'delete']
+  actions: ['create', 'update', 'delete'],
+  framework: 'django' | 'fastapi'  // NEW: Distinguish framework
 });
 ```
 
@@ -342,6 +343,156 @@ The dj-fixi backend already has LLM tool definitions ([dj_fixi/llm/tools.py](../
 8. LLM validates input (Form Schema)
    ↓
 9. Django saves changes
+```
+
+---
+
+## Integration with franchise-assessment (FastAPI)
+
+The franchise-assessment project uses FastAPI and can benefit from the same FixiPlug integration patterns as dj-fixi.
+
+**FastAPI Integration Advantages:**
+- **Pydantic Models** → Automatic JSON schema generation
+- **Type Hints** → Better validation and documentation
+- **Async Support** → Native async/await in routes
+- **OpenAPI** → Auto-generated API docs
+
+**What FixiPlug plugins enable for FastAPI:**
+- **Capability Discovery** → LLM knows what FastAPI endpoints exist
+- **Agent Commands** → LLM can interact with data tables
+- **State Tracker** → LLM knows when async operations complete
+- **Form Schema** → LLM validates data against Pydantic models
+
+**Complete Flow (FastAPI):**
+```
+1. LLM asks: "Show me franchises with revenue > $500k"
+   ↓
+2. LLM discovers /api/franchises/ endpoint (Capability Discovery)
+   ↓
+3. LLM queries FastAPI endpoint (Agent Commands)
+   ↓
+4. FastAPI validates with Pydantic model, executes query
+   ↓
+5. FixiPlug renders interactive table (table.js plugin)
+   ↓
+6. LLM tracks loading state (State Tracker)
+   ↓
+7. User edits cell → LLM executes agent command (Agent Commands)
+   ↓
+8. LLM validates against Pydantic schema (Form Schema)
+   ↓
+9. FastAPI saves changes, returns updated data
+```
+
+**Key Differences from Django:**
+- **Pydantic vs Django Forms**: Pydantic models provide built-in JSON schema
+- **Async by default**: FastAPI routes are async, better for LLM coordination
+- **OpenAPI integration**: FastAPI auto-generates OpenAPI schemas that LLMs can consume
+
+**Example Pydantic Model:**
+```python
+# franchise-assessment/models.py
+from pydantic import BaseModel, Field
+from typing import Optional
+from decimal import Decimal
+
+class FranchiseBase(BaseModel):
+    name: str = Field(..., min_length=1, max_length=200)
+    location: str
+    annual_revenue: Decimal = Field(..., ge=0)
+    employees: int = Field(..., ge=0)
+    is_active: bool = True
+
+class FranchiseCreate(FranchiseBase):
+    pass
+
+class Franchise(FranchiseBase):
+    id: int
+
+    class Config:
+        orm_mode = True  # For SQLAlchemy compatibility
+```
+
+**FixiPlug Integration:**
+```javascript
+// Auto-register FastAPI endpoint capabilities
+fixiplug.dispatch('api:registerCapability', {
+  type: 'table',
+  endpoint: '/api/franchises/',
+  model: 'Franchise',
+  framework: 'fastapi',
+  schema: {
+    // Extracted from Pydantic model
+    name: { type: 'string', minLength: 1, maxLength: 200, required: true },
+    location: { type: 'string', required: true },
+    annual_revenue: { type: 'number', minimum: 0, required: true },
+    employees: { type: 'integer', minimum: 0, required: true },
+    is_active: { type: 'boolean', default: true }
+  },
+  features: ['search', 'sort', 'paginate', 'edit'],
+  actions: ['create', 'read', 'update', 'delete']
+});
+```
+
+**Agent Workflow Example:**
+```javascript
+// LLM agent queries franchise data
+const franchises = await fixiplug.dispatch('agent:queryTable', {
+  table: 'franchises',
+  filter: {
+    annual_revenue__gte: 500000,  // Django-style filter works!
+    is_active: true
+  }
+});
+
+// LLM agent fills franchise creation form
+await fixiplug.dispatch('agent:fillForm', {
+  form: 'franchise-form',
+  data: {
+    name: 'Boston Downtown',
+    location: 'Boston, MA',
+    annual_revenue: 750000,
+    employees: 25,
+    is_active: true
+  }
+});
+
+// Validate against Pydantic schema before submit
+const schema = await fixiplug.dispatch('api:getFormSchema', {
+  form: 'franchise-form'
+});
+// Returns Pydantic model JSON schema
+```
+
+**Skill Plugin for FastAPI (Future):**
+```javascript
+// plugins/fastapi-workflows-skill.js
+export default function fastapiWorkflowsSkill(ctx) {
+  return {
+    skill: {
+      name: 'fastapi-workflows',
+      description: 'Workflow patterns for FastAPI + FixiPlug integration',
+      instructions: `
+        # FastAPI Workflow Patterns
+
+        ## Pattern 1: Pydantic Model Validation
+        - Extract JSON schema from Pydantic models
+        - Validate form data before submission
+        - Show validation errors from FastAPI
+
+        ## Pattern 2: Async Route Coordination
+        - Track FastAPI async route execution
+        - Wait for background tasks to complete
+        - Handle streaming responses
+
+        ## Pattern 3: OpenAPI Integration
+        - Auto-discover endpoints from OpenAPI spec
+        - Generate forms from Pydantic schemas
+        - Validate requests against OpenAPI
+      `
+    }
+  };
+}
 ```
 
 ---

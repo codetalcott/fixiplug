@@ -1162,3 +1162,620 @@ export default function createTablePlugin(options = {}) {
 
 // Note: Helper functions (getCellValue, formatCellValue, sortData) are defined
 // within the plugin closure and not exported separately.
+
+/**
+ * Skill metadata for table plugin
+ * Teaches LLM agents how to create and manage interactive data tables
+ */
+createTablePlugin.skill = {
+  name: 'table-plugin',
+
+  description: 'Create interactive data tables with sorting, pagination, filtering, and inline editing. Use when displaying tabular data from APIs (Django, FastAPI, etc.), rendering CSVs, or building CRUD interfaces. Supports both declarative HTML attributes and programmatic configuration.',
+
+  instructions: `# Table Plugin Skill
+
+## Overview
+
+The Table Plugin automatically renders interactive HTML tables from JSON data. Instead of manually building <table> elements, you declare a container element with \`fx-table\` attributes and the plugin handles rendering, sorting, pagination, filtering, and inline editing.
+
+**Key Principle**: Declarative tables - configure with attributes, not code.
+
+## Basic Usage
+
+### Pattern 1: Auto-Load Table from API
+
+\`\`\`html
+<!-- Minimal setup: loads data from /api/products/ on page load -->
+<div
+  fx-table
+  fx-action="/api/products/"
+  fx-trigger="load">
+</div>
+\`\`\`
+
+**What happens**:
+1. On page load, FixiPlug fetches \`/api/products/\`
+2. Server returns JSON array: \`[{ id: 1, name: "Laptop", price: 999 }, ...]\`
+3. Table plugin receives \`fx:data\` event
+4. Table is automatically rendered with all columns detected
+5. Result: Fully interactive table with sortable columns
+
+### Pattern 2: Manual Trigger with Button
+
+\`\`\`html
+<button fx-action="/api/products/" fx-target="#products-table">Load Products</button>
+
+<div id="products-table" fx-table></div>
+\`\`\`
+
+**What happens**:
+1. User clicks button
+2. FixiPlug fetches \`/api/products/\`
+3. Response is swapped into \`#products-table\`
+4. Table plugin renders the data
+
+### Pattern 3: Django Integration
+
+\`\`\`html
+<!-- Django returns both data AND column configuration -->
+<div
+  fx-table
+  fx-action="/api/products/"
+  fx-trigger="load"
+  data-model="Product">
+</div>
+\`\`\`
+
+**Django Response**:
+\`\`\`python
+# Django view using dj-fixi
+from dj_fixi import FxCRUDView
+
+class ProductTableView(FxCRUDView):
+    model = Product
+    fields = ['id', 'name', 'price', 'category', 'in_stock']
+
+# Returns:
+{
+  "data": [
+    {"id": 1, "name": "Laptop", "price": 999, "category": "Electronics", "in_stock": true},
+    {"id": 2, "name": "Mouse", "price": 29, "category": "Accessories", "in_stock": true}
+  ],
+  "columns": [
+    {"key": "id", "label": "ID", "type": "number", "sortable": true},
+    {"key": "name", "label": "Product Name", "type": "string", "sortable": true, "editable": true},
+    {"key": "price", "label": "Price", "type": "number", "sortable": true, "editable": true},
+    {"key": "category", "label": "Category", "type": "string"},
+    {"key": "in_stock", "label": "In Stock", "type": "boolean"}
+  ],
+  "meta": {
+    "model": "Product",
+    "total_count": 50,
+    "page": 1
+  }
+}
+\`\`\`
+
+## HTML Attributes
+
+### Core Attributes
+
+**\`fx-table\`** - Mark element as table container
+\`\`\`html
+<div fx-table></div>
+\`\`\`
+
+**\`fx-action\`** - API endpoint to fetch data from
+\`\`\`html
+<div fx-table fx-action="/api/products/"></div>
+\`\`\`
+
+**\`fx-trigger\`** - When to fetch data
+- \`"load"\` - On page load
+- \`"click"\` - On click
+- \`"change"\` - On form field change
+\`\`\`html
+<div fx-table fx-action="/api/products/" fx-trigger="load"></div>
+\`\`\`
+
+### Column Configuration
+
+**\`fx-table-columns\`** - JSON array of column definitions
+\`\`\`html
+<div fx-table fx-table-columns='[
+  {"key": "id", "label": "ID", "type": "number"},
+  {"key": "name", "label": "Name", "type": "string", "sortable": true},
+  {"key": "price", "label": "Price", "type": "number", "sortable": true}
+]'></div>
+\`\`\`
+
+**Column Properties**:
+- \`key\` - Field name in data object (supports dot notation: \`"user.name"\`)
+- \`label\` - Column header text
+- \`type\` - Data type: \`"string"\`, \`"number"\`, \`"boolean"\`, \`"date"\`, \`"object"\`
+- \`sortable\` - Enable column sorting (default: true)
+- \`editable\` - Enable inline editing (default: false)
+- \`formatter\` - Custom formatting function
+
+### Sorting
+
+**\`fx-sort-column\`** - Default sort column
+\`\`\`html
+<div fx-table fx-sort-column="name"></div>
+\`\`\`
+
+**\`fx-sort-dir\`** - Default sort direction (\`"asc"\` or \`"desc"\`)
+\`\`\`html
+<div fx-table fx-sort-column="price" fx-sort-dir="desc"></div>
+\`\`\`
+
+**\`fx-sort-server-side\`** - Enable server-side sorting
+\`\`\`html
+<div fx-table fx-sort-server-side fx-action="/api/products/"></div>
+\`\`\`
+
+When server-side sorting is enabled:
+1. User clicks column header
+2. Plugin appends \`?sort=column&dir=asc\` to API URL
+3. Server returns sorted data
+4. Table re-renders
+
+### Pagination
+
+**\`fx-page-size\`** - Rows per page (default: 10)
+\`\`\`html
+<div fx-table fx-page-size="25"></div>
+\`\`\`
+
+Automatically renders pagination controls:
+- First/Previous/Next/Last buttons
+- Page number display
+- Total rows count
+
+### Search/Filtering
+
+**\`fx-search\`** - Enable client-side search
+\`\`\`html
+<div fx-table fx-search></div>
+\`\`\`
+
+Automatically adds search box that filters all visible columns.
+
+### CSV Export
+
+**\`fx-export-filename\`** - Enable CSV export with custom filename
+\`\`\`html
+<div fx-table fx-export-filename="products-export.csv"></div>
+\`\`\`
+
+Automatically adds "Export to CSV" button that downloads filtered data.
+
+### Django/FastAPI Metadata
+
+**\`data-model\`** - Model name (for introspection)
+\`\`\`html
+<div fx-table data-model="Product"></div>
+\`\`\`
+
+## Advanced Patterns
+
+### Pattern 4: Full-Featured Table
+
+\`\`\`html
+<div
+  fx-table
+  fx-action="/api/products/"
+  fx-trigger="load"
+  fx-sort-column="name"
+  fx-sort-dir="asc"
+  fx-page-size="20"
+  fx-search
+  fx-export-filename="products.csv"
+  data-model="Product">
+</div>
+\`\`\`
+
+**Features enabled**:
+- ✅ Auto-loads from \`/api/products/\`
+- ✅ Default sort by name (ascending)
+- ✅ 20 rows per page
+- ✅ Search box for filtering
+- ✅ CSV export button
+- ✅ Model metadata for introspection
+
+### Pattern 5: Server-Side Sorting & Pagination
+
+\`\`\`html
+<div
+  fx-table
+  fx-action="/api/products/"
+  fx-sort-server-side
+  fx-page-size="50">
+</div>
+\`\`\`
+
+**API Requests**:
+\`\`\`
+Initial: GET /api/products/
+Sort by price: GET /api/products/?sort=price&dir=desc
+Page 2: GET /api/products/?sort=price&dir=desc&page=2&page_size=50
+\`\`\`
+
+**Django Implementation**:
+\`\`\`python
+from dj_fixi import FxCRUDView
+
+class ProductTableView(FxCRUDView):
+    model = Product
+    fields = ['id', 'name', 'price']
+
+    def get_queryset(self):
+        qs = super().get_queryset()
+
+        # Server-side sorting
+        sort_column = self.request.GET.get('sort')
+        sort_dir = self.request.GET.get('dir', 'asc')
+        if sort_column:
+            order_by = f"-{sort_column}" if sort_dir == 'desc' else sort_column
+            qs = qs.order_by(order_by)
+
+        return qs
+\`\`\`
+
+### Pattern 6: Inline Editing
+
+\`\`\`html
+<div
+  fx-table
+  fx-action="/api/products/"
+  fx-trigger="load"
+  fx-table-columns='[
+    {"key": "id", "label": "ID", "editable": false},
+    {"key": "name", "label": "Name", "editable": true},
+    {"key": "price", "label": "Price", "type": "number", "editable": true},
+    {"key": "in_stock", "label": "In Stock", "type": "boolean", "editable": true}
+  ]'>
+</div>
+\`\`\`
+
+**Editing Flow**:
+1. User double-clicks editable cell
+2. Cell becomes input field
+3. User edits value
+4. User presses Enter or clicks outside
+5. Plugin sends PATCH request to update row:
+   \`PATCH /api/products/1/\` with \`{"name": "New Name"}\`
+6. Server saves and returns updated row
+7. Table cell updates
+
+**Django PATCH Handler**:
+\`\`\`python
+from dj_fixi import FxCRUDView
+
+class ProductTableView(FxCRUDView):
+    model = Product
+    fields = ['id', 'name', 'price', 'in_stock']
+
+    # PATCH is automatically handled by FxCRUDView
+    # Validates field, updates model, returns JSON
+\`\`\`
+
+### Pattern 7: FastAPI Integration
+
+\`\`\`html
+<div
+  fx-table
+  fx-action="/api/franchises/"
+  fx-trigger="load"
+  data-model="Franchise">
+</div>
+\`\`\`
+
+**FastAPI Response**:
+\`\`\`python
+from fastapi import FastAPI
+from pydantic import BaseModel
+from typing import List
+
+app = FastAPI()
+
+class Franchise(BaseModel):
+    id: int
+    name: str
+    location: str
+    annual_revenue: float
+    employees: int
+    is_active: bool
+
+@app.get("/api/franchises/")
+async def list_franchises():
+    # Return same format as Django
+    return {
+        "data": [
+            {
+                "id": 1,
+                "name": "Boston Downtown",
+                "location": "Boston, MA",
+                "annual_revenue": 750000.00,
+                "employees": 25,
+                "is_active": True
+            },
+            # ...
+        ],
+        "columns": [
+            {"key": "id", "label": "ID", "type": "number"},
+            {"key": "name", "label": "Franchise Name", "type": "string", "editable": True},
+            {"key": "location", "label": "Location", "type": "string", "editable": True},
+            {"key": "annual_revenue", "label": "Revenue", "type": "number", "editable": True},
+            {"key": "employees", "label": "Employees", "type": "number", "editable": True},
+            {"key": "is_active", "label": "Active", "type": "boolean", "editable": True}
+        ],
+        "meta": {
+            "model": "Franchise",
+            "total_count": 15
+        }
+    }
+
+@app.patch("/api/franchises/{franchise_id}/")
+async def update_franchise(franchise_id: int, data: dict):
+    # Handle inline edit
+    # Validate with Pydantic, update database, return updated row
+    pass
+\`\`\`
+
+## Agent Workflows
+
+### Workflow 1: Create Table with Agent Commands
+
+\`\`\`javascript
+// Step 1: Inject table container
+await fixiplug.dispatch('api:injectFxHtml', {
+  html: '<div id="products" fx-table fx-action="/api/products/" fx-trigger="load"></div>',
+  selector: '#app',
+  position: 'beforeend'
+});
+
+// Step 2: Wait for data to load
+await fixiplug.dispatch('api:waitForState', {
+  state: 'success',
+  timeout: 5000
+});
+
+// Step 3: Query rendered table data
+const result = await fixiplug.dispatch('agent:queryTable', {
+  table: 'products',
+  filter: {
+    price__gte: 100
+  }
+});
+
+console.log(\`Found \${result.count} products over $100\`);
+\`\`\`
+
+### Workflow 2: Progressive Enhancement
+
+\`\`\`javascript
+// Start with basic table
+await fixiplug.dispatch('api:injectFxHtml', {
+  html: '<div id="products" fx-table fx-action="/api/products/"></div>',
+  selector: '#app'
+});
+
+// Trigger load
+await fixiplug.dispatch('agent:clickButton', {
+  selector: '[fx-action="/api/products/"]'
+});
+
+// Enhance with sorting
+await fixiplug.dispatch('api:readDom', {
+  selector: '#products',
+  attribute: 'fx-sort-column'
+});
+
+await fixiplug.dispatch('api:injectFxHtml', {
+  html: '<div id="products" fx-table fx-action="/api/products/" fx-sort-column="price" fx-sort-dir="desc"></div>',
+  selector: '#products',
+  position: 'outerHTML'
+});
+\`\`\`
+
+### Workflow 3: Edit Table Cell
+
+\`\`\`javascript
+// Get current data
+const result = await fixiplug.dispatch('agent:queryTable', {
+  table: 'products'
+});
+
+// Find specific row
+const laptop = result.data.find(p => p.name === 'Laptop');
+
+// Simulate inline edit by sending PATCH request
+await fetch(\`/api/products/\${laptop.id}/\`, {
+  method: 'PATCH',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ price: 899 })
+});
+
+// Table will auto-refresh from server response
+\`\`\`
+
+## Best Practices
+
+### 1. Let Django/FastAPI Define Columns
+
+\`\`\`javascript
+// ❌ Don't hardcode column config in HTML
+<div fx-table fx-table-columns='[...]'></div>
+
+// ✅ Do let server return column metadata
+<div fx-table fx-action="/api/products/"></div>
+\`\`\`
+
+**Why**: Server knows field types, validation rules, and permissions.
+
+### 2. Use Server-Side Sorting for Large Datasets
+
+\`\`\`javascript
+// ❌ Don't client-sort 10,000 rows
+<div fx-table fx-action="/api/products/"></div>
+
+// ✅ Do use server-side sorting
+<div fx-table fx-sort-server-side fx-action="/api/products/"></div>
+\`\`\`
+
+### 3. Enable Pagination for Long Tables
+
+\`\`\`javascript
+// ❌ Don't render 1000 rows at once
+<div fx-table fx-action="/api/products/"></div>
+
+// ✅ Do paginate
+<div fx-table fx-page-size="25" fx-action="/api/products/"></div>
+\`\`\`
+
+### 4. Provide Meaningful Export Filenames
+
+\`\`\`javascript
+// ❌ Don't use generic names
+<div fx-table fx-export-filename="export.csv"></div>
+
+// ✅ Do use descriptive names
+<div fx-table fx-export-filename="products-2024-11.csv"></div>
+\`\`\`
+
+### 5. Coordinate with State Tracker
+
+\`\`\`javascript
+// Track table loading state
+await fixiplug.dispatch('api:setState', { state: 'loading-table' });
+
+// Inject table
+await fixiplug.dispatch('api:injectFxHtml', {
+  html: '<div fx-table fx-action="/api/products/" fx-trigger="load"></div>',
+  selector: '#app'
+});
+
+// Wait for load to complete
+ctx.on('fx:after', async (event) => {
+  if (event.cfg.action === '/api/products/') {
+    await fixiplug.dispatch('api:setState', { state: 'table-ready' });
+  }
+});
+\`\`\`
+
+## Common Pitfalls
+
+### ❌ Don't Manually Build <table> Elements
+
+\`\`\`html
+<!-- BAD: Manual table HTML -->
+<table>
+  <thead>
+    <tr><th>Name</th><th>Price</th></tr>
+  </thead>
+  <tbody>
+    <!-- ... manually built rows ... -->
+  </tbody>
+</table>
+\`\`\`
+
+### ✅ Do Use fx-table Declarative API
+
+\`\`\`html
+<!-- GOOD: Declarative table -->
+<div fx-table fx-action="/api/products/" fx-trigger="load"></div>
+\`\`\`
+
+### ❌ Don't Mix Client and Server Sorting
+
+\`\`\`html
+<!-- BAD: Conflicting sort modes -->
+<div fx-table fx-sort-column="name" fx-sort-server-side></div>
+\`\`\`
+
+### ✅ Do Choose One Sort Mode
+
+\`\`\`html
+<!-- GOOD: Server-side only -->
+<div fx-table fx-sort-server-side></div>
+
+<!-- GOOD: Client-side with default -->
+<div fx-table fx-sort-column="name"></div>
+\`\`\`
+
+### ❌ Don't Ignore Column Types
+
+\`\`\`javascript
+// BAD: No type information
+{
+  "columns": [
+    {"key": "price", "label": "Price"}  // Will be treated as string
+  ]
+}
+\`\`\`
+
+### ✅ Do Specify Column Types
+
+\`\`\`javascript
+// GOOD: Proper typing
+{
+  "columns": [
+    {"key": "price", "label": "Price", "type": "number"}  // Formatted and sorted correctly
+  ]
+}
+\`\`\`
+
+## Events
+
+### table:exported
+
+Fired after CSV export completes.
+
+\`\`\`javascript
+ctx.on('table:exported', (event) => {
+  console.log(\`Exported \${event.rowCount} rows to \${event.filename}\`);
+});
+\`\`\`
+
+## Summary
+
+The Table Plugin provides:
+
+- **Declarative API** - Configure with HTML attributes
+- **Auto-rendering** - Tables render from \`fx:data\` events
+- **Django/FastAPI integration** - Server defines columns and data
+- **Sorting** - Client-side or server-side
+- **Pagination** - Client-side with configurable page size
+- **Search** - Client-side full-text filtering
+- **Inline editing** - Double-click cells to edit (sends PATCH)
+- **CSV export** - Download filtered table data
+- **Accessibility** - ARIA attributes and keyboard navigation
+
+**When to use**: Any time you need to display tabular data from an API.
+
+**Integration**: Works seamlessly with agent-commands, state-tracker, and fixi-agent plugins.
+`,
+
+  references: [
+    'fixiAgentPlugin',
+    'agentCommands',
+    'stateTrackerPlugin'
+  ],
+
+  tags: [
+    'tables',
+    'data-display',
+    'crud',
+    'django',
+    'fastapi',
+    'sorting',
+    'pagination',
+    'csv-export',
+    'inline-editing'
+  ],
+
+  version: '1.0.0',
+  author: 'FixiPlug Team',
+  level: 'intermediate'
+};
