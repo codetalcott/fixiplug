@@ -1,0 +1,120 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Pattern Learning Schemas",
+  "definitions": {
+    "getRecommendations": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": ["finance", "analytics", "ml", "geospatial", "text", "general"],
+          "description": "Pattern domain"
+        },
+        "description": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 5000,
+          "description": "Description of what you're building"
+        },
+        "minConfidence": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "description": "Minimum confidence score (0-1)"
+        },
+        "maxResults": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 100,
+          "description": "Maximum number of results"
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "findSimilarPatterns": {
+      "type": "object",
+      "required": ["description"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 5000,
+          "description": "Description to match against"
+        },
+        "threshold": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1,
+          "default": 0.7,
+          "description": "Similarity threshold (0-1)"
+        },
+        "maxResults": {
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50,
+          "default": 10,
+          "description": "Maximum number of results"
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "getPatternStatistics": {
+      "type": "object",
+      "properties": {
+        "domain": {
+          "type": "string",
+          "enum": ["finance", "analytics", "ml", "geospatial", "text", "general"]
+        },
+        "timeRange": {
+          "type": "object",
+          "properties": {
+            "start": {
+              "type": "string",
+              "format": "date-time"
+            },
+            "end": {
+              "type": "string",
+              "format": "date-time"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "recordPattern": {
+      "type": "object",
+      "required": ["patternName", "domain", "successRate"],
+      "properties": {
+        "patternName": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200
+        },
+        "domain": {
+          "type": "string",
+          "enum": ["finance", "analytics", "ml", "geospatial", "text", "general"]
+        },
+        "successRate": {
+          "type": "number",
+          "minimum": 0,
+          "maximum": 1
+        },
+        "performance": {
+          "type": "number",
+          "minimum": 0
+        },
+        "description": {
+          "type": "string",
+          "maxLength": 2000
+        },
+        "metadata": {
+          "type": "object"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}

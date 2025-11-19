@@ -1,0 +1,124 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "title": "Extension Generation Schemas",
+  "definitions": {
+    "analyzeRequirements": {
+      "type": "object",
+      "required": ["description"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10000,
+          "description": "What the extension should do"
+        },
+        "domain": {
+          "type": "string",
+          "enum": ["finance", "analytics", "ml", "geospatial", "text", "general"]
+        },
+        "performanceRequirements": {
+          "type": "object",
+          "properties": {
+            "minOpsPerSec": {
+              "type": "number",
+              "minimum": 0
+            },
+            "maxLatency": {
+              "type": "number",
+              "minimum": 0
+            },
+            "maxMemory": {
+              "type": "number",
+              "minimum": 0
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "recommendPath": {
+      "type": "object",
+      "required": ["requirements"],
+      "properties": {
+        "requirements": {
+          "type": "object",
+          "required": ["domain", "complexity"],
+          "properties": {
+            "domain": {
+              "type": "string"
+            },
+            "complexity": {
+              "type": "string",
+              "enum": ["simple", "medium", "complex"]
+            },
+            "backend": {
+              "type": "string"
+            }
+          }
+        },
+        "constraints": {
+          "type": "object",
+          "properties": {
+            "timeLimit": {
+              "type": "number"
+            },
+            "resourceLimit": {
+              "type": "string"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "generateExtension": {
+      "type": "object",
+      "required": ["description"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10000
+        },
+        "backend": {
+          "type": "string",
+          "enum": ["python", "mojo", "rust", "c"],
+          "default": "python"
+        },
+        "performanceLevel": {
+          "type": "string",
+          "enum": ["balanced", "speed", "memory", "development"],
+          "default": "balanced"
+        },
+        "includeTests": {
+          "type": "boolean",
+          "default": true
+        },
+        "includeDocumentation": {
+          "type": "boolean",
+          "default": true
+        }
+      },
+      "additionalProperties": false
+    },
+
+    "quickExtensionFromDescription": {
+      "type": "object",
+      "required": ["description"],
+      "properties": {
+        "description": {
+          "type": "string",
+          "minLength": 10,
+          "maxLength": 10000
+        },
+        "backend": {
+          "type": "string",
+          "enum": ["python", "mojo", "rust", "c"],
+          "default": "python"
+        }
+      },
+      "additionalProperties": false
+    }
+  }
+}
