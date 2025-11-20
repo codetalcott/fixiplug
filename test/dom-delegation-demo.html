@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>DOM Event Delegation Demo - FixiPlug</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 30px;
+    }
+
+    header h1 {
+      font-size: 2.5rem;
+      margin-bottom: 10px;
+      text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    header p {
+      font-size: 1.2rem;
+      opacity: 0.9;
+    }
+
+    .stats-panel {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .stat-card {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-label {
+      font-size: 0.9rem;
+      opacity: 0.9;
+      margin-bottom: 5px;
+    }
+
+    .stat-value {
+      font-size: 2rem;
+      font-weight: bold;
+    }
+
+    .stat-comparison {
+      background: #f0f0f0;
+      color: #333;
+      padding: 15px;
+      border-radius: 8px;
+      text-align: center;
+    }
+
+    .stat-comparison strong {
+      color: #667eea;
+      font-size: 1.5rem;
+    }
+
+    .demo-section {
+      background: white;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 20px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+    }
+
+    .demo-section h2 {
+      color: #333;
+      margin-bottom: 15px;
+      font-size: 1.5rem;
+    }
+
+    .table-container {
+      overflow-x: auto;
+    }
+
+    .grid-table {
+      width: 100%;
+      border-collapse: separate;
+      border-spacing: 4px;
+    }
+
+    .grid-table td {
+      min-width: 80px;
+      height: 60px;
+      text-align: center;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-weight: bold;
+      border-radius: 6px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      position: relative;
+    }
+
+    .grid-table td:hover {
+      transform: scale(1.05);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+    }
+
+    .grid-table td.clicked {
+      background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+    }
+
+    .grid-table td.success {
+      background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    }
+
+    .click-count {
+      display: block;
+      font-size: 0.8rem;
+      opacity: 0.8;
+      margin-top: 5px;
+    }
+
+    .controls {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-bottom: 15px;
+    }
+
+    button {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 6px;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .event-log {
+      max-height: 300px;
+      overflow-y: auto;
+      background: #f5f5f5;
+      border-radius: 6px;
+      padding: 15px;
+      font-family: 'Courier New', monospace;
+      font-size: 0.9rem;
+    }
+
+    .log-entry {
+      padding: 5px;
+      margin-bottom: 5px;
+      border-left: 3px solid #667eea;
+      padding-left: 10px;
+    }
+
+    .log-entry.success {
+      border-left-color: #00f2fe;
+    }
+
+    .form-demo {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 15px;
+      margin-top: 15px;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }
+
+    .form-group label {
+      font-weight: bold;
+      color: #333;
+    }
+
+    .form-group input,
+    .form-group select {
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: border-color 0.3s ease;
+    }
+
+    .form-group input:focus,
+    .form-group select:focus {
+      outline: none;
+      border-color: #667eea;
+    }
+
+    #result-display {
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 6px;
+      margin-top: 15px;
+      min-height: 60px;
+    }
+
+    .badge {
+      display: inline-block;
+      padding: 4px 8px;
+      border-radius: 4px;
+      background: #667eea;
+      color: white;
+      font-size: 0.8rem;
+      margin-left: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>🚀 DOM Event Delegation Demo</h1>
+      <p>FixiPlug - 96% Memory Reduction with Event Delegation</p>
+    </header>
+
+    <!-- Stats Panel -->
+    <div class="stats-panel">
+      <h2>📊 Delegation Statistics</h2>
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Elements Handled</div>
+          <div class="stat-value" id="elementsHandled">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Listeners Attached</div>
+          <div class="stat-value" id="listenersAttached">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Event Types</div>
+          <div class="stat-value" id="eventTypesCount">0</div>
+        </div>
+        <div class="stat-comparison">
+          <div class="stat-label">Memory Reduction</div>
+          <strong id="memoryReduction">N/A</strong>
+          <div style="margin-top: 10px; font-size: 0.9rem;">
+            Traditional: <span id="traditionalCount">0</span> listeners<br>
+            Delegated: <span id="delegatedCount">0</span> listeners
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Interactive Grid Demo -->
+    <div class="demo-section">
+      <h2>🎯 Interactive 10x10 Grid (100 Elements)</h2>
+      <p style="margin-bottom: 15px; color: #666;">
+        Click any cell to trigger its fx-action. Each cell fetches unique data and shows click count.
+        <span class="badge">4 listeners total</span>
+      </p>
+
+      <div class="controls">
+        <button onclick="resetGrid()">🔄 Reset Grid</button>
+        <button onclick="refreshStats()">📊 Refresh Stats</button>
+        <button onclick="clearLog()">🗑️ Clear Log</button>
+      </div>
+
+      <div class="table-container">
+        <table class="grid-table" id="gridTable">
+          <!-- Generated by JavaScript -->
+        </table>
+      </div>
+    </div>
+
+    <!-- Form Elements Demo -->
+    <div class="demo-section">
+      <h2>📝 Form Elements with Delegation</h2>
+      <p style="margin-bottom: 15px; color: #666;">
+        Multiple form elements sharing delegated change/input listeners.
+      </p>
+
+      <div class="form-demo">
+        <div class="form-group">
+          <label>Select Option:</label>
+          <select fx-action="/api/select" fx-target="#result-display">
+            <option value="">Choose...</option>
+            <option value="option1">Option 1</option>
+            <option value="option2">Option 2</option>
+            <option value="option3">Option 3</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label>Text Input:</label>
+          <input
+            type="text"
+            fx-action="/api/input"
+            fx-target="#result-display"
+            fx-trigger="input"
+            placeholder="Type something...">
+        </div>
+
+        <div class="form-group">
+          <label>Range Slider:</label>
+          <input
+            type="range"
+            min="0"
+            max="100"
+            value="50"
+            fx-action="/api/range"
+            fx-target="#result-display"
+            fx-trigger="input">
+        </div>
+
+        <div class="form-group">
+          <label>Checkbox:</label>
+          <input
+            type="checkbox"
+            fx-action="/api/checkbox"
+            fx-target="#result-display">
+          <span style="margin-left: 10px;">Enable feature</span>
+        </div>
+      </div>
+
+      <div id="result-display">
+        <em style="color: #999;">Interact with form elements to see results...</em>
+      </div>
+    </div>
+
+    <!-- Event Log -->
+    <div class="demo-section">
+      <h2>📜 Event Log</h2>
+      <div class="event-log" id="eventLog">
+        <em style="color: #999;">Events will appear here...</em>
+      </div>
+    </div>
+  </div>
+
+  <script type="module">
+    import { createFixiplug, FEATURES } from '../builder/fixiplug-factory.js';
+    import domDelegation from '../plugins/dom-delegation.js';
+
+    // Mock server responses
+    const mockServer = {
+      async fetch(url, options = {}) {
+        await new Promise(resolve => setTimeout(resolve, 100)); // Simulate network delay
+
+        const urlObj = new URL(url, window.location.origin);
+        const path = urlObj.pathname;
+        const params = Object.fromEntries(urlObj.searchParams);
+
+        // Parse row/col from path like /api/cell/5/3
+        const cellMatch = path.match(/\/api\/cell\/(\d+)\/(\d+)/);
+
+        if (cellMatch) {
+          const [, row, col] = cellMatch;
+          return {
+            ok: true,
+            status: 200,
+            text: async () => `<span>Cell [${row},${col}]<span class="click-count">Clicked!</span></span>`,
+            json: async () => ({ row, col, clicked: true })
+          };
+        }
+
+        if (path === '/api/select') {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => `<div>Selected: <strong>${params.value || 'none'}</strong></div>`,
+            json: async () => ({ value: params.value })
+          };
+        }
+
+        if (path === '/api/input') {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => `<div>Input value: <strong>${params.value || ''}</strong> (${params.value?.length || 0} chars)</div>`,
+            json: async () => ({ value: params.value })
+          };
+        }
+
+        if (path === '/api/range') {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => `<div>Range: <strong>${params.value}</strong>%</div>`,
+            json: async () => ({ value: params.value })
+          };
+        }
+
+        if (path === '/api/checkbox') {
+          return {
+            ok: true,
+            status: 200,
+            text: async () => `<div>Checkbox: <strong>${params.checked === 'true' ? 'Enabled ✓' : 'Disabled ✗'}</strong></div>`,
+            json: async () => ({ checked: params.checked === 'true' })
+          };
+        }
+
+        return {
+          ok: true,
+          status: 200,
+          text: async () => '<div>Response received</div>',
+          json: async () => ({ success: true })
+        };
+      }
+    };
+
+    // Override global fetch
+    window.fetch = mockServer.fetch.bind(mockServer);
+
+    // Initialize FixiPlug with DOM delegation
+    const fixiplug = createFixiplug({
+      features: [FEATURES.DOM, FEATURES.LOGGING]
+    });
+
+    fixiplug.use(domDelegation);
+
+    // Make fixiplug available globally for console debugging
+    window.fixiplug = fixiplug;
+
+    // Log events
+    let eventCounter = 0;
+
+    // Listen to fx:before for logging
+    const originalDispatch = fixiplug.dispatch.bind(fixiplug);
+    fixiplug.dispatch = async function(hookName, event) {
+      if (hookName === 'fx:before') {
+        logEvent(`Request: ${event.cfg?.method || 'GET'} ${event.cfg?.action}`);
+      }
+      return originalDispatch(hookName, event);
+    };
+
+    // Generate 10x10 grid
+    function generateGrid() {
+      const table = document.getElementById('gridTable');
+      table.innerHTML = '';
+
+      for (let row = 0; row < 10; row++) {
+        const tr = document.createElement('tr');
+        for (let col = 0; col < 10; col++) {
+          const td = document.createElement('td');
+          td.setAttribute('fx-action', `/api/cell/${row}/${col}`);
+          td.setAttribute('fx-swap', 'innerHTML');
+          td.textContent = `[${row},${col}]`;
+          tr.appendChild(td);
+        }
+        table.appendChild(tr);
+      }
+
+      // Initialize fixi for all new cells
+      document.querySelectorAll('[fx-action]').forEach(el => {
+        if (!el.__fixi) {
+          // Dispatch the DOM CustomEvent, not the global hook
+          el.dispatchEvent(new CustomEvent('fx:process', { bubbles: true }));
+        }
+      });
+
+      refreshStats();
+    }
+
+    // Refresh stats display
+    async function refreshStats() {
+      const stats = await fixiplug.dispatch('api:getDelegationStats');
+
+      document.getElementById('elementsHandled').textContent = stats.elementsHandled || 0;
+      document.getElementById('listenersAttached').textContent = stats.listenersAttached || 0;
+      document.getElementById('eventTypesCount').textContent = stats.eventTypes?.length || 0;
+      document.getElementById('memoryReduction').textContent = stats.memoryReduction || 'N/A';
+      document.getElementById('traditionalCount').textContent = stats.elementsHandled || 0;
+      document.getElementById('delegatedCount').textContent = stats.listenersAttached || 0;
+
+      logEvent(`Stats refreshed: ${stats.elementsHandled} elements, ${stats.listenersAttached} listeners`, 'success');
+    }
+
+    // Reset grid
+    window.resetGrid = function() {
+      generateGrid();
+      logEvent('Grid reset', 'success');
+    };
+
+    // Refresh stats
+    window.refreshStats = refreshStats;
+
+    // Clear log
+    window.clearLog = function() {
+      document.getElementById('eventLog').innerHTML = '<em style="color: #999;">Log cleared...</em>';
+      eventCounter = 0;
+    };
+
+    // Log event
+    function logEvent(message, type = 'info') {
+      const log = document.getElementById('eventLog');
+      if (log.querySelector('em')) {
+        log.innerHTML = '';
+      }
+
+      const entry = document.createElement('div');
+      entry.className = `log-entry ${type}`;
+      entry.textContent = `[${++eventCounter}] ${new Date().toLocaleTimeString()}: ${message}`;
+      log.insertBefore(entry, log.firstChild);
+
+      // Keep only last 50 entries
+      while (log.children.length > 50) {
+        log.removeChild(log.lastChild);
+      }
+    }
+
+    // Initialize on load
+    generateGrid();
+    logEvent('Demo initialized with DOM delegation', 'success');
+    logEvent('Click any cell in the grid to see delegation in action!');
+  </script>
+</body>
+</html>

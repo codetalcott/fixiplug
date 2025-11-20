@@ -5,9 +5,31 @@ import { Fixi } from './fixi-core.js';
 /**
  * DOM‑integration IIFE for Fixi.
  * Watches for [fx-action], wires up event handlers, swaps HTML, dispatches fx:… events.
+ *
+ * Includes event buffering to prevent race conditions:
+ * - Buffers fx:process events dispatched before initialization completes
+ * - Replays buffered events once ready
+ * - Dispatches fx:dom:ready event when fully initialized
  */
 ;(function () {
   if (typeof document === 'undefined' || document.__fixi_mo) return;
+
+  // ========================================
+  // Event Buffering for Race Condition Prevention
+  // ========================================
+  const earlyEvents = [];
+  let isReady = false;
+
+  // Temporary listener to buffer early fx:process events
+  const bufferListener = (evt) => {
+    if (!isReady) {
+      earlyEvents.push(evt.target);
+      evt.stopImmediatePropagation();
+    }
+  };
+
+  // Install buffer listener immediately (capture phase)
+  document.addEventListener('fx:process', bufferListener, { capture: true });
 
   // observe new elements
   document.__fixi_mo = new MutationObserver((recs) =>
@@ -115,7 +137,12 @@ import { Fixi } from './fixi-core.js';
         ? 'change'
         : 'click'
     );
-    elt.addEventListener(elt.__fixi.evt, elt.__fixi, options);
+
+    // Only attach individual listener if delegation is not active
+    if (!options.__delegated) {
+      elt.addEventListener(elt.__fixi.evt, elt.__fixi, options);
+    }
+
     send(elt, 'inited', {}, false);
   }
 
@@ -127,7 +154,35 @@ import { Fixi } from './fixi-core.js';
     if (n.querySelectorAll) n.querySelectorAll('[fx-action]').forEach(init);
   }
 
+  // ========================================
+  // Readiness Initialization
+  // ========================================
+
+  // Remove buffer listener and install real processor
+  document.removeEventListener('fx:process', bufferListener, { capture: true });
   document.addEventListener('fx:process', (evt) => process(evt.target));
+
+  // Mark as ready
+  isReady = true;
+  document.__fixi_ready = true;
+
+  // Process buffered events that arrived before initialization
+  const bufferedCount = earlyEvents.length;
+  if (bufferedCount > 0) {
+    earlyEvents.forEach(target => process(target));
+    earlyEvents.length = 0;
+  }
+
+  // Signal that DOM feature is ready
+  document.dispatchEvent(new CustomEvent('fx:dom:ready', {
+    bubbles: true,
+    detail: {
+      bufferedEvents: bufferedCount,
+      timestamp: Date.now()
+    }
+  }));
+
+  // Setup MutationObserver on DOMContentLoaded
   document.addEventListener('DOMContentLoaded', () => {
     document.__fixi_mo.observe(document.documentElement, {
       childList: true,

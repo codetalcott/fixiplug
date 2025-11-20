@@ -154,6 +154,38 @@ export class APIClient {
       stopOnError: options.stopOnError !== false
     });
   }
+
+  // ============================================================
+  // Plugin Management
+  // ============================================================
+
+  /**
+   * List all plugins with status
+   */
+  async listPlugins() {
+    return this.get('/api/plugins');
+  }
+
+  /**
+   * Enable a plugin
+   */
+  async enablePlugin(name) {
+    return this.post(`/api/plugins/${name}/enable`, {});
+  }
+
+  /**
+   * Disable a plugin
+   */
+  async disablePlugin(name) {
+    return this.post(`/api/plugins/${name}/disable`, {});
+  }
+
+  /**
+   * List all skills
+   */
+  async listSkills() {
+    return this.get('/api/skills');
+  }
 }
 
 export default APIClient;

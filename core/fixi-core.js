@@ -27,20 +27,61 @@ export class Fixi {
       b = null;
     }
 
-    const res = await fetch(url, {
-      method: m,
-      headers: h,
-      body: b,
-      signal: s
+    // Hook: Before fetch (allows request modification)
+    const beforeEvt = await hooks.dispatch('fetch:before', {
+      url, method: m, body: b, headers: h, signal: s, cfg
     });
 
-    return {
+    // Apply modifications from hooks
+    url = beforeEvt.url;
+    m = beforeEvt.method;
+    b = beforeEvt.body;
+    h = beforeEvt.headers;
+    s = beforeEvt.signal;
+
+    let res;
+
+    // Check if response is cached (skip network call)
+    if (beforeEvt.__cached && beforeEvt.__cacheEntry) {
+      // Use cached response
+      const cached = beforeEvt.__cacheEntry.response;
+      res = {
+        ok: cached.ok,
+        status: cached.status,
+        headers: cached.headers,
+        json: async () => cached.data,
+        text: async () => cached.data
+      };
+    } else {
+      // Perform actual network request
+      res = await fetch(url, {
+        method: m,
+        headers: h,
+        body: b,
+        signal: s
+      });
+    }
+
+    // Hook: After fetch (response received, before parsing)
+    await hooks.dispatch('fetch:after', {
+      response: res, cfg, url, method: m
+    });
+
+    const wrapped = {
       ok: res.ok,
       status: res.status,
       json: res.json.bind(res),
       text: res.text.bind(res),
-      headers: res.headers
+      headers: res.headers,
+      raw: res
     };
+
+    // Hook: Response ready (wrapped response created)
+    await hooks.dispatch('fetch:ready', {
+      response: wrapped, cfg
+    });
+
+    return wrapped;
   }
 }
 

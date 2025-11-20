@@ -294,7 +294,18 @@ export function enablePlugin(pluginName) {
  */
 export function registerSkill(pluginName, skillMetadata) {
   if (skillMetadata && typeof skillMetadata === 'object') {
+    const existing = skillRegistry.get(pluginName);
+    const isUpdate = existing !== undefined;
+
     skillRegistry.set(pluginName, skillMetadata);
+
+    // Emit lifecycle event (deferred to prevent recursion)
+    queueDeferredEvent(isUpdate ? 'skill:updated' : 'skill:registered', {
+      plugin: pluginName,
+      skill: skillMetadata,
+      previous: existing || null,
+      timestamp: Date.now()
+    });
   }
 }
 
@@ -303,7 +314,18 @@ export function registerSkill(pluginName, skillMetadata) {
  * @param {string} pluginName - The plugin name
  */
 export function unregisterSkill(pluginName) {
-  skillRegistry.delete(pluginName);
+  const existing = skillRegistry.get(pluginName);
+
+  if (existing) {
+    skillRegistry.delete(pluginName);
+
+    // Emit lifecycle event (deferred to prevent recursion)
+    queueDeferredEvent('skill:removed', {
+      plugin: pluginName,
+      skill: existing,
+      timestamp: Date.now()
+    });
+  }
 }
 
 /**

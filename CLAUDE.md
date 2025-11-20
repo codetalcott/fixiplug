@@ -35,10 +35,24 @@ npm test
 # Backend tests (Node.js)
 node playground/backend/test/server.test.js
 
+# Core feature tests (Node.js)
+node test/fetch-interceptors.test.js
+node test/skill-lifecycle.test.js
+node test/dom-delegation.test.js
+
+# Browser automated tests (Playwright)
+# Requires server running on localhost:3000
+cd playground
+npm run test:browser
+
 # SDK tests (Browser - open in browser)
 open test/sdk/agent-client.test.html
 open test/sdk/openai-adapter.test.html
 open test/sdk/anthropic-adapter.test.html
+open test/event-buffering.test.html
+
+# DOM delegation demo (manual testing)
+open http://localhost:3000/dom-delegation-demo.html
 
 # Run examples
 node examples/openai-adapter-example.js
@@ -96,6 +110,10 @@ FixiPlug follows a modular, event-driven architecture with three main layers:
 - Table management
 - Form schema
 - Agent commands
+- DOM Delegation (`dom-delegation.js`) - Event delegation for memory optimization
+- Fetch Logger (`fetch-logger.js`) - Request/response logging
+- Fetch Cache (`fetch-cache.js`) - In-memory caching with TTL
+- Skill Versioning (`skill-versioning.js`) - Track skill version history
 
 ### 3. Agent SDK Layer
 
@@ -124,8 +142,13 @@ FixiPlug follows a modular, event-driven architecture with three main layers:
 **Backend** (`playground/backend/`)
 - Express.js HTTP server
 - WebSocket server
-- REST API (11 endpoints)
-- Conversation management
+- REST API (15 endpoints)
+  - Chat and capabilities
+  - Conversation management
+  - Agent state management
+  - Workflow execution
+  - Plugin management (enable/disable/list)
+  - Skill registry
 - LLM provider abstraction
 - Services layer
 
@@ -213,6 +236,42 @@ FixiPlug follows a modular, event-driven architecture with three main layers:
 **APIClient** (`playground/frontend/js/api-client.js`)
 - REST API wrapper
 - All backend endpoints
+
+### DOM Features and Browser Testing
+
+**DOM Delegation Plugin** (`plugins/dom-delegation.js`)
+
+- Event delegation for memory optimization
+- Reduces listeners from N (one per element) to M (one per event type)
+- Dynamic event type management via hooks:
+  - `api:addDelegationEventType` - Add new event types at runtime
+  - `api:getDelegationStats` - Get delegation statistics
+- Achieves ~96% memory reduction for 100+ elements
+- See: `playground/frontend/dom-delegation-demo.html`
+
+**DOM Feature** (`core/fixi-dom.js`)
+
+- Async factory pattern with event buffering
+- Prevents race conditions during module loading
+- `fx:dom:ready` event signals initialization complete
+- `document.__fixi_ready` flag for synchronous checks
+- See: `docs/DOM_FEATURE_INITIALIZATION.md`
+
+**Browser Testing** (`playground/test/`)
+
+- Playwright-based automated testing
+- Tests all 8 event types: click, double-click, mouseenter, change, input, focus, submit, keydown
+- Validates delegation statistics and memory reduction
+- Run: `cd playground && npm run test:browser`
+- See: `test/BROWSER_TESTING.md`
+
+**Event Validation Features** (in `dom-delegation-demo.html`)
+
+- Live counter badges showing event fire counts
+- Visual feedback (element flashing on events)
+- Detailed console logging of all events
+- Validation tools: `showEventCounts()`, `resetEventCounts()`, `showEventTypes()`
+- Track individual event type firing via `eventTypeCounts` object
 
 ## Domain Terminology
 
@@ -458,6 +517,162 @@ const agent = new FixiPlugAgent(fixiplug, {
 const metrics = agent.getPerformanceMetrics();
 console.log(metrics);
 ```
+
+## New Features
+
+### 1. Fetch Response Interceptors
+
+**Purpose**: Hook into HTTP fetch lifecycle for request modification, response caching, and logging.
+
+**Core Implementation** (`core/fixi-core.js`):
+- Three new hooks: `fetch:before`, `fetch:after`, `fetch:ready`
+- Allows plugins to modify requests, cache responses, and intercept network calls
+
+**Example Plugins**:
+- **fetch-logger.js**: Logs all HTTP requests/responses with timing
+- **fetch-cache.js**: In-memory caching with TTL (60s default) and LRU eviction
+
+**Usage**:
+```javascript
+const fixiplug = createFixiplug({ features: ['logging'] });
+fixiplug.use(fetchLogger);    // Log all requests
+fixiplug.use(fetchCache);     // Cache GET requests
+
+// Check cache stats
+const stats = await fixiplug.dispatch('api:getCacheStats');
+// Clear cache
+await fixiplug.dispatch('api:clearCache');
+```
+
+**Tests**: `test/fetch-interceptors.test.js` (23/23 passing)
+
+---
+
+### 2. Skill Registry Lifecycle Hooks
+
+**Purpose**: Track and version skill registration/updates/removals with full history.
+
+**Core Implementation** (`core/hooks.js`):
+- Three new events: `skill:registered`, `skill:updated`, `skill:removed`
+- Emitted automatically when skills are registered/updated/removed
+
+**Example Plugin**:
+- **skill-versioning.js**: Tracks complete version history with change detection
+
+**Usage**:
+```javascript
+const fixiplug = createFixiplug({ features: ['logging'] });
+fixiplug.use(skillVersioning);
+
+// Get version history for a plugin
+const history = await fixiplug.dispatch('api:getSkillHistory', {
+  plugin: 'stateTrackerPlugin'
+});
+
+// Get all versions across all skills
+const allVersions = await fixiplug.dispatch('api:getAllSkillVersions');
+```
+
+**Tests**: `test/skill-lifecycle.test.js` (41/41 passing)
+
+---
+
+### 3. DOM Event Delegation
+
+**Purpose**: Reduce memory usage by 96% using single delegated listeners instead of per-element listeners.
+
+**Core Implementation**:
+- **Plugin**: `plugins/dom-delegation.js` - Intercepts `fx:init` with HIGH priority
+- **Core Integration**: `core/fixi-dom.js` - Checks `__delegated` flag to skip individual listeners
+
+**Memory Optimization**:
+- Traditional: 100 elements = 100 listeners
+- Delegated: 100 elements = 4 listeners (96% reduction)
+
+**Usage**:
+```javascript
+const fixiplug = createFixiplug({ features: ['dom'] });
+fixiplug.use(domDelegation);
+
+// Get delegation statistics
+const stats = await fixiplug.dispatch('api:getDelegationStats');
+// {
+//   active: true,
+//   eventTypes: ['click', 'change', 'submit', 'input'],
+//   elementsHandled: 100,
+//   listenersAttached: 4,
+//   memoryReduction: '~96%'
+// }
+
+// Add custom event type
+await fixiplug.dispatch('api:addDelegationEventType', { eventType: 'focus' });
+
+// Remove event type
+await fixiplug.dispatch('api:removeDelegationEventType', { eventType: 'input' });
+```
+
+**Tests**: `test/dom-delegation.test.js` (25/27 passing, 92.6%)
+
+---
+
+### 4. Plugin Management API
+
+**Purpose**: Enable/disable plugins at runtime with full status tracking.
+
+**Core Implementation**:
+- **Core**: `core/hooks.js` - `enablePlugin()` and `disablePlugin()` functions
+- **Factory**: `builder/fixiplug-factory.js` - `enable()`, `disable()`, `getPluginsInfo()`, `getPluginInfo()`
+- **Backend**: 4 new REST endpoints in `playground/backend/server.js`
+- **Frontend**: 4 new API client methods in `playground/frontend/js/api-client.js`
+
+**API Endpoints**:
+```bash
+GET    /api/plugins                # List all plugins with status
+POST   /api/plugins/:name/enable   # Enable a plugin
+POST   /api/plugins/:name/disable  # Disable a plugin
+GET    /api/skills                 # List all skills
+```
+
+**Usage**:
+
+Backend (Node.js):
+```javascript
+// Disable plugin
+fixiplug.disable('stateTrackerPlugin');
+
+// Enable plugin
+fixiplug.enable('stateTrackerPlugin');
+
+// Get plugin info
+const info = fixiplug.getPluginInfo('stateTrackerPlugin');
+// { name, disabled: false, hasSkill: true, skill: {...} }
+
+// Get all plugins
+const allPlugins = fixiplug.getPluginsInfo();
+```
+
+Frontend (Browser):
+```javascript
+// List plugins
+const response = await apiClient.listPlugins();
+// { success: true, plugins: [...], count: 3 }
+
+// Disable plugin
+await apiClient.disablePlugin('stateTrackerPlugin');
+
+// Enable plugin
+await apiClient.enablePlugin('stateTrackerPlugin');
+
+// List skills
+const skills = await apiClient.listSkills();
+```
+
+**Behavior**:
+- Disabled plugins stay registered but their hooks won't execute
+- Non-destructive - can be re-enabled without losing state
+- Local and core status tracking synchronized
+
+---
 
 ## Recent Major Changes
 

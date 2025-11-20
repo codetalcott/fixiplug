@@ -18,7 +18,7 @@ export const FEATURES = {
 /**
  * Create a new fixiplug instance
  * @param {ConfigOptions} [options={}] - Configuration options
- * @returns {Object} Configured fixiplug instance
+ * @returns {Object|Promise<Object>} Configured fixiplug instance (Promise if DOM feature is used)
  */
 export function createFixiplug(options = {}) {
   const { 
@@ -53,12 +53,7 @@ export function createFixiplug(options = {}) {
       }
     }
   };
-  
-  // Load DOM integration if requested
-  if (hasFeature(FEATURES.DOM) && typeof window !== 'undefined') {
-    import('../core/fixi-dom.js');
-  }
-  
+
   // Plugin storage
   const plugins = new Map();
   
@@ -252,17 +247,28 @@ export function createFixiplug(options = {}) {
     /**
      * Enable a disabled plugin
      * @param {string} pluginName - The name of the plugin to enable
-     * @returns {Object} This fixiplug instance for chaining 
+     * @returns {Object} This fixiplug instance for chaining
      */
     enable(pluginName) {
       logger.log(`Enabling plugin: ${pluginName}`);
-      
-      // Implementation depends on how plugin disabling is stored
-      // For now, we'll assume plugins are enabled by default and this is a no-op
-      
+
+      if (!plugins.has(pluginName)) {
+        logger.error(`Cannot enable plugin "${pluginName}": plugin not found`);
+        return this;
+      }
+
+      // Enable in core
+      Fixi.enable(pluginName);
+
+      // Update local status
+      const pluginData = plugins.get(pluginName);
+      if (pluginData) {
+        pluginData.disabled = false;
+      }
+
       return this;
     },
-    
+
     /**
      * Disable an active plugin
      * @param {string} pluginName - The name of the plugin to disable
@@ -270,10 +276,21 @@ export function createFixiplug(options = {}) {
      */
     disable(pluginName) {
       logger.log(`Disabling plugin: ${pluginName}`);
-      
-      // Implementation depends on how plugin disabling is stored
-      // For now, we'll assume it's similar to unuse but without cleanup
-      
+
+      if (!plugins.has(pluginName)) {
+        logger.error(`Cannot disable plugin "${pluginName}": plugin not found`);
+        return this;
+      }
+
+      // Disable in core (hooks won't fire, but plugin stays registered)
+      Fixi.disable(pluginName);
+
+      // Update local status
+      const pluginData = plugins.get(pluginName);
+      if (pluginData) {
+        pluginData.disabled = true;
+      }
+
       return this;
     },
     
@@ -319,6 +336,38 @@ export function createFixiplug(options = {}) {
      */
     getPlugins() {
       return Array.from(plugins.keys());
+    },
+
+    /**
+     * Get detailed information about all plugins
+     * @returns {Array<Object>} Array of plugin info objects
+     */
+    getPluginsInfo() {
+      return Array.from(plugins.entries()).map(([name, data]) => ({
+        name,
+        disabled: data.disabled || false,
+        hasSkill: !!data.skill,
+        skill: data.skill || null
+      }));
+    },
+
+    /**
+     * Get information about a specific plugin
+     * @param {string} pluginName - The plugin name
+     * @returns {Object|null} Plugin info or null if not found
+     */
+    getPluginInfo(pluginName) {
+      if (!plugins.has(pluginName)) {
+        return null;
+      }
+
+      const data = plugins.get(pluginName);
+      return {
+        name: pluginName,
+        disabled: data.disabled || false,
+        hasSkill: !!data.skill,
+        skill: data.skill || null
+      };
     },
     
     /**
@@ -501,7 +550,24 @@ export function createFixiplug(options = {}) {
       }
     })();
   }
-  
+
+  // If DOM feature is requested, return a Promise that resolves when ready
+  if (hasFeature(FEATURES.DOM) && typeof window !== 'undefined') {
+    return import('../core/fixi-dom.js').then(() => {
+      // Wait for fx:dom:ready event to ensure fixi-dom.js is fully initialized
+      return new Promise(resolve => {
+        if (document.__fixi_ready) {
+          // Already ready
+          resolve(fixiplug);
+        } else {
+          // Wait for ready event
+          document.addEventListener('fx:dom:ready', () => resolve(fixiplug), { once: true });
+        }
+      });
+    });
+  }
+
+  // Otherwise return synchronously
   return fixiplug;
 }
 

@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Event Buffering Test - FixiPlug</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      max-width: 1000px;
+      margin: 40px auto;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      color: #333;
+      border-bottom: 3px solid #667eea;
+      padding-bottom: 10px;
+    }
+    .test-section {
+      background: white;
+      padding: 20px;
+      margin: 20px 0;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    .test-element {
+      padding: 10px;
+      margin: 10px 0;
+      background: #e3f2fd;
+      border-left: 4px solid #2196f3;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .test-element:hover {
+      background: #bbdefb;
+    }
+    .result {
+      margin-top: 20px;
+      padding: 15px;
+      background: #f5f5f5;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 14px;
+    }
+    .result.pass {
+      background: #c8e6c9;
+      border-left: 4px solid #4caf50;
+    }
+    .result.fail {
+      background: #ffcdd2;
+      border-left: 4px solid #f44336;
+    }
+    .log {
+      margin-top: 10px;
+      padding: 10px;
+      background: #263238;
+      color: #aed581;
+      border-radius: 4px;
+      font-family: monospace;
+      font-size: 12px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    .log-entry {
+      margin: 2px 0;
+    }
+    .log-entry.info { color: #81d4fa; }
+    .log-entry.success { color: #aed581; }
+    .log-entry.warn { color: #ffb74d; }
+    .log-entry.error { color: #e57373; }
+  </style>
+</head>
+<body>
+  <h1>🧪 Event Buffering Test</h1>
+  <p>This test verifies that fx:process events dispatched before fixi-dom.js is ready are buffered and replayed.</p>
+
+  <div class="test-section">
+    <h2>Test Elements</h2>
+    <p>These elements will dispatch fx:process events immediately at module load time (potentially before fixi-dom.js is ready).</p>
+
+    <div id="test-early-1" class="test-element" fx-action="/api/test/1">
+      Early Element 1 - Click me!
+    </div>
+    <div id="test-early-2" class="test-element" fx-action="/api/test/2">
+      Early Element 2 - Click me!
+    </div>
+    <div id="test-early-3" class="test-element" fx-action="/api/test/3">
+      Early Element 3 - Click me!
+    </div>
+  </div>
+
+  <div class="test-section">
+    <h2>Test Results</h2>
+    <div id="results"></div>
+  </div>
+
+  <div class="test-section">
+    <h2>Event Log</h2>
+    <div class="log" id="log"></div>
+  </div>
+
+  <script type="module">
+    // Mock fetch
+    window.fetch = async (url) => {
+      return {
+        ok: true,
+        text: async () => `<span>Response from ${url}</span>`
+      };
+    };
+
+    // Logging utility
+    const logs = [];
+    function log(message, type = 'info') {
+      const timestamp = new Date().toLocaleTimeString();
+      const entry = `[${timestamp}] ${message}`;
+      logs.push({ entry, type });
+
+      const logEl = document.getElementById('log');
+      if (logEl) {
+        const div = document.createElement('div');
+        div.className = `log-entry ${type}`;
+        div.textContent = entry;
+        logEl.appendChild(div);
+        logEl.scrollTop = logEl.scrollHeight;
+      }
+    }
+
+    // Test state
+    const testState = {
+      elementsProcessed: 0,
+      domReadyFired: false,
+      bufferedCount: null,
+      elementsInitialized: 0
+    };
+
+    log('Test starting...', 'info');
+    log('Dispatching fx:process events BEFORE importing fixi-dom.js', 'warn');
+
+    // CRITICAL: Dispatch fx:process events BEFORE fixi-dom.js loads
+    // These should be buffered and replayed
+    const testElements = ['test-early-1', 'test-early-2', 'test-early-3'];
+    testElements.forEach((id, index) => {
+      const el = document.getElementById(id);
+      if (el) {
+        el.dispatchEvent(new CustomEvent('fx:process', { bubbles: true }));
+        testState.elementsProcessed++;
+        log(`Dispatched fx:process for ${id}`, 'warn');
+      }
+    });
+
+    log(`Total fx:process events dispatched: ${testState.elementsProcessed}`, 'warn');
+
+    // Listen for DOM readiness BEFORE importing
+    document.addEventListener('fx:dom:ready', (event) => {
+      testState.domReadyFired = true;
+      testState.bufferedCount = event.detail.bufferedEvents;
+      log(`fx:dom:ready fired! Buffered events: ${testState.bufferedCount}`, 'success');
+    });
+
+    // Listen for fx:init to track when elements are actually initialized
+    document.addEventListener('fx:init', (event) => {
+      testState.elementsInitialized++;
+      log(`fx:init fired for element (total: ${testState.elementsInitialized})`, 'info');
+    }, { capture: true });
+
+    log('NOW importing fixi-dom.js...', 'info');
+
+    // NOW import fixi-dom.js - it should buffer and replay the events
+    import('../core/fixi-dom.js').then(() => {
+      log('fixi-dom.js imported successfully', 'success');
+
+      // Wait a bit for buffered events to be processed
+      setTimeout(() => {
+        runTests();
+      }, 500);
+    }).catch(err => {
+      log(`Error importing fixi-dom.js: ${err.message}`, 'error');
+    });
+
+    function runTests() {
+      const results = document.getElementById('results');
+      const tests = [];
+
+      // Test 1: fx:dom:ready fired
+      tests.push({
+        name: 'fx:dom:ready event fired',
+        pass: testState.domReadyFired,
+        message: testState.domReadyFired ? 'Event fired successfully' : 'Event did not fire'
+      });
+
+      // Test 2: Buffered events count matches dispatched count
+      tests.push({
+        name: 'Correct number of events buffered',
+        pass: testState.bufferedCount === testState.elementsProcessed,
+        message: `Buffered: ${testState.bufferedCount}, Dispatched: ${testState.elementsProcessed}`
+      });
+
+      // Test 3: Elements were initialized
+      tests.push({
+        name: 'Elements initialized from buffered events',
+        pass: testState.elementsInitialized === testState.elementsProcessed,
+        message: `Initialized: ${testState.elementsInitialized}, Expected: ${testState.elementsProcessed}`
+      });
+
+      // Test 4: Elements have __fixi handler
+      const handlersAttached = testElements.filter(id => {
+        const el = document.getElementById(id);
+        return el && typeof el.__fixi === 'function';
+      }).length;
+
+      tests.push({
+        name: 'Elements have __fixi handlers attached',
+        pass: handlersAttached === testState.elementsProcessed,
+        message: `Handlers: ${handlersAttached}, Expected: ${testState.elementsProcessed}`
+      });
+
+      // Test 5: document.__fixi_ready flag is set
+      tests.push({
+        name: 'document.__fixi_ready flag set',
+        pass: document.__fixi_ready === true,
+        message: document.__fixi_ready ? 'Flag is set' : 'Flag is not set'
+      });
+
+      // Display results
+      const passCount = tests.filter(t => t.pass).length;
+      const totalCount = tests.length;
+
+      results.innerHTML = `
+        <div class="result ${passCount === totalCount ? 'pass' : 'fail'}">
+          <strong>Test Results: ${passCount}/${totalCount} passed</strong>
+        </div>
+      `;
+
+      tests.forEach(test => {
+        const div = document.createElement('div');
+        div.className = `result ${test.pass ? 'pass' : 'fail'}`;
+        div.innerHTML = `
+          <strong>${test.pass ? '✓' : '✗'} ${test.name}</strong><br>
+          ${test.message}
+        `;
+        results.appendChild(div);
+      });
+
+      log('All tests completed', passCount === totalCount ? 'success' : 'error');
+      log(`Final score: ${passCount}/${totalCount}`, passCount === totalCount ? 'success' : 'error');
+
+      // Test clicking an element
+      setTimeout(() => {
+        log('Testing click on first element...', 'info');
+        const el = document.getElementById('test-early-1');
+        if (el && el.__fixi) {
+          el.click();
+          log('Click test successful - handler exists', 'success');
+        } else {
+          log('Click test failed - no handler', 'error');
+        }
+      }, 1000);
+    }
+  </script>
+</body>
+</html>

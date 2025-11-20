@@ -15,6 +15,8 @@ import express from 'express';
 import cors from 'cors';
 import { createServer } from 'http';
 import { WebSocketServer } from 'ws';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { FixiPlugAgent } from '../../sdk/agent-client.js';
 import { OpenAIAdapter } from '../../sdk/adapters/openai-adapter.js';
 import { AnthropicAdapter } from '../../sdk/adapters/anthropic-adapter.js';
@@ -33,6 +35,10 @@ const PORT = process.env.PORT || 3000;
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 const ANTHROPIC_API_KEY = process.env.ANTHROPIC_API_KEY;
 
+// ES module __dirname equivalent
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
 // Initialize Express app
 const app = express();
 const httpServer = createServer(app);
@@ -41,6 +47,11 @@ const httpServer = createServer(app);
 app.use(cors());
 app.use(express.json());
 app.use(express.static('frontend'));
+
+// Serve FixiPlug core directories for browser imports
+app.use('/builder', express.static(path.join(__dirname, '../../builder')));
+app.use('/plugins', express.static(path.join(__dirname, '../../plugins')));
+app.use('/core', express.static(path.join(__dirname, '../../core')));
 
 // Initialize FixiPlug with plugins
 const fixiplug = createFixiplug({
@@ -490,6 +501,82 @@ app.post('/api/workflow/execute', async (req, res) => {
       result
     });
   } catch (error) {
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+// ============================================================
+// Plugin Management Endpoints
+// ============================================================
+
+app.get('/api/plugins', async (req, res) => {
+  try {
+    const plugins = fixiplug.getPluginsInfo();
+    res.json({
+      success: true,
+      plugins,
+      count: plugins.length
+    });
+  } catch (error) {
+    console.error('Error getting plugins:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/plugins/:name/enable', async (req, res) => {
+  try {
+    const { name } = req.params;
+    fixiplug.enable(name);
+
+    res.json({
+      success: true,
+      plugin: name,
+      status: 'enabled'
+    });
+  } catch (error) {
+    console.error('Error enabling plugin:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.post('/api/plugins/:name/disable', async (req, res) => {
+  try {
+    const { name } = req.params;
+    fixiplug.disable(name);
+
+    res.json({
+      success: true,
+      plugin: name,
+      status: 'disabled'
+    });
+  } catch (error) {
+    console.error('Error disabling plugin:', error);
+    res.status(500).json({
+      success: false,
+      error: error.message
+    });
+  }
+});
+
+app.get('/api/skills', async (req, res) => {
+  try {
+    const skills = fixiplug.getSkills();
+    res.json({
+      success: true,
+      skills,
+      count: skills.length
+    });
+  } catch (error) {
+    console.error('Error getting skills:', error);
     res.status(500).json({
       success: false,
       error: error.message
