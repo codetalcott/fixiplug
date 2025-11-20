@@ -908,6 +908,283 @@ All 4 existing JavaScript skills have been exported to SKILL.md format:
 
 ---
 
+### 7. SQLite Extensions Framework Integration
+
+**Purpose**: Enable LLM agents to leverage database capabilities including pattern learning, code generation, dynamic tool creation, and agent context management through integration with the SQLite Extensions Framework.
+
+**Core Implementation**:
+
+- **4 Core Plugins**: Pattern learner, extension generator, agent amplification, agent context
+- **Service Layer**: `sdk/adapters/sqlite-framework/service.js` - High-level API with validation, caching, metrics
+- **Bridge Layer**: `sdk/adapters/sqlite-framework/bridge.js` - Process pool communication with Python framework
+- **SKILL.md Files**: All 4 plugins exported to `.claude/skills/` for Claude Code compatibility
+
+**Architecture Stack**:
+
+```text
+LLM Agent (Claude/GPT)
+    ↓ retrieve_skill('sqlite-pattern-learner')
+Skills Layer (.claude/skills/*.md)
+    ↓ Instructions loaded
+Plugin Layer (plugins/sqlite-*.js)
+    ↓ sqlite.patterns.get({...})
+Service Layer (validation, caching, metrics)
+    ↓ JSON-RPC 2.0
+Bridge Layer (process pool, retry, circuit breaker)
+    ↓ Python subprocess
+SQLite Extensions Framework (Python)
+```
+
+**Available Plugins**:
+
+1. **sqlite-pattern-learner** (`plugins/sqlite-pattern-learner.js`)
+   - Hooks: `sqlite.patterns.get`, `sqlite.patterns.find_similar`, `sqlite.patterns.statistics`, `sqlite.patterns.record`
+   - Learn from proven database query patterns
+   - Get optimized recommendations based on domain and requirements
+   - Skill: `.claude/skills/sqlite-pattern-learner/SKILL.md`
+
+2. **sqlite-extension-generator** (`plugins/sqlite-extension-generator.js`)
+   - Hooks: `sqlite.extension.analyze`, `sqlite.extension.recommend_path`, `sqlite.extension.generate`, `sqlite.extension.quick_generate`
+   - Generate SQLite extensions in C, Rust, or Mojo
+   - Analyze requirements and recommend implementation approach
+   - Skill: `.claude/skills/sqlite-extension-generator/SKILL.md`
+
+3. **sqlite-agent-amplification** (`plugins/sqlite-agent-amplification.js`)
+   - Hooks: `sqlite.agent.create_tool`, `sqlite.agent.record_decision`, `sqlite.agent.consult_peers`, `sqlite.agent.track_evolution`
+   - Create dynamic tools on-the-fly
+   - Consult specialized peer agents
+   - Track capability evolution over time
+   - Skill: `.claude/skills/sqlite-agent-amplification/SKILL.md`
+
+4. **sqlite-agent-context** (`plugins/sqlite-agent-context.js`)
+   - Hooks: `sqlite.context.detect`, `sqlite.context.capabilities`, `sqlite.context.token_budget`, `sqlite.context.format_response`
+   - Auto-detect agent type and capabilities
+   - Calculate token budgets
+   - Format responses for specific agents
+   - Skill: `.claude/skills/sqlite-agent-context/SKILL.md`
+
+**Usage**:
+
+Setup with SQLite plugins:
+```javascript
+import { createFixiplug } from './builder/fixiplug-factory.js';
+import introspectionPlugin from './plugins/introspection.js';
+import skillMdLoader from './plugins/skill-md-loader.js';
+import sqlitePatternLearner from './plugins/sqlite-pattern-learner.js';
+import sqliteExtensionGenerator from './plugins/sqlite-extension-generator.js';
+import sqliteAgentAmplification from './plugins/sqlite-agent-amplification.js';
+import sqliteAgentContext from './plugins/sqlite-agent-context.js';
+
+// Set framework path
+process.env.SQLITE_FRAMEWORK_PATH = '/path/to/sqlite-extensions-framework';
+
+// Create fixiplug instance
+const fixiplug = createFixiplug({ features: [] });
+fixiplug.use(introspectionPlugin);
+fixiplug.use(skillMdLoader);
+fixiplug.use(sqlitePatternLearner);
+fixiplug.use(sqliteExtensionGenerator);
+fixiplug.use(sqliteAgentAmplification);
+fixiplug.use(sqliteAgentContext);
+```
+
+Pattern Learning Example:
+```javascript
+// Get pattern recommendations
+const patterns = await fixiplug.dispatch('sqlite.patterns.get', {
+  domain: 'finance',
+  description: 'Calculate portfolio value at risk',
+  minConfidence: 0.8,
+  maxResults: 3
+});
+
+console.log(patterns.recommendations);
+// [
+//   {
+//     pattern: 'finance_var_calculation',
+//     confidence: 0.95,
+//     successRate: 0.92,
+//     avgPerformance: 150  // ms
+//   }
+// ]
+
+// Record successful pattern
+await fixiplug.dispatch('sqlite.patterns.record', {
+  patternName: 'custom_risk_metric',
+  domain: 'finance',
+  description: 'Custom risk metric for derivatives',
+  successRate: 0.94,
+  performance: 180
+});
+```
+
+Extension Generation Example:
+```javascript
+// Analyze requirements
+const analysis = await fixiplug.dispatch('sqlite.extension.analyze', {
+  description: 'Real-time streaming aggregation',
+  domain: 'analytics',
+  performanceRequirements: {
+    maxLatency: 1,      // 1ms
+    throughput: 10000   // 10k ops/sec
+  }
+});
+
+console.log(analysis.recommendations);
+// [
+//   { backend: 'mojo', confidence: 0.95, reasoning: 'Best for sub-ms latency' },
+//   { backend: 'rust', confidence: 0.88, reasoning: 'Excellent safety + performance' }
+// ]
+
+// Generate extension
+const extension = await fixiplug.dispatch('sqlite.extension.generate', {
+  description: 'Customer lifetime value calculation',
+  backend: 'rust',
+  performanceLevel: 'speed',
+  includeTests: true
+});
+
+console.log(extension.code);        // Rust source code
+console.log(extension.tests);       // Test suite
+console.log(extension.buildInstructions);  // How to build
+```
+
+Agent Amplification Example:
+```javascript
+// Create dynamic tool
+const tool = await fixiplug.dispatch('sqlite.agent.create_tool', {
+  name: 'portfolio_rebalancer',
+  description: 'Rebalance investment portfolio',
+  parameters: {
+    type: 'object',
+    properties: {
+      currentHoldings: { type: 'object' },
+      targetAllocation: { type: 'object' }
+    }
+  },
+  implementation: 'python',
+  code: 'def rebalance(...):\n    # implementation'
+});
+
+// Tool is now available as hook
+await fixiplug.dispatch(tool.hookName, {
+  currentHoldings: { 'AAPL': 5000 },
+  targetAllocation: { 'AAPL': 0.6 }
+});
+
+// Consult peer agents
+const advice = await fixiplug.dispatch('sqlite.agent.consult_peers', {
+  question: 'Best approach for real-time fraud detection?',
+  domain: 'security',
+  context: { transactionVolume: 10000 }
+});
+
+console.log(advice.consensus);  // Consensus recommendation from peers
+```
+
+Agent Context Example:
+```javascript
+// Detect current agent
+const agent = await fixiplug.dispatch('sqlite.context.detect');
+console.log(agent.type);  // 'claude-code', 'gpt-4', etc.
+console.log(agent.capabilities);  // ['tool-use', 'vision', ...]
+
+// Get detailed capabilities
+const caps = await fixiplug.dispatch('sqlite.context.capabilities', {
+  agentType: 'claude-3-5-sonnet'
+});
+console.log(caps.maxTokens);  // 200000
+console.log(caps.toolUseSupport);  // true
+
+// Calculate token budget
+const budget = await fixiplug.dispatch('sqlite.context.token_budget', {
+  conversation: [
+    { role: 'user', content: 'Hello' },
+    { role: 'assistant', content: 'Hi there!' }
+  ]
+});
+console.log(`Used: ${budget.totalTokens} / ${budget.maxTokens}`);
+console.log(`Remaining: ${budget.remainingTokens} tokens`);
+```
+
+LLM Integration Example:
+```javascript
+import { FixiPlugAgent } from './sdk/agent-client.js';
+import { AnthropicAdapter } from './sdk/adapters/anthropic-adapter.js';
+
+const agent = new FixiPlugAgent(fixiplug, { skillStrategy: 'dynamic' });
+const adapter = new AnthropicAdapter(agent);
+
+// LLM workflow:
+// 1. LLM calls retrieve_skill('sqlite-pattern-learner')
+// 2. LLM reads instructions on pattern learning
+// 3. LLM calls sqlite.patterns.get({ domain: 'finance', ... })
+// 4. LLM applies proven patterns to generate optimal code
+
+const tools = await adapter.getToolDefinitions();
+// Includes: retrieve_skill, dispatch_hook (for calling sqlite.* hooks)
+```
+
+**Context Efficiency**:
+
+| Approach | Initial Context | On-Demand | Total (1 skill) | Savings |
+|----------|----------------|-----------|-----------------|---------|
+| Static (all skills) | 162KB | 0KB | 162KB | 0% |
+| Dynamic (this approach) | 0KB | ~35KB | 35KB | **78%** |
+
+**Performance Characteristics**:
+
+- **Skill Retrieval**: <1ms (cached)
+- **Pattern Learning**: 50-200ms typical
+- **Extension Generation**: 2-10 seconds
+- **Dynamic Tool Creation**: 1-3 seconds
+- **Agent Detection**: 50-100ms (cache recommended)
+
+**Environment Setup**:
+
+```bash
+# Required: Set framework path
+export SQLITE_FRAMEWORK_PATH=/path/to/sqlite-extensions-framework
+
+# Optional: Configure service
+export SQLITE_MAX_PROCESSES=4              # Process pool size (default: 4)
+export SQLITE_REQUEST_TIMEOUT=30000        # Request timeout ms (default: 30000)
+export SQLITE_CACHE_ENABLED=true           # Enable caching (default: true)
+```
+
+**Prerequisites**:
+
+- SQLite Extensions Framework installed (Python)
+- Python 3.8+ with framework dependencies
+- Environment variable `SQLITE_FRAMEWORK_PATH` set
+
+**Available Skills** (`.claude/skills/`):
+
+- **sqlite-pattern-learner** (~35KB): Pattern learning and recommendations
+- **sqlite-extension-generator** (~38KB): SQLite extension code generation
+- **sqlite-agent-amplification** (~40KB): Dynamic tool creation and peer consultation
+- **sqlite-agent-context** (~37KB): Agent detection and context management
+
+**Tests**:
+
+- `test/sqlite-skills-integration.test.js` - Full stack integration tests
+- Skills can be retrieved via `api:getSkill`
+- Plugin hooks registered and callable
+- LLM integration works via `retrieve_skill` tool
+- End-to-end workflow tested
+
+**Examples**:
+
+- `examples/sqlite-skills-example.js` - Complete usage demonstration
+
+**Documentation**:
+
+- `sdk/adapters/sqlite-framework/README.md` - Bridge and service layer docs
+- `docs/SQLITE_FRAMEWORK_INTEGRATION.md` - Phase 1-2 implementation summary
+- `roadmap/SQLITE_SKILLS_INTEGRATION_ASSESSMENT.md` - Architecture and integration guide
+
+---
+
 ## Recent Major Changes
 
 Recent significant commits:

@@ -914,6 +914,7 @@ ${Object.keys(capabilities.hooks).length > 10 ? '...' : ''}
    */
   renderMarkdown(markdown) {
     // Check if marked and DOMPurify are available
+    // @ts-ignore - Global libraries loaded via script tags
     if (typeof marked === 'undefined' || typeof DOMPurify === 'undefined') {
       console.warn('Markdown libraries not loaded, falling back to plain text');
       return this.escapeHTML(markdown);
@@ -921,6 +922,7 @@ ${Object.keys(capabilities.hooks).length > 10 ? '...' : ''}
 
     try {
       // Configure marked for better rendering
+      // @ts-ignore - Global library loaded via script tag
       marked.setOptions({
         breaks: true,  // Convert line breaks to <br>
         gfm: true,     // GitHub Flavored Markdown
@@ -929,9 +931,11 @@ ${Object.keys(capabilities.hooks).length > 10 ? '...' : ''}
       });
 
       // Parse markdown to HTML
+      // @ts-ignore - Global library loaded via script tag
       const rawHTML = marked.parse(markdown);
 
       // Sanitize HTML to prevent XSS attacks
+      // @ts-ignore - Global library loaded via script tag
       const cleanHTML = DOMPurify.sanitize(rawHTML, {
         ALLOWED_TAGS: [
           'p', 'br', 'strong', 'em', 'u', 'code', 'pre',
@@ -955,9 +959,11 @@ ${Object.keys(capabilities.hooks).length > 10 ? '...' : ''}
 // Initialize app when DOM is ready
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', () => {
+    // @ts-ignore - Global app instance for debugging
     window.app = new AgentPlayground();
   });
 } else {
+  // @ts-ignore - Global app instance for debugging
   window.app = new AgentPlayground();
 }
 

@@ -371,7 +371,8 @@ async function example12_websocket() {
     };
 
     ws.onerror = (error) => {
-      console.log('WebSocket error:', error.message);
+      // @ts-ignore - WebSocket error event handling
+      console.log('WebSocket error:', error.message || 'Unknown error');
       resolve();
     };
   });

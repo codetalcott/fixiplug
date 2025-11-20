@@ -242,7 +242,7 @@ export class Retry {
 
   /**
    * Set custom shouldRetry function
-   * @param {Function} fn - Function to determine if error should be retried
+   * @param {(error: Error) => boolean} fn - Function to determine if error should be retried
    * @returns {Retry} this for chaining
    */
   when(fn) {

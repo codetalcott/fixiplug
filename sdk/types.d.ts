@@ -55,6 +55,15 @@ export interface AgentOptions {
    * @default []
    */
   retryableHooks?: string[];
+
+  /**
+   * Skill retrieval strategy for LLM adapters
+   * - 'dynamic': Skills retrieved on-demand (0KB baseline)
+   * - 'static': All skills loaded into context upfront
+   * - 'none': No skill retrieval support
+   * @default 'dynamic'
+   */
+  skillStrategy?: 'dynamic' | 'static' | 'none';
 }
 
 /**

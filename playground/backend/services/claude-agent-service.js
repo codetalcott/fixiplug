@@ -110,6 +110,7 @@ export class ClaudeAgentService {
       // Execute query with correct API signature (single object parameter)
       const queryGen = query({
         prompt,
+        // @ts-ignore - queryOptions has additional properties beyond base Options type
         options: queryOptions
       });
 

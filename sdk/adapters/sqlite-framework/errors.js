@@ -29,7 +29,6 @@ export class SQLiteFrameworkError extends Error {
    * @param {Object} [details={}] - Additional error details
    * @param {boolean} [details.recoverable=false] - Whether error is recoverable
    * @param {number} [details.retryAfter] - Milliseconds until retry recommended
-   * @param {*} [details.*] - Any additional context
    */
   constructor(message, code, details = {}) {
     super(message);
@@ -170,10 +169,10 @@ export class ValidationError extends SQLiteFrameworkError {
    * @param {Array<Object>} validationErrors - Array of validation errors
    */
   constructor(message, validationErrors = []) {
-    super(message, 'VALIDATION_ERROR', {
+    super(message, 'VALIDATION_ERROR', /** @type {any} */({
       validationErrors,
       recoverable: false
-    });
+    }));
     this.name = 'ValidationError';
     this.validationErrors = validationErrors;
   }
@@ -219,12 +218,12 @@ export class PythonError extends SQLiteFrameworkError {
       'TimeoutError'
     ].includes(pythonType);
 
-    super(message, 'PYTHON_ERROR', {
+    super(message, 'PYTHON_ERROR', /** @type {any} */({
       pythonType,
       traceback,
       recoverable,
       retryAfter: recoverable ? 1000 : undefined
-    });
+    }));
     this.name = 'PythonError';
     this.pythonType = pythonType;
     this.traceback = traceback;
@@ -320,7 +319,7 @@ export class FrameworkNotFoundError extends SQLiteFrameworkError {
     super(
       `SQLite Extensions Framework not found at: ${frameworkPath}`,
       'FRAMEWORK_NOT_FOUND',
-      { frameworkPath, recoverable: false }
+      /** @type {any} */({ frameworkPath, recoverable: false })
     );
     this.name = 'FrameworkNotFoundError';
     this.frameworkPath = frameworkPath;
@@ -346,7 +345,7 @@ export class MethodNotFoundError extends SQLiteFrameworkError {
     super(
       `Method not found: ${method}`,
       'METHOD_NOT_FOUND',
-      { method, recoverable: false }
+      /** @type {any} */({ method, recoverable: false })
     );
     this.name = 'MethodNotFoundError';
     this.method = method;
@@ -438,7 +437,8 @@ export function isRecoverableError(error) {
     'EHOSTUNREACH'
   ];
 
-  return recoverableNodeErrors.includes(error.code);
+  const errorCode = /** @type {any} */(error).code;
+  return errorCode && recoverableNodeErrors.includes(errorCode);
 }
 
 /**

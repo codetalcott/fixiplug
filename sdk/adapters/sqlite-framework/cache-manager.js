@@ -291,7 +291,7 @@ class FileCache {
           const stat = statSync(path);
           return { path, mtime: stat.mtime };
         })
-        .sort((a, b) => a.mtime - b.mtime); // Oldest first
+        .sort((a, b) => a.mtime.getTime() - b.mtime.getTime()); // Oldest first
 
       // Delete oldest files until under limit
       let currentSize = totalSize;

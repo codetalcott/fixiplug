@@ -130,10 +130,12 @@ function convertPropertyToZod(prop, isRequired = false) {
       break;
     case 'object':
       if (prop.properties) {
+        // @ts-ignore - Dynamically built Zod schema
         const nestedSchema = {};
         for (const [k, v] of Object.entries(prop.properties)) {
           nestedSchema[k] = convertPropertyToZod(v, prop.required?.includes(k));
         }
+        // @ts-ignore - nestedSchema is dynamically built and matches ZodRawShape
         validator = z.object(nestedSchema);
       } else {
         validator = z.record(z.any());

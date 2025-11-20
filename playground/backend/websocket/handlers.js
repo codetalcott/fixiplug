@@ -6,6 +6,8 @@
  * @module playground/backend/websocket/handlers
  */
 
+/** @typedef {import('ws').WebSocketServer} WebSocketServer */
+
 /**
  * Setup WebSocket server with handlers
  *

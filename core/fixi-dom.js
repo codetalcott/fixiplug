@@ -164,6 +164,7 @@ import { Fixi } from './fixi-core.js';
 
   // Mark as ready
   isReady = true;
+  // @ts-ignore - Custom property for DOM readiness tracking
   document.__fixi_ready = true;
 
   // Process buffered events that arrived before initialization

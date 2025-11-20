@@ -9,9 +9,13 @@
  * Run with: bun run examples/hono-server.js
  */
 
+// @ts-ignore - Hono types not available (Bun-specific framework)
 import { Hono } from 'hono';
+// @ts-ignore - Hono types not available
 import { cors } from 'hono/cors';
+// @ts-ignore - Hono types not available
 import { logger } from 'hono/logger';
+// @ts-ignore - Hono types not available
 import { streamSSE } from 'hono/streaming';
 
 const app = new Hono();
@@ -162,6 +166,7 @@ app.get('/ws', (c) => {
     return c.text('Expected websocket', 400);
   }
 
+  // @ts-ignore - Bun global available in Bun runtime
   const { response, socket } = Bun.upgrade(c.req.raw, {
     data: { connectedAt: Date.now() }
   });
@@ -432,6 +437,7 @@ Endpoints:
   - GET  /health               Health check
   `);
 
+  // @ts-ignore - Bun global available in Bun runtime
   Bun.serve({
     port,
     fetch: app.fetch

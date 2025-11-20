@@ -556,6 +556,7 @@ export function createFixiplug(options = {}) {
     return import('../core/fixi-dom.js').then(() => {
       // Wait for fx:dom:ready event to ensure fixi-dom.js is fully initialized
       return new Promise(resolve => {
+        // @ts-ignore - Custom property for DOM readiness tracking
         if (document.__fixi_ready) {
           // Already ready
           resolve(fixiplug);

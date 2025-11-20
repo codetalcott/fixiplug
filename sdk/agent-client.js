@@ -41,6 +41,7 @@ export class FixiPlugAgent {
    * @param {number} [options.retryDelay=100] - Initial retry delay in milliseconds
    * @param {number} [options.retryBackoff=2] - Exponential backoff multiplier
    * @param {Array<string>} [options.retryableHooks=[]] - Hooks that should be retried on error
+   * @param {'dynamic'|'static'|'none'} [options.skillStrategy='dynamic'] - Skill retrieval strategy for LLM adapters
    */
   constructor(fixiplugInstance, options = {}) {
     if (!fixiplugInstance) {

@@ -388,12 +388,12 @@ class ManagedProcess extends EventEmitter {
 
   /**
    * Kill the process
-   * @param {string} [signal='SIGTERM'] - Signal to send
+   * @param {NodeJS.Signals|string} [signal='SIGTERM'] - Signal to send
    */
   kill(signal = 'SIGTERM') {
     if (this.process && !this.process.killed) {
       this.state = ProcessState.STOPPING;
-      this.process.kill(signal);
+      this.process.kill(/** @type {NodeJS.Signals} */(signal));
     }
   }
 

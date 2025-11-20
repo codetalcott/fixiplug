@@ -163,9 +163,9 @@ console.log('-----------------------------------');
     console.log('3. Tool execution result:', capabilityResult);
 
     // Add assistant message with tool use
-    // @ts-ignore - Anthropic API supports content arrays
     messages.push({
       role: 'assistant',
+      // @ts-ignore - Anthropic API supports content arrays
       content: [
         {
           type: 'text',
@@ -176,9 +176,9 @@ console.log('-----------------------------------');
     });
 
     // Add tool result to conversation
-    // @ts-ignore - Anthropic API supports content arrays
     messages.push({
       role: 'user',
+      // @ts-ignore - Anthropic API supports content arrays
       content: [adapter.createToolResult(checkCapabilityUse.id, capabilityResult)]
     });
 
@@ -329,7 +329,6 @@ console.log('-----------------------------------');
     try {
       await adapter.executeToolUse({
         id: 'toolu_error_test',
-        type: 'tool_use',
         name: 'unknown_tool',
         input: {}
       });
