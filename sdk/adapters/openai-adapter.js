@@ -38,6 +38,8 @@ export class OpenAIAdapter {
    * @param {boolean} [options.includeWorkflowTools=true] - Include workflow tools
    * @param {boolean} [options.includeCacheTools=true] - Include cache management tools
    * @param {boolean} [options.includePluginHooks=false] - Include discovered plugin hooks
+   * @param {boolean} [options.includeSkills=false] - Include skills in context generation (deprecated - use skillStrategy)
+   * @param {string} [options.skillStrategy='dynamic'] - Skill loading strategy: 'dynamic' (on-demand via tool), 'static' (all in context), 'none' (disabled)
    */
   constructor(agent, options = {}) {
     if (!agent) {
@@ -49,11 +51,16 @@ export class OpenAIAdapter {
       includeCoreTools: options.includeCoreTools !== false,
       includeWorkflowTools: options.includeWorkflowTools !== false,
       includeCacheTools: options.includeCacheTools !== false,
-      includePluginHooks: options.includePluginHooks || false
+      includePluginHooks: options.includePluginHooks || false,
+      includeSkills: options.includeSkills || false,
+      skillStrategy: options.skillStrategy || 'dynamic'
     };
 
     // Track function call history
     this.callHistory = [];
+
+    // Skill retrieval cache (per-conversation)
+    this._skillCache = new Map();
   }
 
   /**
@@ -88,6 +95,14 @@ export class OpenAIAdapter {
     // Cache management tools
     if (this.options.includeCacheTools) {
       tools.push(...this._getCacheTools());
+    }
+
+    // Skill retrieval tool (dynamic strategy)
+    if (this.options.skillStrategy === 'dynamic') {
+      const skillTool = await this._getSkillRetrievalTool();
+      if (skillTool) {
+        tools.push(skillTool);
+      }
     }
 
     // Plugin hooks (discovered from introspection)
@@ -211,6 +226,173 @@ export class OpenAIAdapter {
    */
   clearCallHistory() {
     this.callHistory = [];
+  }
+
+  /**
+   * Get skills context for GPT system message
+   *
+   * Retrieves all registered skills and formats them as markdown documentation
+   * suitable for injection into GPT's system context. This teaches GPT
+   * how to orchestrate FixiPlug tools effectively.
+   *
+   * @param {Object} [options={}] - Context generation options
+   * @param {string} [options.format='full'] - Detail level: 'metadata' (name/desc only), 'summary' (name/desc/tags), 'full' (includes instructions)
+   * @param {Array<string>} [options.includeOnly] - Only include specific skills by name
+   * @param {Array<string>} [options.exclude] - Exclude specific skills by name
+   * @returns {Promise<string>} Formatted skills context as markdown
+   *
+   * @example
+   * const adapter = new OpenAIAdapter(agent, { includeSkills: true });
+   *
+   * // Get full skills context
+   * const context = await adapter.getSkillsContext();
+   *
+   * // Get metadata only (lighter weight)
+   * const metadata = await adapter.getSkillsContext({ format: 'metadata' });
+   *
+   * // Include in system message
+   * const response = await openai.chat.completions.create({
+   *   model: 'gpt-4',
+   *   messages: [
+   *     { role: 'system', content: context },
+   *     ...
+   *   ],
+   *   tools: await adapter.getToolDefinitions()
+   * });
+   */
+  async getSkillsContext(options = {}) {
+    const {
+      format = 'full',
+      includeOnly = null,
+      exclude = []
+    } = options;
+
+    try {
+      // Get skills manifest via introspection
+      const manifest = await this.agent.fixi.dispatch('api:getSkillsManifest', {});
+
+      if (!manifest || !manifest.skills || manifest.skills.length === 0) {
+        return ''; // No skills available
+      }
+
+      let skills = manifest.skills;
+
+      // Filter skills if requested
+      if (includeOnly && Array.isArray(includeOnly)) {
+        skills = skills.filter(s => includeOnly.includes(s.skill.name));
+      }
+
+      if (exclude && Array.isArray(exclude)) {
+        skills = skills.filter(s => !exclude.includes(s.skill.name));
+      }
+
+      if (skills.length === 0) {
+        return ''; // No skills after filtering
+      }
+
+      // Build context based on format
+      const sections = [];
+
+      sections.push('# FixiPlug Skills\n');
+      sections.push('The following skills provide guidance on how to orchestrate FixiPlug tools effectively.\n');
+
+      for (const { pluginName, skill } of skills) {
+        sections.push(`\n## ${skill.name || pluginName}`);
+
+        // Always include description
+        if (skill.description) {
+          sections.push(`\n${skill.description}\n`);
+        }
+
+        // Metadata format: just name and description
+        if (format === 'metadata') {
+          continue;
+        }
+
+        // Summary format: add tags and references
+        if (format === 'summary' || format === 'full') {
+          if (skill.tags && skill.tags.length > 0) {
+            sections.push(`\n**Tags**: ${skill.tags.join(', ')}`);
+          }
+
+          if (skill.references && skill.references.length > 0) {
+            sections.push(`\n**Related Plugins**: ${skill.references.join(', ')}`);
+          }
+
+          if (skill.level) {
+            sections.push(`\n**Level**: ${skill.level}`);
+          }
+        }
+
+        // Full format: include complete instructions
+        if (format === 'full' && skill.instructions) {
+          sections.push(`\n${skill.instructions}`);
+        }
+      }
+
+      return sections.join('\n');
+
+    } catch (error) {
+      // If introspection fails, return empty string (graceful degradation)
+      console.warn('Failed to retrieve skills context:', error);
+      return '';
+    }
+  }
+
+  /**
+   * Get list of available skill names
+   *
+   * @private
+   * @returns {Promise<Array<string>>} Array of skill names
+   */
+  async _getAvailableSkillNames() {
+    try {
+      const manifest = await this.agent.fixi.dispatch('api:getSkillsManifest', {});
+
+      if (!manifest || !manifest.skills) {
+        return [];
+      }
+
+      return manifest.skills
+        .map(s => s.skill?.name)
+        .filter(name => name); // Filter out undefined/null
+    } catch (error) {
+      console.warn('Failed to get skill names:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get skill retrieval tool definition
+   *
+   * @private
+   * @returns {Promise<Object|null>} Skill retrieval tool or null if no skills
+   */
+  async _getSkillRetrievalTool() {
+    const availableSkills = await this._getAvailableSkillNames();
+
+    if (availableSkills.length === 0) {
+      return null;
+    }
+
+    return {
+      type: 'function',
+      function: {
+        name: 'retrieve_skill',
+        description: 'Retrieve workflow guides and best practices for FixiPlug integrations. Use when you need domain-specific implementation patterns (Django, error handling, forms, reactive UI). Returns complete skill instructions.',
+        parameters: {
+          type: 'object',
+          properties: {
+            skill_name: {
+              type: 'string',
+              enum: availableSkills,
+              description: 'Name of the skill guide to retrieve'
+            }
+          },
+          required: ['skill_name']
+        }
+      }
+    };
   }
 
   /**
@@ -488,6 +670,10 @@ export class OpenAIAdapter {
       case 'get_cache_info':
         return this.agent.getCacheInfo();
 
+      // Skill retrieval
+      case 'retrieve_skill':
+        return await this._executeSkillRetrieval(args);
+
       // Plugin hooks
       default:
         // Check if it's a hook function
@@ -501,6 +687,69 @@ export class OpenAIAdapter {
         }
 
         throw new Error(`Unknown function: ${name}`);
+    }
+  }
+
+  /**
+   * Execute skill retrieval with caching
+   *
+   * @private
+   * @param {Object} args - Function arguments
+   * @param {string} args.skill_name - Skill name to retrieve
+   * @returns {Promise<Object>} Skill data or error
+   */
+  async _executeSkillRetrieval(args) {
+    const { skill_name } = args;
+
+    if (!skill_name) {
+      return {
+        success: false,
+        error: 'skill_name parameter required'
+      };
+    }
+
+    // Check cache first
+    const cacheKey = `skill:${skill_name}`;
+    if (this._skillCache.has(cacheKey)) {
+      return this._skillCache.get(cacheKey);
+    }
+
+    // Retrieve skill using new api:getSkill hook
+    try {
+      const result = await this.agent.fixi.dispatch('api:getSkill', {
+        skillName: skill_name
+      });
+
+      if (!result.success) {
+        return result; // Return error response with available skills
+      }
+
+      // Format successful response
+      const response = {
+        success: true,
+        skill_name: result.skill.name,
+        description: result.skill.description,
+        instructions: result.skill.instructions,
+        tags: result.skill.tags || [],
+        references: result.skill.references || [],
+        level: result.skill.level || 'intermediate',
+        metadata: {
+          plugin: result.pluginName,
+          version: result.skill.version || '1.0',
+          author: result.skill.author || 'FixiPlug Team'
+        }
+      };
+
+      // Cache the result
+      this._skillCache.set(cacheKey, response);
+
+      return response;
+
+    } catch (error) {
+      return {
+        success: false,
+        error: `Skill retrieval failed: ${error.message}`
+      };
     }
   }
 

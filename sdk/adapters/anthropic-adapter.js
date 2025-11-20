@@ -39,7 +39,8 @@ export class AnthropicAdapter {
    * @param {boolean} [options.includeWorkflowTools=true] - Include workflow tools
    * @param {boolean} [options.includeCacheTools=true] - Include cache management tools
    * @param {boolean} [options.includePluginHooks=false] - Include discovered plugin hooks
-   * @param {boolean} [options.includeSkills=false] - Include skills in context generation
+   * @param {boolean} [options.includeSkills=false] - Include skills in context generation (deprecated - use skillStrategy)
+   * @param {string} [options.skillStrategy='dynamic'] - Skill loading strategy: 'dynamic' (on-demand via tool), 'static' (all in context), 'none' (disabled)
    */
   constructor(agent, options = {}) {
     if (!agent) {
@@ -52,11 +53,15 @@ export class AnthropicAdapter {
       includeWorkflowTools: options.includeWorkflowTools !== false,
       includeCacheTools: options.includeCacheTools !== false,
       includePluginHooks: options.includePluginHooks || false,
-      includeSkills: options.includeSkills || false
+      includeSkills: options.includeSkills || false,
+      skillStrategy: options.skillStrategy || 'dynamic'
     };
 
     // Track tool use history
     this.useHistory = [];
+
+    // Skill retrieval cache (per-conversation)
+    this._skillCache = new Map();
   }
 
   /**
@@ -91,6 +96,14 @@ export class AnthropicAdapter {
     // Cache management tools
     if (this.options.includeCacheTools) {
       tools.push(...this._getCacheTools());
+    }
+
+    // Skill retrieval tool (dynamic strategy)
+    if (this.options.skillStrategy === 'dynamic') {
+      const skillTool = await this._getSkillRetrievalTool();
+      if (skillTool) {
+        tools.push(skillTool);
+      }
     }
 
     // Plugin hooks (discovered from introspection)
@@ -296,6 +309,59 @@ export class AnthropicAdapter {
       console.warn('Failed to retrieve skills context:', error);
       return '';
     }
+  }
+
+  /**
+   * Get list of available skill names
+   *
+   * @private
+   * @returns {Promise<Array<string>>} Array of skill names
+   */
+  async _getAvailableSkillNames() {
+    try {
+      const manifest = await this.agent.fixi.dispatch('api:getSkillsManifest', {});
+
+      if (!manifest || !manifest.skills) {
+        return [];
+      }
+
+      return manifest.skills
+        .map(s => s.skill?.name)
+        .filter(name => name); // Filter out undefined/null
+    } catch (error) {
+      console.warn('Failed to get skill names:', error);
+      return [];
+    }
+  }
+
+  /**
+   * Get skill retrieval tool definition
+   *
+   * @private
+   * @returns {Promise<Object|null>} Skill retrieval tool or null if no skills
+   */
+  async _getSkillRetrievalTool() {
+    const availableSkills = await this._getAvailableSkillNames();
+
+    if (availableSkills.length === 0) {
+      return null;
+    }
+
+    return {
+      name: 'retrieve_skill',
+      description: 'Retrieve workflow guides and best practices for FixiPlug integrations. Use when you need domain-specific implementation patterns (Django, error handling, forms, reactive UI). Returns complete skill instructions.',
+      input_schema: {
+        type: 'object',
+        properties: {
+          skill_name: {
+            type: 'string',
+            enum: availableSkills,
+            description: 'Name of the skill guide to retrieve'
+          }
+        },
+        required: ['skill_name']
+      }
+    };
   }
 
   /**
@@ -559,6 +625,10 @@ export class AnthropicAdapter {
       case 'get_cache_info':
         return this.agent.getCacheInfo();
 
+      // Skill retrieval
+      case 'retrieve_skill':
+        return await this._executeSkillRetrieval(input);
+
       // Plugin hooks
       default:
         // Check if it's a hook tool
@@ -572,6 +642,69 @@ export class AnthropicAdapter {
         }
 
         throw new Error(`Unknown tool: ${name}`);
+    }
+  }
+
+  /**
+   * Execute skill retrieval with caching
+   *
+   * @private
+   * @param {Object} input - Tool input
+   * @param {string} input.skill_name - Skill name to retrieve
+   * @returns {Promise<Object>} Skill data or error
+   */
+  async _executeSkillRetrieval(input) {
+    const { skill_name } = input;
+
+    if (!skill_name) {
+      return {
+        success: false,
+        error: 'skill_name parameter required'
+      };
+    }
+
+    // Check cache first
+    const cacheKey = `skill:${skill_name}`;
+    if (this._skillCache.has(cacheKey)) {
+      return this._skillCache.get(cacheKey);
+    }
+
+    // Retrieve skill using new api:getSkill hook
+    try {
+      const result = await this.agent.fixi.dispatch('api:getSkill', {
+        skillName: skill_name
+      });
+
+      if (!result.success) {
+        return result; // Return error response with available skills
+      }
+
+      // Format successful response
+      const response = {
+        success: true,
+        skill_name: result.skill.name,
+        description: result.skill.description,
+        instructions: result.skill.instructions,
+        tags: result.skill.tags || [],
+        references: result.skill.references || [],
+        level: result.skill.level || 'intermediate',
+        metadata: {
+          plugin: result.pluginName,
+          version: result.skill.version || '1.0',
+          author: result.skill.author || 'FixiPlug Team'
+        }
+      };
+
+      // Cache the result
+      this._skillCache.set(cacheKey, response);
+
+      return response;
+
+    } catch (error) {
+      return {
+        success: false,
+        error: `Skill retrieval failed: ${error.message}`
+      };
     }
   }
 }

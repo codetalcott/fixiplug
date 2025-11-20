@@ -112,6 +112,8 @@ const HOOK_DOCS = {
 
   'api:getPluginSkills': 'Get skills for all plugins. Returns: {plugins: [{name: "stateTrackerPlugin", hasSkill: true, skill: {...}}, {name: "fixiAgentPlugin", hasSkill: false, skill: null}]}. Use this to see which plugins have workflow guidance.',
 
+  'api:getSkill': 'Get a specific skill by its skill name (not plugin name). Parameters: {skillName: "django-workflows"}. Returns: {success: true, skillName: "django-workflows", pluginName: "djangoWorkflowsSkill", skill: {name, description, instructions, tags, ...}}. Error if not found: {success: false, error: "Skill \'foo\' not found", availableSkills: ["django-workflows", "error-recovery", ...]}. Use this for on-demand skill retrieval.',
+
   // Error handling
   'pluginError': 'Event fired when a plugin handler throws an error. Handlers receive: {plugin: "pluginName", hookName: "api:introspect", error: Error object, event: original event object}. Listen to this to debug plugin issues.'
 };
@@ -270,6 +272,48 @@ export default function introspectionPlugin(ctx) {
     }
 
     return { plugins };
+  });
+
+  // ========================================
+  // API: Get Skill by Skill Name
+  // ========================================
+  ctx.on('api:getSkill', (event) => {
+    const { skillName } = event;
+
+    if (!skillName) {
+      return {
+        success: false,
+        error: 'skillName parameter required'
+      };
+    }
+
+    // Search skill registry for matching skill name
+    const skillRegistry = Fixi.getSkillRegistry();
+
+    for (const [pluginName, skill] of skillRegistry.entries()) {
+      if (skill && skill.name === skillName) {
+        return {
+          success: true,
+          skillName: skill.name,
+          pluginName,
+          skill
+        };
+      }
+    }
+
+    // Skill not found - return available skills
+    const availableSkills = [];
+    for (const [, skill] of skillRegistry.entries()) {
+      if (skill && skill.name) {
+        availableSkills.push(skill.name);
+      }
+    }
+
+    return {
+      success: false,
+      error: `Skill '${skillName}' not found`,
+      availableSkills
+    };
   });
 
   // ========================================

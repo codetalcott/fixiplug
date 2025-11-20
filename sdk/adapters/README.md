@@ -527,6 +527,194 @@ const adapter = new AnthropicAdapter(agent, options);
 
 ---
 
+## Skill Retrieval (Dynamic Context Loading)
+
+Skills provide domain-specific workflow guides that teach LLMs how to use FixiPlug effectively. Instead of loading all skills into context upfront (78KB+), the `retrieve_skill` tool allows LLMs to fetch guides on-demand.
+
+### Benefits
+
+- **78KB context savings** for conversations that don't need skills
+- **58KB savings** when only 1 skill is needed (73.8% reduction)
+- **Instant retrieval** (<1ms cached)
+- **Scales to 100+ skills** without context bloat
+
+### Skill Strategy Configuration
+
+```javascript
+// Dynamic strategy (default) - retrieves skills on-demand
+const adapter = new AnthropicAdapter(agent, {
+  skillStrategy: 'dynamic'  // Default
+});
+
+// Static strategy - loads all skills into context upfront
+const adapter = new OpenAIAdapter(agent, {
+  skillStrategy: 'static',
+  includeSkills: true  // Deprecated, use skillStrategy
+});
+
+// None strategy - disables skills completely
+const adapter = new AnthropicAdapter(agent, {
+  skillStrategy: 'none'
+});
+```
+
+### Available Skills
+
+- **django-workflows** (22KB): Django CRUD, tables, forms with dj-fixi
+- **error-recovery** (21KB): Retry logic, fallback strategies, circuit breakers
+- **form-workflows** (27KB): Multi-step forms, validation, submission
+- **reactive-ui-patterns** (14KB): State-driven UI, reactive patterns
+
+### Dynamic Retrieval (Recommended)
+
+With `skillStrategy: 'dynamic'`, LLMs can retrieve skills on-demand using the `retrieve_skill` tool:
+
+**Anthropic (Tool Use):**
+
+```javascript
+const adapter = new AnthropicAdapter(agent);
+const tools = await adapter.getToolDefinitions();
+
+// Claude calls: retrieve_skill({ skill_name: "django-workflows" })
+// Returns 22KB of Django integration patterns
+```
+
+**OpenAI (Function Calling):**
+
+```javascript
+const adapter = new OpenAIAdapter(agent);
+const tools = await adapter.getToolDefinitions();
+
+// GPT calls: retrieve_skill({ skill_name: "error-recovery" })
+// Returns 21KB of error handling patterns
+```
+
+### Static Context Loading
+
+With `skillStrategy: 'static'`, inject all skills into the system message:
+
+```javascript
+const adapter = new AnthropicAdapter(agent, { skillStrategy: 'static' });
+
+// Get full skills context
+const skillsContext = await adapter.getSkillsContext({ format: 'full' });
+
+// Use with Anthropic
+const response = await anthropic.messages.create({
+  model: 'claude-3-5-sonnet-20241022',
+  system: skillsContext,  // 78KB of skills
+  messages: [...],
+  tools: await adapter.getToolDefinitions()
+});
+```
+
+### Context Formats
+
+```javascript
+// Full: Complete instructions (78KB for 4 skills)
+const fullContext = await adapter.getSkillsContext({ format: 'full' });
+
+// Summary: Name, description, tags only (2KB)
+const summaryContext = await adapter.getSkillsContext({ format: 'summary' });
+
+// Metadata: Name and description only (1KB)
+const metadataContext = await adapter.getSkillsContext({ format: 'metadata' });
+
+// Filter skills
+const djangoOnly = await adapter.getSkillsContext({
+  includeOnly: ['django-workflows']
+});
+
+const noDjango = await adapter.getSkillsContext({
+  exclude: ['django-workflows']
+});
+```
+
+### Performance Comparison
+
+| Strategy | Baseline Context | Per Skill | Savings (0 skills) | Savings (1 skill) |
+|----------|-----------------|-----------|-------------------|-------------------|
+| Static   | 78KB (always)   | N/A       | 0%                | 0%                |
+| Dynamic  | 0KB (on-demand) | ~21KB     | 100% (78KB saved) | 73.8% (58KB saved)|
+
+### When to Use Each Strategy
+
+**Use `skillStrategy: 'dynamic'` (default) when:**
+
+- You want to minimize baseline context usage
+- Conversations may not need any skills
+- You have many skills (5+)
+- You want to scale to 100+ skills
+
+**Use `skillStrategy: 'static'` when:**
+
+- Every conversation needs all skills
+- You have very few skills (1-2)
+- You want to avoid tool calls for skill retrieval
+
+**Use `skillStrategy: 'none'` when:**
+
+- Testing without skills
+- Skills not yet created
+- Using custom skill injection
+
+### Example: Dynamic Retrieval in Action
+
+```javascript
+import { FixiPlugAgent } from '../agent-client.js';
+import { AnthropicAdapter } from './anthropic-adapter.js';
+import Anthropic from '@anthropic-ai/sdk';
+
+// Create adapter with dynamic strategy
+const agent = new FixiPlugAgent(fixiplug);
+const adapter = new AnthropicAdapter(agent);  // skillStrategy: 'dynamic' by default
+
+const tools = await adapter.getToolDefinitions();
+// Includes retrieve_skill tool
+
+const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const response = await anthropic.messages.create({
+  model: 'claude-3-5-sonnet-20241022',
+  messages: [
+    { role: 'user', content: 'How do I build a Django CRUD interface with FixiPlug?' }
+  ],
+  tools,
+  max_tokens: 4096
+});
+
+// Claude automatically calls retrieve_skill({ skill_name: "django-workflows" })
+// Gets 22KB of Django patterns instead of 78KB upfront
+
+for (const content of response.content) {
+  if (content.type === 'tool_use' && content.name === 'retrieve_skill') {
+    const result = await adapter.executeToolUse(content);
+    // result.instructions contains complete Django workflow guide
+  }
+}
+```
+
+### Tests
+
+See [test/skill-retrieval.test.js](../../test/skill-retrieval.test.js) for:
+
+- api:getSkill hook tests (12 tests)
+- Anthropic adapter retrieve_skill tests (12 tests)
+- OpenAI adapter retrieve_skill tests (12 tests)
+- Caching behavior tests (6 tests)
+- Strategy option tests (6 tests)
+- getSkillsContext tests (8 tests)
+
+See [test/skill-retrieval-benchmarks.test.js](../../test/skill-retrieval-benchmarks.test.js) for:
+
+- Tool definition size measurements
+- Skills context size analysis
+- Individual skill size breakdown
+- Context savings calculations
+- Retrieval performance benchmarks
+
+---
+
 ## License
 
 Part of the FixiPlug project.

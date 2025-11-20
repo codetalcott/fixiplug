@@ -39,6 +39,8 @@ node playground/backend/test/server.test.js
 node test/fetch-interceptors.test.js
 node test/skill-lifecycle.test.js
 node test/dom-delegation.test.js
+node test/skill-retrieval.test.js
+node test/skill-retrieval-benchmarks.test.js
 
 # Browser automated tests (Playwright)
 # Requires server running on localhost:3000
@@ -671,6 +673,97 @@ const skills = await apiClient.listSkills();
 - Disabled plugins stay registered but their hooks won't execute
 - Non-destructive - can be re-enabled without losing state
 - Local and core status tracking synchronized
+
+---
+
+### 5. Skill Retrieval (Dynamic Context Loading)
+
+**Purpose**: Enable on-demand skill retrieval to reduce context usage from 78KB to 0KB baseline, with 73.8% savings when 1 skill is needed.
+
+**Core Implementation**:
+
+- **Hook**: `plugins/introspection.js` - New `api:getSkill` hook retrieves skills by name
+- **Anthropic Adapter**: `sdk/adapters/anthropic-adapter.js` - `retrieve_skill` tool with caching
+- **OpenAI Adapter**: `sdk/adapters/openai-adapter.js` - `retrieve_skill` function with caching
+- **Strategy Options**: `skillStrategy` parameter: 'dynamic' (default), 'static', or 'none'
+
+**Performance Metrics**:
+
+- Baseline context: 0KB (dynamic) vs 78KB (static)
+- Average skill size: ~21KB
+- Retrieval speed: <1ms (cached)
+- Context savings: 100% (0 skills), 73.8% (1 skill), 47.6% (2 skills)
+
+**Usage**:
+
+Anthropic Adapter (Tool Use):
+```javascript
+import { AnthropicAdapter } from './sdk/adapters/anthropic-adapter.js';
+
+// Dynamic strategy (default) - skills retrieved on-demand
+const adapter = new AnthropicAdapter(agent);  // skillStrategy: 'dynamic'
+const tools = await adapter.getToolDefinitions();
+// Includes retrieve_skill tool
+
+// Claude calls: retrieve_skill({ skill_name: "django-workflows" })
+// Returns 22KB of Django integration patterns
+```
+
+OpenAI Adapter (Function Calling):
+```javascript
+import { OpenAIAdapter } from './sdk/adapters/openai-adapter.js';
+
+// Dynamic strategy (default)
+const adapter = new OpenAIAdapter(agent);  // skillStrategy: 'dynamic'
+const tools = await adapter.getToolDefinitions();
+// Includes retrieve_skill function
+
+// GPT calls: retrieve_skill({ skill_name: "error-recovery" })
+// Returns 21KB of error handling patterns
+```
+
+Static Strategy (legacy):
+```javascript
+// Load all skills into context upfront (78KB)
+const adapter = new AnthropicAdapter(agent, { skillStrategy: 'static' });
+const skillsContext = await adapter.getSkillsContext({ format: 'full' });
+
+// Use in system message
+const response = await anthropic.messages.create({
+  model: 'claude-3-5-sonnet-20241022',
+  system: skillsContext,  // 78KB loaded upfront
+  messages: [...],
+  tools: await adapter.getToolDefinitions()
+});
+```
+
+Direct Hook Usage:
+```javascript
+// Retrieve specific skill by name
+const result = await fixiplug.dispatch('api:getSkill', {
+  skillName: 'reactive-ui-patterns'
+});
+
+if (result.success) {
+  console.log(result.skill.instructions);  // Complete skill guide
+  console.log(result.skill.tags);          // ['ui', 'state', 'reactive']
+  console.log(result.pluginName);          // 'reactiveUiPatternsSkill'
+}
+```
+
+**Available Skills**:
+
+- **django-workflows** (22KB): Django CRUD, tables, forms with dj-fixi
+- **error-recovery** (21KB): Retry logic, fallback strategies, circuit breakers
+- **form-workflows** (27KB): Multi-step forms, validation, submission
+- **reactive-ui-patterns** (14KB): State-driven UI, reactive patterns
+
+**Tests**:
+
+- `test/skill-retrieval.test.js` (65/65 passing)
+- `test/skill-retrieval-benchmarks.test.js` (performance measurements)
+
+**Documentation**: `sdk/adapters/README.md` - Complete skill retrieval guide
 
 ---
 
