@@ -767,6 +767,147 @@ if (result.success) {
 
 ---
 
+### 6. Hybrid Skill Format Support (SKILL.md Loader)
+
+**Purpose**: Enable portability between FixiPlug and Claude Code by supporting both JavaScript plugin skills and Claude Code-compatible SKILL.md files.
+
+**Core Implementation**:
+
+- **Loader Plugin**: `plugins/skill-md-loader.js` - Loads SKILL.md files from `.claude/skills/` directories
+- **Export Utility**: `utils/export-skill-to-md.js` - Converts JavaScript skills to SKILL.md format
+- **File Format**: YAML frontmatter + Markdown content (Claude Code standard)
+
+**Skill Locations**:
+
+- **Project skills**: `.claude/skills/` (git-committed, team-shared)
+- **Personal skills**: `~/.claude/skills/` (user-specific)
+
+**SKILL.md Format**:
+
+```markdown
+---
+name: skill-name
+description: Brief description of when to use this skill
+tags:
+  - tag1
+  - tag2
+version: 1.0.0
+level: intermediate
+author: Team Name
+---
+
+# Skill Name
+
+## Instructions
+
+Complete skill documentation in markdown...
+```
+
+**Usage**:
+
+Load SKILL.md files (automatic):
+```javascript
+import skillMdLoader from './plugins/skill-md-loader.js';
+
+const fixiplug = createFixiplug({ features: [] });
+fixiplug.use(introspectionPlugin);
+fixiplug.use(skillMdLoader);  // Automatically loads .claude/skills/**/*.SKILL.md
+
+// SKILL.md skills appear alongside JavaScript skills
+const manifest = await fixiplug.dispatch('api:getSkillsManifest');
+// Returns both JS skills and SKILL.md skills
+
+// Retrieve SKILL.md skill same as JS skill
+const result = await fixiplug.dispatch('api:getSkill', {
+  skillName: 'django-workflows'  // Works for both formats
+});
+```
+
+Export JavaScript skills to SKILL.md:
+
+```bash
+# Export all skills to .claude/skills/
+node utils/export-skill-to-md.js
+
+# Export specific skill
+node utils/export-skill-to-md.js --skill reactive-ui-patterns
+
+# Export to custom directory
+node utils/export-skill-to-md.js --output ~/my-skills
+```
+
+Programmatic export:
+```javascript
+import { exportSkillToMd, exportAllSkills } from './utils/export-skill-to-md.js';
+
+// Export single skill
+const skill = {
+  name: 'my-skill',
+  description: 'Skill description',
+  instructions: '# My Skill\n\n...',
+  tags: ['tag1', 'tag2'],
+  version: '1.0.0'
+};
+const mdPath = await exportSkillToMd(skill, '.claude/skills');
+
+// Export all skills from fixiplug instance
+const results = await exportAllSkills(fixiplug, '.claude/skills');
+console.log(`Exported ${results.exported.length} skills`);
+```
+
+Check SKILL.md loader stats:
+```javascript
+const stats = await fixiplug.dispatch('api:getSkillMdStats');
+console.log(stats.loaded);  // 4
+console.log(stats.skills);  // [{name: 'django-workflows', source: 'project', path: '...'}]
+console.log(stats.locations);  // ['.claude/skills', '~/.claude/skills']
+```
+
+Reload SKILL.md files:
+```javascript
+// Re-scan directories and register new/updated skills
+const result = await fixiplug.dispatch('api:reloadSkillMd');
+console.log(`Reloaded ${result.reloaded} skills`);
+```
+
+**Benefits of Hybrid Approach**:
+
+1. **Portability**: SKILL.md files work in both FixiPlug and Claude Code
+2. **Simplicity**: No JavaScript knowledge needed for pure instructional skills
+3. **Advanced Features**: JavaScript plugins can still use `setup()` for hooks/logic
+4. **Unified API**: Both formats accessible via same `api:getSkill` hook
+5. **LLM Integration**: Both formats available via `retrieve_skill` tool/function
+
+**Format Comparison**:
+
+| Feature | JavaScript Plugin | SKILL.md File |
+|---------|------------------|---------------|
+| Skill metadata | ✅ | ✅ |
+| Instructions | ✅ | ✅ |
+| setup() hooks | ✅ | ❌ |
+| Event listeners | ✅ | ❌ |
+| Dynamic logic | ✅ | ❌ |
+| Portability | FixiPlug only | FixiPlug + Claude Code |
+| Git-friendly | ❌ (JS code) | ✅ (Markdown) |
+
+**Example SKILL.md Files**:
+
+All 4 existing JavaScript skills have been exported to SKILL.md format:
+
+- `.claude/skills/reactive-ui-patterns/SKILL.md` (14KB)
+- `.claude/skills/django-workflows/SKILL.md` (22KB)
+- `.claude/skills/error-recovery/SKILL.md` (21KB)
+- `.claude/skills/form-workflows/SKILL.md` (27KB)
+
+**Tests**:
+
+- `test/skill-md-loader.test.js` (54/54 passing, 100% success rate)
+- Tests cover: file loading, YAML parsing, skill registration, API hooks, adapter integration, format validation
+
+**Documentation**: `roadmap/SKILL_FORMAT_BRIDGE.md` - Complete hybrid skill architecture guide
+
+---
+
 ## Recent Major Changes
 
 Recent significant commits:
