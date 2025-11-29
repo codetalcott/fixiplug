@@ -1,6 +1,7 @@
 //// filepath: fixiplug/src/core/fixi-dom.js
 
 import { Fixi } from './fixi-core.js';
+import { send, attr, ignore } from 'fixi-common/utils';
 
 /**
  * DOM‑integration IIFE for Fixi.
@@ -38,19 +39,6 @@ import { Fixi } from './fixi-core.js';
       r.addedNodes.forEach((n) => process(n))
     )
   );
-
-  const send = (elt, type, detail, bub) =>
-    elt.dispatchEvent(
-      new CustomEvent('fx:' + type, {
-        detail,
-        cancelable: true,
-        bubbles: bub !== false,
-        composed: true
-      })
-    );
-
-  const attr = (elt, name, defaultVal) => elt.getAttribute(name) || defaultVal;
-  const ignore = (elt) => elt.closest('[fx-ignore]') != null;
 
   function init(elt) {
     let options = {};
