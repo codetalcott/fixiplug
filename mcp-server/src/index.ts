@@ -126,7 +126,7 @@ server.tool(
   toolDescriptions.extract_data,
   {
     selector: z.string().describe("CSS selector for container elements"),
-    fields: z.record(z.string()).optional().describe("Field mapping (field_name -> selector)")
+    fields: z.record(z.string(), z.string()).optional().describe("Field mapping (field_name -> selector)")
   },
   async ({ selector, fields }) => {
     const executor = await ensureBrowserReady();
@@ -147,7 +147,7 @@ server.tool(
   toolDescriptions.fill_form,
   {
     form_selector: z.string().describe("CSS selector for form element"),
-    data: z.record(z.any()).describe("Field values (field_name -> value)")
+    data: z.record(z.string(), z.any()).describe("Field values (field_name -> value)")
   },
   async ({ form_selector, data }) => {
     const executor = await ensureBrowserReady();

@@ -257,7 +257,7 @@ describe('Tool Descriptions', () => {
     expect(toolDescriptions.click_button).toContain('button');
     expect(toolDescriptions.extract_data).toContain('data');
     expect(toolDescriptions.fill_form).toContain('form');
-    expect(toolDescriptions.navigate).toContain('navigate');
+    expect(toolDescriptions.navigate.toLowerCase()).toContain('navigate');
     expect(toolDescriptions.get_table_data).toContain('table');
   });
 });

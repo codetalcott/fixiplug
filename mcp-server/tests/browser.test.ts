@@ -2,19 +2,23 @@
  * Unit tests for BrowserManager
  */
 
-import { BrowserManager } from '../src/browser.js';
+import { jest, describe, it, expect, beforeEach, afterEach } from '@jest/globals';
 import { Config, defaultConfig } from '../src/core/types.js';
-import { Browser, Page } from 'playwright';
+import type { Browser, Page } from 'playwright';
 
-// Mock Playwright
-jest.mock('playwright', () => ({
+// Mock Playwright BEFORE importing BrowserManager
+const mockLaunch = jest.fn();
+jest.unstable_mockModule('playwright', () => ({
   chromium: {
-    launch: jest.fn(),
+    launch: mockLaunch,
   },
 }));
 
+// Now import BrowserManager (which uses playwright)
+const { BrowserManager } = await import('../src/browser.js');
+
 describe('BrowserManager', () => {
-  let browserManager: BrowserManager;
+  let browserManager: InstanceType<typeof BrowserManager>;
   let testConfig: Config;
   let mockBrowser: jest.Mocked<Browser>;
   let mockPage: jest.Mocked<Page>;
@@ -40,8 +44,7 @@ describe('BrowserManager', () => {
       close: jest.fn(),
     } as any;
 
-    const { chromium } = require('playwright');
-    chromium.launch.mockResolvedValue(mockBrowser);
+    mockLaunch.mockResolvedValue(mockBrowser);
 
     browserManager = new BrowserManager(testConfig);
   });
@@ -63,8 +66,7 @@ describe('BrowserManager', () => {
 
       await browserManager.start();
 
-      const { chromium } = require('playwright');
-      expect(chromium.launch).toHaveBeenCalledWith({
+      expect(mockLaunch).toHaveBeenCalledWith({
         headless: testConfig.browser.headless,
       });
       expect(mockBrowser.newPage).toHaveBeenCalled();
@@ -92,12 +94,11 @@ describe('BrowserManager', () => {
       mockPage.waitForFunction.mockResolvedValue({} as any);
 
       await browserManager.start();
-      const { chromium } = require('playwright');
-      const firstCallCount = chromium.launch.mock.calls.length;
+      const firstCallCount = mockLaunch.mock.calls.length;
 
       await browserManager.start();
 
-      expect(chromium.launch.mock.calls.length).toBe(firstCallCount);
+      expect(mockLaunch.mock.calls.length).toBe(firstCallCount);
     });
 
     it('should cleanup on failure', async () => {

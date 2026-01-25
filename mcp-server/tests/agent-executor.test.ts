@@ -2,6 +2,7 @@
  * Unit tests for AgentExecutor
  */
 
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { AgentExecutor } from '../src/agent-executor.js';
 import { BrowserManager } from '../src/browser.js';
 import { Config, defaultConfig } from '../src/core/types.js';

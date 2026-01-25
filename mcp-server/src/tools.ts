@@ -22,12 +22,12 @@ export const toolSchemas = {
 
   extract_data: z.object({
     selector: z.string().describe("CSS selector for container elements"),
-    fields: z.record(z.string()).optional().describe("Field mapping (field_name -> selector)")
+    fields: z.record(z.string(), z.string()).optional().describe("Field mapping (field_name -> selector)")
   }),
 
   fill_form: z.object({
     form_selector: z.string().describe("CSS selector for form element"),
-    data: z.record(z.any()).describe("Field values (field_name -> value)")
+    data: z.record(z.string(), z.any()).describe("Field values (field_name -> value)")
   }),
 
   navigate: z.object({

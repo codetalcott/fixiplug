@@ -1,0 +1,47 @@
+{
+  "name": "@fixiplug/core",
+  "version": "0.1.0",
+  "description": "Minimal plugin framework with event-driven hooks system",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "types": "./types.d.ts"
+    },
+    "./dom": {
+      "import": "./dom.js",
+      "types": "./types.d.ts"
+    }
+  },
+  "files": [
+    "index.js",
+    "dom.js",
+    "hooks.js",
+    "fixi-core.js",
+    "fixi-dom.js",
+    "fixiplug-factory.js",
+    "types.d.ts"
+  ],
+  "keywords": [
+    "plugin",
+    "hooks",
+    "events",
+    "framework",
+    "extensible",
+    "middleware"
+  ],
+  "author": "",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fixiplug/core.git"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "sideEffects": [
+    "./dom.js",
+    "./fixi-dom.js"
+  ]
+}

@@ -15,11 +15,16 @@
     "test:watch": "npm test -- --watch",
     "test:coverage": "npm test -- --coverage"
   },
-  "keywords": ["mcp", "fixiplug", "agent", "automation"],
+  "keywords": [
+    "mcp",
+    "fixiplug",
+    "agent",
+    "automation"
+  ],
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@modelcontextprotocol/sdk": "^1.0.4",
+    "@modelcontextprotocol/sdk": "^1.25.3",
     "playwright": "^1.48.2",
     "zod": "^3.23.8"
   },
