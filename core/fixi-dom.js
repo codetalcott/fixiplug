@@ -1,7 +1,7 @@
 //// filepath: fixiplug/src/core/fixi-dom.js
 
 import { Fixi } from './fixi-core.js';
-import { send, attr, ignore } from 'fixi-common/utils';
+import { send, attr, ignore } from './utils/dom.js';
 
 /**
  * DOM‑integration IIFE for Fixi.
