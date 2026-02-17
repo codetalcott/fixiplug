@@ -11,26 +11,31 @@
  * @param {boolean} [bubble=true] - Whether event should bubble
  * @returns {boolean} Whether the event was not cancelled
  */
-export const send = (el, type, detail, bubble = true) =>
-  el.dispatchEvent(new CustomEvent('fx:' + type, {
+export const send = (el, type, detail, bubble = true) => {
+  if (!el || typeof el.dispatchEvent !== 'function') return false;
+  return el.dispatchEvent(new CustomEvent('fx:' + type, {
     detail,
     cancelable: true,
     bubbles: bubble,
     composed: true
   }));
+};
 
 /**
  * Get an attribute value from an element with a default fallback
  * @param {Element} el - Target element
  * @param {string} name - Attribute name
- * @param {*} [def] - Default value if attribute is empty/missing
+ * @param {*} [def] - Default value if attribute is missing (not present)
  * @returns {string|*} Attribute value or default
  */
-export const attr = (el, name, def) => el.getAttribute(name) || def;
+export const attr = (el, name, def) => {
+  const val = el.getAttribute(name);
+  return val !== null ? val : def;
+};
 
 /**
  * Check if an element should be ignored (has fx-ignore ancestor)
  * @param {Element} el - Element to check
  * @returns {boolean} True if element should be ignored
  */
-export const ignore = (el) => el.closest('[fx-ignore]') != null;
+export const ignore = (el) => el.closest('[fx-ignore]') !== null;

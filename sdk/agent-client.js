@@ -501,7 +501,10 @@ export class FixiPlugAgent {
    */
   async _dispatch(hook, params, options = {}) {
     const { retry = true } = options;
-    const startTime = this.options.trackPerformance ? performance.now() : 0;
+    const _now = typeof performance !== 'undefined' && performance.now
+      ? () => performance.now()
+      : () => Date.now();
+    const startTime = this.options.trackPerformance ? _now() : 0;
 
     // Determine if this hook should be retried
     const shouldRetry = retry && (
@@ -518,7 +521,7 @@ export class FixiPlugAgent {
         const result = await this.fixi.dispatch(hook, params);
 
         if (this.options.trackPerformance) {
-          const endTime = performance.now();
+          const endTime = _now();
           const duration = endTime - startTime;
 
           this.stats.apiCalls++;
@@ -552,7 +555,7 @@ export class FixiPlugAgent {
 
     // All attempts failed
     if (this.options.trackPerformance) {
-      const endTime = performance.now();
+      const endTime = _now();
       const duration = endTime - startTime;
 
       this.stats.apiCalls++;

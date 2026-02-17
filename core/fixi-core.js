@@ -45,12 +45,13 @@ export class Fixi {
     if (beforeEvt.__cached && beforeEvt.__cacheEntry) {
       // Use cached response
       const cached = beforeEvt.__cacheEntry.response;
+      const cachedData = cached.data;
       res = {
-        ok: cached.ok,
-        status: cached.status,
-        headers: cached.headers,
-        json: async () => cached.data,
-        text: async () => cached.data
+        ok: cached.ok !== undefined ? cached.ok : true,
+        status: cached.status || 200,
+        headers: cached.headers || new Headers(),
+        json: async () => typeof cachedData === 'string' ? JSON.parse(cachedData) : cachedData,
+        text: async () => typeof cachedData === 'string' ? cachedData : JSON.stringify(cachedData)
       };
     } else {
       // Perform actual network request
@@ -70,8 +71,8 @@ export class Fixi {
     const wrapped = {
       ok: res.ok,
       status: res.status,
-      json: res.json.bind(res),
-      text: res.text.bind(res),
+      json: typeof res.json === 'function' ? res.json.bind(res) : async () => ({}),
+      text: typeof res.text === 'function' ? res.text.bind(res) : async () => '',
       headers: res.headers,
       raw: res
     };
