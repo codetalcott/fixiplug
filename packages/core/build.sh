@@ -1,6 +1,6 @@
 #!/bin/bash
 # Build script for @fixiplug/core package
-# Copies core files and adjusts import paths
+# Copies core files, bundled plugins, and adjusts import paths
 
 set -e
 
@@ -16,14 +16,39 @@ cp "$ROOT_DIR/core/fixi-dom.js" "$SCRIPT_DIR/"
 cp "$ROOT_DIR/builder/fixiplug-factory.js" "$SCRIPT_DIR/"
 
 # Fix import paths in fixiplug-factory.js (was ../core/, now ./)
-sed -i '' "s|from '../core/|from './|g" "$SCRIPT_DIR/fixiplug-factory.js"
+sed -i "s|from '../core/|from './|g" "$SCRIPT_DIR/fixiplug-factory.js"
+# Fix plugin import paths (static and dynamic)
+sed -i "s|from '../plugins/|from './plugins/|g" "$SCRIPT_DIR/fixiplug-factory.js"
+sed -i "s|import('../plugins/|import('./plugins/|g" "$SCRIPT_DIR/fixiplug-factory.js"
+
+# Copy bundled plugins
+mkdir -p "$SCRIPT_DIR/plugins"
+CORE_PLUGINS=(
+  logger
+  hook-visualizer
+  performance
+  security
+  error-reporter
+  testing
+  offline
+  data-pipeline
+  content-modifier
+  swap-idiomorph
+  swap-morphlex
+)
+
+for plugin in "${CORE_PLUGINS[@]}"; do
+  cp "$ROOT_DIR/plugins/${plugin}.js" "$SCRIPT_DIR/plugins/"
+done
+
+echo "Copied ${#CORE_PLUGINS[@]} bundled plugins"
 
 # Create entry points
 cat > "$SCRIPT_DIR/index.js" << 'EOF'
 // @fixiplug/core - Minimal plugin framework
 // Zero dependencies, ~30KB unminified
 
-export { createFixiplug, FEATURES } from './fixiplug-factory.js';
+export { createFixiplug, FEATURES, FEATURE_SETS } from './fixiplug-factory.js';
 export { Fixi } from './fixi-core.js';
 export {
   on, off, dispatch,
@@ -39,7 +64,7 @@ cat > "$SCRIPT_DIR/dom.js" << 'EOF'
 // Adds MutationObserver, event handling, fx-action elements
 
 import './fixi-dom.js';
-export { createFixiplug, FEATURES } from './fixiplug-factory.js';
+export { createFixiplug, FEATURES, FEATURE_SETS } from './fixiplug-factory.js';
 export { Fixi } from './fixi-core.js';
 export {
   on, off, dispatch,
@@ -53,9 +78,9 @@ EOF
 # Get sizes
 echo ""
 echo "Package contents:"
-ls -lh "$SCRIPT_DIR"/*.js | awk '{print $5, $9}'
+find "$SCRIPT_DIR" -name "*.js" -exec ls -lh {} \; | awk '{print $5, $9}'
 
-TOTAL=$(cat "$SCRIPT_DIR"/*.js | wc -c | tr -d ' ')
+TOTAL=$(find "$SCRIPT_DIR" -name "*.js" -exec cat {} + | wc -c | tr -d ' ')
 echo ""
 echo "Total size: ${TOTAL} bytes (~$((TOTAL / 1024)) KB)"
 echo ""

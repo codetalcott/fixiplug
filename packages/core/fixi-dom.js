@@ -1,14 +1,7 @@
 //// filepath: fixiplug/src/core/fixi-dom.js
 
 import { Fixi } from './fixi-core.js';
-
-// Inlined utilities (formerly from fixi-common/utils) - zero external dependencies
-const send = (el, type, detail, bubble = true) =>
-  el.dispatchEvent(new CustomEvent('fx:' + type, {
-    detail, cancelable: true, bubbles: bubble, composed: true
-  }));
-const attr = (el, name, def) => el.getAttribute(name) || def;
-const ignore = (el) => el.closest('[fx-ignore]') != null;
+import { send, attr, ignore } from './utils/dom.js';
 
 /**
  * DOM‑integration IIFE for Fixi.

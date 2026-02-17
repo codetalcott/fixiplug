@@ -1,7 +1,7 @@
 // @fixiplug/core - Minimal plugin framework
 // Zero dependencies, ~30KB unminified
 
-export { createFixiplug, FEATURES } from './fixiplug-factory.js';
+export { createFixiplug, FEATURES, FEATURE_SETS } from './fixiplug-factory.js';
 export { Fixi } from './fixi-core.js';
 export {
   on, off, dispatch,
