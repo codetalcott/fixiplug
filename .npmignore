@@ -1,0 +1,8 @@
+experiments/
+docs/
+test/
+roadmap/
+.claude/
+.agent-assist/
+*.backup
+CLAUDE.md

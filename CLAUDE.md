@@ -4,62 +4,54 @@ This file provides guidance to Claude Code when working with code in this reposi
 
 ## Project Overview
 
-FixiPlug is a modular plugin framework with advanced LLM agent integration capabilities. The project consists of:
+FixiPlug is a modular, event-driven plugin framework. The repo is organized as an npm workspace with two publishable packages and an experiments area.
 
-1. **Core Plugin System**: Event-driven architecture for extensible plugins
-2. **Agent SDK**: LLM agent framework with tool execution
-3. **LLM Adapters**: OpenAI and Anthropic integrations
-4. **Agent Playground**: Full-stack web application for testing
+### Repository Structure
+
+```
+fixiplug/
+├── core/                    # Framework engine (hooks, events, dispatch)
+├── builder/                 # Factory (createFixiplug) and plugin manager
+├── plugins/                 # 11 bundled utility plugins
+├── sdk/                     # Agent SDK source (LLM adapters)
+├── packages/
+│   ├── core/                # @fixiplug/core — publishable package
+│   └── agent-sdk/           # @fixiplug/agent-sdk — publishable package
+├── test/                    # Core tests
+│   ├── sdk/                 # SDK browser tests
+│   └── scratch/             # Ad-hoc test scripts (not maintained)
+├── experiments/             # Experimental/specialized code (not published)
+│   ├── plugins/             # 22 experimental plugins
+│   ├── playground/          # Full-stack demo app (Express + frontend)
+│   ├── mcp-server/          # MCP server (TypeScript)
+│   ├── sqlite-framework/    # SQLite extensions bridge
+│   ├── skills/              # SKILL.md files for Claude Code
+│   ├── examples/            # Usage examples
+│   ├── test/                # Tests for experimental features
+│   ├── utils/               # Export utilities
+│   └── roadmap/             # Planning documents
+├── docs/                    # Published docs
+│   └── notes/               # Internal notes, session summaries
+├── utils/                   # Shared utilities (logger, validation)
+├── examples/                # Minimal core examples
+├── fixiplug.js              # Main entry point
+├── package.json             # Workspace root
+└── CLAUDE.md                # This file
+```
 
 ## Commands
-
-### Agent Playground
-
-```bash
-# Start the playground (backend + frontend)
-cd playground
-npm install
-npm start
-# Server runs on http://localhost:3000
-
-# Development mode with auto-reload
-npm run dev
-
-# Run backend tests
-npm test
-```
 
 ### Testing
 
 ```bash
-# Backend tests (Node.js)
-node playground/backend/test/server.test.js
+# Core browser tests (open in browser)
+open test/fixiplug.test.html
+open test/event-buffering.test.html
 
-# Core feature tests (Node.js)
-node test/fetch-interceptors.test.js
-node test/skill-lifecycle.test.js
-node test/dom-delegation.test.js
-node test/skill-retrieval.test.js
-node test/skill-retrieval-benchmarks.test.js
-
-# Browser automated tests (Playwright)
-# Requires server running on localhost:3000
-cd playground
-npm run test:browser
-
-# SDK tests (Browser - open in browser)
+# SDK browser tests
 open test/sdk/agent-client.test.html
 open test/sdk/openai-adapter.test.html
 open test/sdk/anthropic-adapter.test.html
-open test/event-buffering.test.html
-
-# DOM delegation demo (manual testing)
-open http://localhost:3000/dom-delegation-demo.html
-
-# Run examples
-node examples/openai-adapter-example.js
-node examples/anthropic-adapter-example.js
-node playground/examples/backend-usage.js
 
 # TypeScript type checking
 npx tsc --noEmit
@@ -68,1160 +60,102 @@ npx tsc --noEmit
 node --check <file.js>
 ```
 
-### Build and Run
+### Build
 
 ```bash
-# No build step required - uses ES6 modules directly
+# Build @fixiplug/core package
+cd packages/core && bash build.sh
 
-# Run playground
-cd playground && npm start
+# Build @fixiplug/agent-sdk package
+cd packages/agent-sdk && bash build.sh
 
-# Run specific example
-node examples/openai-adapter-example.js
+# No build step for development — uses ES6 modules directly
 ```
 
-## Project Architecture
+### Experimental Features
 
-FixiPlug follows a modular, event-driven architecture with three main layers:
+```bash
+# Playground (requires experiments/playground/)
+cd experiments/playground && npm install && npm start
 
-### 1. Core Layer
-
-**Builder** (`builder/fixiplug-factory.js`)
-- Factory for creating fixiplug instances
-- Feature-based configuration
-
-**Core** (`core/`)
-- Base fixiplug implementation
-- Event dispatch system
-- Plugin management
-
-### 2. Plugin Layer
-
-**Introspection Plugin** (`plugins/introspection.js`)
-- Capability discovery
-- Hook metadata
-- Version tracking
-
-**State Tracker Plugin** (`plugins/state-tracker.js`)
-- Application state management
-- State change notifications
-- State history
-
-**Other Plugins** (`plugins/`)
-- Data transformer
-- Table management
-- Form schema
-- Agent commands
-- DOM Delegation (`dom-delegation.js`) - Event delegation for memory optimization
-- Fetch Logger (`fetch-logger.js`) - Request/response logging
-- Fetch Cache (`fetch-cache.js`) - In-memory caching with TTL
-- Skill Versioning (`skill-versioning.js`) - Track skill version history
-
-### 3. Agent SDK Layer
-
-**Agent Client** (`sdk/agent-client.js`)
-- Main FixiPlugAgent class
-- Capability discovery
-- Workflow orchestration
-- State management
-- Performance tracking
-- Caching
-
-**OpenAI Adapter** (`sdk/adapters/openai-adapter.js`)
-- Function calling integration
-- Tool definition generation (OpenAI format)
-- Tool call execution
-- Message formatting
-
-**Anthropic Adapter** (`sdk/adapters/anthropic-adapter.js`)
-- Tool use integration
-- Tool definition generation (Anthropic format)
-- Tool use execution
-- Tool result formatting
-
-### 4. Application Layer
-
-**Backend** (`playground/backend/`)
-- Express.js HTTP server
-- WebSocket server
-- REST API (15 endpoints)
-  - Chat and capabilities
-  - Conversation management
-  - Agent state management
-  - Workflow execution
-  - Plugin management (enable/disable/list)
-  - Skill registry
-- LLM provider abstraction
-- Services layer
-
-**Frontend** (`playground/frontend/`)
-- Vanilla JavaScript SPA
-- WebSocket client
-- REST API client
-- Real-time chat UI
-- Tool execution visualization
-- Responsive design
-
-### Architectural Patterns
-
-- **Factory Pattern**: Used in builder/, SDK adapters
-- **Observer Pattern**: Core event system, plugin hooks
-- **Adapter Pattern**: LLM provider adapters (OpenAI, Anthropic)
-- **Strategy Pattern**: LLM provider service
-- **Singleton Pattern**: Conversation manager, agent instances
-
-## Core Components
-
-### Agent SDK
-
-**FixiPlugAgent** (`sdk/agent-client.js`)
-- Entry point for LLM agent features
-- Methods:
-  - `discover()` - Get capabilities
-  - `hasCapability()` - Check capability
-  - `getCurrentState()` / `setState()` - State management
-  - `executeWorkflow()` - Run workflows
-  - `warmCache()` / `invalidateCache()` - Cache control
-
-**OpenAIAdapter** (`sdk/adapters/openai-adapter.js`)
-- OpenAI function calling integration
-- Methods:
-  - `getToolDefinitions()` - Generate tools
-  - `executeToolCall()` - Execute function
-  - `createToolMessage()` - Format response
-
-**AnthropicAdapter** (`sdk/adapters/anthropic-adapter.js`)
-- Anthropic tool use integration
-- Methods:
-  - `getToolDefinitions()` - Generate tools
-  - `executeToolUse()` - Execute tool
-  - `createToolResult()` - Format response
-
-### Playground Backend
-
-**Server** (`playground/backend/server.js`)
-- Main Express application
-- Endpoints:
-  - `/health` - Health check
-  - `/api/capabilities` - Get capabilities
-  - `/api/tools/:provider` - Get tools
-  - `/api/chat/:provider` - Chat endpoint
-  - `/api/conversations` - Conversation management
-  - `/api/agent/state` - State management
-  - `/api/workflow/execute` - Workflow execution
-- WebSocket integration
-- SSE streaming support
-
-**Services** (`playground/backend/services/`)
-- ConversationManager - Session tracking
-- LLMProviderService - Provider abstraction
-
-**WebSocket** (`playground/backend/websocket/handlers.js`)
-- Real-time communication
-- Message routing
-- Tool execution feedback
-
-### Playground Frontend
-
-**App** (`playground/frontend/js/app.js`)
-- Main AgentPlayground class
-- UI coordination
-- State management
-- Message display
-- Tool visualization
-
-**WebSocketClient** (`playground/frontend/js/websocket-client.js`)
-- WebSocket connection
-- Auto-reconnect
-- Event handling
-
-**APIClient** (`playground/frontend/js/api-client.js`)
-- REST API wrapper
-- All backend endpoints
-
-### DOM Features and Browser Testing
-
-**DOM Delegation Plugin** (`plugins/dom-delegation.js`)
-
-- Event delegation for memory optimization
-- Reduces listeners from N (one per element) to M (one per event type)
-- Dynamic event type management via hooks:
-  - `api:addDelegationEventType` - Add new event types at runtime
-  - `api:getDelegationStats` - Get delegation statistics
-- Achieves ~96% memory reduction for 100+ elements
-- See: `playground/frontend/dom-delegation-demo.html`
-
-**DOM Feature** (`core/fixi-dom.js`)
-
-- Async factory pattern with event buffering
-- Prevents race conditions during module loading
-- `fx:dom:ready` event signals initialization complete
-- `document.__fixi_ready` flag for synchronous checks
-- See: `docs/DOM_FEATURE_INITIALIZATION.md`
-
-**Browser Testing** (`playground/test/`)
-
-- Playwright-based automated testing
-- Tests all 8 event types: click, double-click, mouseenter, change, input, focus, submit, keydown
-- Validates delegation statistics and memory reduction
-- Run: `cd playground && npm run test:browser`
-- See: `test/BROWSER_TESTING.md`
-
-**Event Validation Features** (in `dom-delegation-demo.html`)
-
-- Live counter badges showing event fire counts
-- Visual feedback (element flashing on events)
-- Detailed console logging of all events
-- Validation tools: `showEventCounts()`, `resetEventCounts()`, `showEventTypes()`
-- Track individual event type firing via `eventTypeCounts` object
-
-## Domain Terminology
-
-### Core Concepts
-
-- **Plugin**: Module that extends fixiplug functionality
-- **Hook**: Named event that plugins can listen to
-- **Dispatch**: Trigger an event/hook
-- **Context**: Plugin's interface to fixiplug
-
-### Agent SDK
-
-- **Agent**: FixiPlugAgent instance
-- **Capability**: Plugin or hook that's available
-- **Tool**: LLM-callable function
-- **Adapter**: Provider-specific integration
-- **Workflow**: Multi-step execution plan
-
-### LLM Integration
-
-- **Tool Call** (OpenAI): Function execution request
-- **Tool Use** (Anthropic): Tool execution request
-- **Tool Definition**: JSON schema for LLM
-- **Tool Result**: Execution response
-
-### Playground
-
-- **Provider**: LLM service (OpenAI, Anthropic)
-- **Conversation**: Chat session
-- **Streaming**: Real-time response chunks
-- **WebSocket**: Bidirectional connection
-
-## File Organization
-
+# Experimental tests
+node experiments/test/fetch-interceptors.test.js
+node experiments/test/skill-lifecycle.test.js
+node experiments/test/skill-retrieval.test.js
+node experiments/test/skill-md-loader.test.js
 ```
-fixiplug/
-├── builder/                 # Factory patterns
-├── core/                    # Base implementation
-├── plugins/                 # Plugin implementations
-│   ├── introspection.js    # Capability discovery
-│   ├── state-tracker.js    # State management
-│   └── ...
-├── sdk/                     # Agent SDK
-│   ├── agent-client.js     # Main agent class
-│   ├── adapters/           # LLM adapters
-│   │   ├── openai-adapter.js
-│   │   ├── anthropic-adapter.js
-│   │   └── README.md
-│   ├── types.d.ts          # TypeScript definitions
-│   └── README.md
-├── playground/              # Web application
-│   ├── backend/            # Server
-│   │   ├── server.js
-│   │   ├── services/
-│   │   ├── websocket/
-│   │   └── test/
-│   ├── frontend/           # UI
-│   │   ├── index.html
-│   │   ├── css/
-│   │   ├── js/
-│   │   └── README.md
-│   ├── examples/
-│   ├── package.json
-│   └── README.md
-├── examples/                # Usage examples
-├── test/                    # Test suites
-├── docs/                    # Documentation
-│   ├── SESSION_1_SUMMARY.md
-│   ├── SESSION_2_SUMMARY.md
-│   ├── SESSION_3_SUMMARY.md
-│   ├── SESSION_4_SUMMARY.md
-│   ├── SESSION_5_SUMMARY.md
-│   └── SESSION_6_SUMMARY.md
-└── README.md
-```
+
+## Architecture
+
+### Core Layer
+
+- **`core/fixi-core.js`** — Base Fixi class, hook dispatch engine
+- **`core/hooks.js`** — Hook lifecycle (register, unregister, enable, disable, priorities)
+- **`core/fixi-dom.js`** — DOM integration (MutationObserver, fx-action, event buffering)
+- **`builder/fixiplug-factory.js`** — Factory function, features, plugin context
+
+### Plugin Layer (11 bundled plugins)
+
+- `logger.js` — Event logging
+- `hook-visualizer.js` — Visual hook execution display
+- `performance.js` — Execution timing
+- `security.js` — Input validation
+- `error-reporter.js` — Error capture
+- `testing.js` — Hook mocking, dispatch tracking
+- `offline.js` — Offline detection
+- `data-pipeline.js` — Data transformation
+- `content-modifier.js` — Content modification
+- `swap-idiomorph.js` / `swap-morphlex.js` — DOM morphing strategies
+
+### Agent SDK Layer (`sdk/`)
+
+- **`agent-client.js`** — FixiPlugAgent class (discovery, state, workflows, caching)
+- **`adapters/base-adapter.js`** — Shared adapter logic
+- **`adapters/openai-adapter.js`** — OpenAI function calling
+- **`adapters/anthropic-adapter.js`** — Anthropic tool use
+- **`adapters/tool-definitions.js`** — Dynamic tool generation from plugins
+
+### Experiments (`experiments/`)
+
+Experimental and specialized code that is **not published**:
+
+- **22 plugins**: introspection, state-tracker, table (51KB), form-schema (38KB), agent-commands, DOM delegation, fetch interceptors, skill plugins, SQLite plugins, etc.
+- **Playground**: Express.js backend + vanilla JS frontend for testing
+- **MCP Server**: TypeScript Model Context Protocol implementation
+- **SQLite Framework**: Bridge to Python SQLite extensions
+- **Skills**: SKILL.md files for Claude Code compatibility
 
 ## Code Style
 
 - **Indentation**: 2 spaces
-- **Quotes**: Double quotes for strings
+- **Quotes**: Double quotes
 - **Semicolons**: Required
-- **Modules**: ES6 modules (import/export)
-- **Async**: Prefer async/await over promises
-- **Comments**: JSDoc for public APIs
-- **Naming**:
-  - Classes: PascalCase
-  - Functions/methods: camelCase
-  - Constants: UPPER_SNAKE_CASE
-  - Private methods: _prefixWithUnderscore
+- **Modules**: ES6 (import/export)
+- **Async**: Prefer async/await
+- **Naming**: PascalCase (classes), camelCase (functions), UPPER_SNAKE_CASE (constants), _prefix (private)
 
-## Environment Variables
+## Key Patterns
 
-### Playground
+- **Factory**: `createFixiplug({ features: [...] })` returns configured instance
+- **Observer**: Plugins register hooks via `context.on(name, handler, priority)`
+- **Adapter**: OpenAI/Anthropic adapters wrap the agent client
+- **Plugin Context**: Each plugin gets an isolated context with on/off/emit/storage
 
-```bash
-# Required for LLM functionality
-OPENAI_API_KEY=sk-...        # OpenAI API key
-ANTHROPIC_API_KEY=sk-...     # Anthropic API key
+## Adding a Plugin
 
-# Optional
-PORT=3000                     # Server port (default: 3000)
-NODE_ENV=development          # Environment mode
-```
+1. Create file in `plugins/` with `name` and `setup(context)` export
+2. Register hooks in setup: `context.on('hookName', handler, priority)`
+3. Optionally return `{ skill: { ... } }` for LLM-accessible metadata
+4. Add tests in `test/`
 
-### Testing
+## Packages
 
-```bash
-# For running examples with real APIs
-OPENAI_API_KEY=sk-...
-ANTHROPIC_API_KEY=sk-...
-```
+### @fixiplug/core
 
-## Development Guidelines
+Zero dependencies. Contains the framework engine + 11 bundled plugins.
+Built from `core/`, `builder/`, `plugins/` into `packages/core/`.
 
-### Adding a New Plugin
+### @fixiplug/agent-sdk
 
-1. Create file in `plugins/` directory
-2. Export object with `name` and `setup` function
-3. Register hooks in `setup(context)`
-4. Add tests in `test/` directory
-5. Document in plugin's JSDoc comments
-
-### Adding a New LLM Adapter
-
-1. Create file in `sdk/adapters/`
-2. Implement tool definition generation
-3. Implement tool execution
-4. Add TypeScript types in `sdk/types.d.ts`
-5. Create tests in `test/sdk/`
-6. Add examples in `examples/`
-7. Document in `sdk/adapters/README.md`
-
-### Adding a Playground Feature
-
-**Backend:**
-1. Add endpoint in `playground/backend/server.js`
-2. Create service if needed in `services/`
-3. Add WebSocket handler if needed
-4. Write tests in `backend/test/`
-
-**Frontend:**
-1. Add UI elements in `frontend/index.html`
-2. Style in `frontend/css/styles.css`
-3. Add logic in `frontend/js/app.js`
-4. Update API client if needed
-
-## Testing Strategy
-
-### Unit Tests
-
-- **SDK**: Browser-based tests (test/sdk/*.test.html)
-- **Backend**: Node.js tests (playground/backend/test/)
-- **Services**: Unit tests for ConversationManager, LLMProviderService
-
-### Integration Tests
-
-- **Adapters**: Test with mock LLM responses
-- **Backend**: Test API endpoints
-- **WebSocket**: Test real-time communication
-
-### Manual Testing
-
-- **Playground**: Run server and test in browser
-- **Examples**: Execute example files
-- **LLM Integration**: Test with real API keys
-
-## Common Tasks
-
-### Run the Playground
-
-```bash
-cd playground
-npm install
-export OPENAI_API_KEY=sk-...
-export ANTHROPIC_API_KEY=sk-...
-npm start
-# Open http://localhost:3000
-```
-
-### Test SDK Changes
-
-```bash
-# Update code in sdk/
-node --check sdk/agent-client.js
-npx tsc --noEmit
-open test/sdk/agent-client.test.html
-```
-
-### Test Adapter Changes
-
-```bash
-# Update code in sdk/adapters/
-node --check sdk/adapters/openai-adapter.js
-node examples/openai-adapter-example.js
-```
-
-### Test Backend Changes
-
-```bash
-# Update code in playground/backend/
-node --check playground/backend/server.js
-node playground/backend/test/server.test.js
-```
-
-### Test Frontend Changes
-
-```bash
-# Update code in playground/frontend/
-# No build step needed - just refresh browser
-cd playground && npm start
-# Open http://localhost:3000
-```
-
-## Debugging
-
-### Backend Debugging
-
-```javascript
-// Enable logging in server
-const fixiplug = createFixiplug({
-  features: ['logging']  // Enables console logging
-});
-```
-
-### Frontend Debugging
-
-```javascript
-// Use browser console
-console.log(window.app);  // Access main app instance
-console.log(window.app.wsClient.isConnected());
-console.log(window.app.stats);
-```
-
-### Agent SDK Debugging
-
-```javascript
-// Enable performance tracking
-const agent = new FixiPlugAgent(fixiplug, {
-  trackPerformance: true
-});
-
-// Get metrics
-const metrics = agent.getPerformanceMetrics();
-console.log(metrics);
-```
-
-## New Features
-
-### 1. Fetch Response Interceptors
-
-**Purpose**: Hook into HTTP fetch lifecycle for request modification, response caching, and logging.
-
-**Core Implementation** (`core/fixi-core.js`):
-- Three new hooks: `fetch:before`, `fetch:after`, `fetch:ready`
-- Allows plugins to modify requests, cache responses, and intercept network calls
-
-**Example Plugins**:
-- **fetch-logger.js**: Logs all HTTP requests/responses with timing
-- **fetch-cache.js**: In-memory caching with TTL (60s default) and LRU eviction
-
-**Usage**:
-```javascript
-const fixiplug = createFixiplug({ features: ['logging'] });
-fixiplug.use(fetchLogger);    // Log all requests
-fixiplug.use(fetchCache);     // Cache GET requests
-
-// Check cache stats
-const stats = await fixiplug.dispatch('api:getCacheStats');
-// Clear cache
-await fixiplug.dispatch('api:clearCache');
-```
-
-**Tests**: `test/fetch-interceptors.test.js` (23/23 passing)
-
----
-
-### 2. Skill Registry Lifecycle Hooks
-
-**Purpose**: Track and version skill registration/updates/removals with full history.
-
-**Core Implementation** (`core/hooks.js`):
-- Three new events: `skill:registered`, `skill:updated`, `skill:removed`
-- Emitted automatically when skills are registered/updated/removed
-
-**Example Plugin**:
-- **skill-versioning.js**: Tracks complete version history with change detection
-
-**Usage**:
-```javascript
-const fixiplug = createFixiplug({ features: ['logging'] });
-fixiplug.use(skillVersioning);
-
-// Get version history for a plugin
-const history = await fixiplug.dispatch('api:getSkillHistory', {
-  plugin: 'stateTrackerPlugin'
-});
-
-// Get all versions across all skills
-const allVersions = await fixiplug.dispatch('api:getAllSkillVersions');
-```
-
-**Tests**: `test/skill-lifecycle.test.js` (41/41 passing)
-
----
-
-### 3. DOM Event Delegation
-
-**Purpose**: Reduce memory usage by 96% using single delegated listeners instead of per-element listeners.
-
-**Core Implementation**:
-- **Plugin**: `plugins/dom-delegation.js` - Intercepts `fx:init` with HIGH priority
-- **Core Integration**: `core/fixi-dom.js` - Checks `__delegated` flag to skip individual listeners
-
-**Memory Optimization**:
-- Traditional: 100 elements = 100 listeners
-- Delegated: 100 elements = 4 listeners (96% reduction)
-
-**Usage**:
-```javascript
-const fixiplug = createFixiplug({ features: ['dom'] });
-fixiplug.use(domDelegation);
-
-// Get delegation statistics
-const stats = await fixiplug.dispatch('api:getDelegationStats');
-// {
-//   active: true,
-//   eventTypes: ['click', 'change', 'submit', 'input'],
-//   elementsHandled: 100,
-//   listenersAttached: 4,
-//   memoryReduction: '~96%'
-// }
-
-// Add custom event type
-await fixiplug.dispatch('api:addDelegationEventType', { eventType: 'focus' });
-
-// Remove event type
-await fixiplug.dispatch('api:removeDelegationEventType', { eventType: 'input' });
-```
-
-**Tests**: `test/dom-delegation.test.js` (25/27 passing, 92.6%)
-
----
-
-### 4. Plugin Management API
-
-**Purpose**: Enable/disable plugins at runtime with full status tracking.
-
-**Core Implementation**:
-- **Core**: `core/hooks.js` - `enablePlugin()` and `disablePlugin()` functions
-- **Factory**: `builder/fixiplug-factory.js` - `enable()`, `disable()`, `getPluginsInfo()`, `getPluginInfo()`
-- **Backend**: 4 new REST endpoints in `playground/backend/server.js`
-- **Frontend**: 4 new API client methods in `playground/frontend/js/api-client.js`
-
-**API Endpoints**:
-```bash
-GET    /api/plugins                # List all plugins with status
-POST   /api/plugins/:name/enable   # Enable a plugin
-POST   /api/plugins/:name/disable  # Disable a plugin
-GET    /api/skills                 # List all skills
-```
-
-**Usage**:
-
-Backend (Node.js):
-```javascript
-// Disable plugin
-fixiplug.disable('stateTrackerPlugin');
-
-// Enable plugin
-fixiplug.enable('stateTrackerPlugin');
-
-// Get plugin info
-const info = fixiplug.getPluginInfo('stateTrackerPlugin');
-// { name, disabled: false, hasSkill: true, skill: {...} }
-
-// Get all plugins
-const allPlugins = fixiplug.getPluginsInfo();
-```
-
-Frontend (Browser):
-```javascript
-// List plugins
-const response = await apiClient.listPlugins();
-// { success: true, plugins: [...], count: 3 }
-
-// Disable plugin
-await apiClient.disablePlugin('stateTrackerPlugin');
-
-// Enable plugin
-await apiClient.enablePlugin('stateTrackerPlugin');
-
-// List skills
-const skills = await apiClient.listSkills();
-```
-
-**Behavior**:
-- Disabled plugins stay registered but their hooks won't execute
-- Non-destructive - can be re-enabled without losing state
-- Local and core status tracking synchronized
-
----
-
-### 5. Skill Retrieval (Dynamic Context Loading)
-
-**Purpose**: Enable on-demand skill retrieval to reduce context usage from 78KB to 0KB baseline, with 73.8% savings when 1 skill is needed.
-
-**Core Implementation**:
-
-- **Hook**: `plugins/introspection.js` - New `api:getSkill` hook retrieves skills by name
-- **Anthropic Adapter**: `sdk/adapters/anthropic-adapter.js` - `retrieve_skill` tool with caching
-- **OpenAI Adapter**: `sdk/adapters/openai-adapter.js` - `retrieve_skill` function with caching
-- **Strategy Options**: `skillStrategy` parameter: 'dynamic' (default), 'static', or 'none'
-
-**Performance Metrics**:
-
-- Baseline context: 0KB (dynamic) vs 78KB (static)
-- Average skill size: ~21KB
-- Retrieval speed: <1ms (cached)
-- Context savings: 100% (0 skills), 73.8% (1 skill), 47.6% (2 skills)
-
-**Usage**:
-
-Anthropic Adapter (Tool Use):
-```javascript
-import { AnthropicAdapter } from './sdk/adapters/anthropic-adapter.js';
-
-// Dynamic strategy (default) - skills retrieved on-demand
-const adapter = new AnthropicAdapter(agent);  // skillStrategy: 'dynamic'
-const tools = await adapter.getToolDefinitions();
-// Includes retrieve_skill tool
-
-// Claude calls: retrieve_skill({ skill_name: "django-workflows" })
-// Returns 22KB of Django integration patterns
-```
-
-OpenAI Adapter (Function Calling):
-```javascript
-import { OpenAIAdapter } from './sdk/adapters/openai-adapter.js';
-
-// Dynamic strategy (default)
-const adapter = new OpenAIAdapter(agent);  // skillStrategy: 'dynamic'
-const tools = await adapter.getToolDefinitions();
-// Includes retrieve_skill function
-
-// GPT calls: retrieve_skill({ skill_name: "error-recovery" })
-// Returns 21KB of error handling patterns
-```
-
-Static Strategy (legacy):
-```javascript
-// Load all skills into context upfront (78KB)
-const adapter = new AnthropicAdapter(agent, { skillStrategy: 'static' });
-const skillsContext = await adapter.getSkillsContext({ format: 'full' });
-
-// Use in system message
-const response = await anthropic.messages.create({
-  model: 'claude-3-5-sonnet-20241022',
-  system: skillsContext,  // 78KB loaded upfront
-  messages: [...],
-  tools: await adapter.getToolDefinitions()
-});
-```
-
-Direct Hook Usage:
-```javascript
-// Retrieve specific skill by name
-const result = await fixiplug.dispatch('api:getSkill', {
-  skillName: 'reactive-ui-patterns'
-});
-
-if (result.success) {
-  console.log(result.skill.instructions);  // Complete skill guide
-  console.log(result.skill.tags);          // ['ui', 'state', 'reactive']
-  console.log(result.pluginName);          // 'reactiveUiPatternsSkill'
-}
-```
-
-**Available Skills**:
-
-- **django-workflows** (22KB): Django CRUD, tables, forms with dj-fixi
-- **error-recovery** (21KB): Retry logic, fallback strategies, circuit breakers
-- **form-workflows** (27KB): Multi-step forms, validation, submission
-- **reactive-ui-patterns** (14KB): State-driven UI, reactive patterns
-
-**Tests**:
-
-- `test/skill-retrieval.test.js` (65/65 passing)
-- `test/skill-retrieval-benchmarks.test.js` (performance measurements)
-
-**Documentation**: `sdk/adapters/README.md` - Complete skill retrieval guide
-
----
-
-### 6. Hybrid Skill Format Support (SKILL.md Loader)
-
-**Purpose**: Enable portability between FixiPlug and Claude Code by supporting both JavaScript plugin skills and Claude Code-compatible SKILL.md files.
-
-**Core Implementation**:
-
-- **Loader Plugin**: `plugins/skill-md-loader.js` - Loads SKILL.md files from `.claude/skills/` directories
-- **Export Utility**: `utils/export-skill-to-md.js` - Converts JavaScript skills to SKILL.md format
-- **File Format**: YAML frontmatter + Markdown content (Claude Code standard)
-
-**Skill Locations**:
-
-- **Project skills**: `.claude/skills/` (git-committed, team-shared)
-- **Personal skills**: `~/.claude/skills/` (user-specific)
-
-**SKILL.md Format**:
-
-```markdown
----
-name: skill-name
-description: Brief description of when to use this skill
-tags:
-  - tag1
-  - tag2
-version: 1.0.0
-level: intermediate
-author: Team Name
----
-
-# Skill Name
-
-## Instructions
-
-Complete skill documentation in markdown...
-```
-
-**Usage**:
-
-Load SKILL.md files (automatic):
-```javascript
-import skillMdLoader from './plugins/skill-md-loader.js';
-
-const fixiplug = createFixiplug({ features: [] });
-fixiplug.use(introspectionPlugin);
-fixiplug.use(skillMdLoader);  // Automatically loads .claude/skills/**/*.SKILL.md
-
-// SKILL.md skills appear alongside JavaScript skills
-const manifest = await fixiplug.dispatch('api:getSkillsManifest');
-// Returns both JS skills and SKILL.md skills
-
-// Retrieve SKILL.md skill same as JS skill
-const result = await fixiplug.dispatch('api:getSkill', {
-  skillName: 'django-workflows'  // Works for both formats
-});
-```
-
-Export JavaScript skills to SKILL.md:
-
-```bash
-# Export all skills to .claude/skills/
-node utils/export-skill-to-md.js
-
-# Export specific skill
-node utils/export-skill-to-md.js --skill reactive-ui-patterns
-
-# Export to custom directory
-node utils/export-skill-to-md.js --output ~/my-skills
-```
-
-Programmatic export:
-```javascript
-import { exportSkillToMd, exportAllSkills } from './utils/export-skill-to-md.js';
-
-// Export single skill
-const skill = {
-  name: 'my-skill',
-  description: 'Skill description',
-  instructions: '# My Skill\n\n...',
-  tags: ['tag1', 'tag2'],
-  version: '1.0.0'
-};
-const mdPath = await exportSkillToMd(skill, '.claude/skills');
-
-// Export all skills from fixiplug instance
-const results = await exportAllSkills(fixiplug, '.claude/skills');
-console.log(`Exported ${results.exported.length} skills`);
-```
-
-Check SKILL.md loader stats:
-```javascript
-const stats = await fixiplug.dispatch('api:getSkillMdStats');
-console.log(stats.loaded);  // 4
-console.log(stats.skills);  // [{name: 'django-workflows', source: 'project', path: '...'}]
-console.log(stats.locations);  // ['.claude/skills', '~/.claude/skills']
-```
-
-Reload SKILL.md files:
-```javascript
-// Re-scan directories and register new/updated skills
-const result = await fixiplug.dispatch('api:reloadSkillMd');
-console.log(`Reloaded ${result.reloaded} skills`);
-```
-
-**Benefits of Hybrid Approach**:
-
-1. **Portability**: SKILL.md files work in both FixiPlug and Claude Code
-2. **Simplicity**: No JavaScript knowledge needed for pure instructional skills
-3. **Advanced Features**: JavaScript plugins can still use `setup()` for hooks/logic
-4. **Unified API**: Both formats accessible via same `api:getSkill` hook
-5. **LLM Integration**: Both formats available via `retrieve_skill` tool/function
-
-**Format Comparison**:
-
-| Feature | JavaScript Plugin | SKILL.md File |
-|---------|------------------|---------------|
-| Skill metadata | ✅ | ✅ |
-| Instructions | ✅ | ✅ |
-| setup() hooks | ✅ | ❌ |
-| Event listeners | ✅ | ❌ |
-| Dynamic logic | ✅ | ❌ |
-| Portability | FixiPlug only | FixiPlug + Claude Code |
-| Git-friendly | ❌ (JS code) | ✅ (Markdown) |
-
-**Example SKILL.md Files**:
-
-All 4 existing JavaScript skills have been exported to SKILL.md format:
-
-- `.claude/skills/reactive-ui-patterns/SKILL.md` (14KB)
-- `.claude/skills/django-workflows/SKILL.md` (22KB)
-- `.claude/skills/error-recovery/SKILL.md` (21KB)
-- `.claude/skills/form-workflows/SKILL.md` (27KB)
-
-**Tests**:
-
-- `test/skill-md-loader.test.js` (54/54 passing, 100% success rate)
-- Tests cover: file loading, YAML parsing, skill registration, API hooks, adapter integration, format validation
-
-**Documentation**: `roadmap/SKILL_FORMAT_BRIDGE.md` - Complete hybrid skill architecture guide
-
----
-
-### 7. SQLite Extensions Framework Integration
-
-**Purpose**: Enable LLM agents to leverage database capabilities including pattern learning, code generation, dynamic tool creation, and agent context management through integration with the SQLite Extensions Framework.
-
-**Core Implementation**:
-
-- **4 Core Plugins**: Pattern learner, extension generator, agent amplification, agent context
-- **Service Layer**: `sdk/adapters/sqlite-framework/service.js` - High-level API with validation, caching, metrics
-- **Bridge Layer**: `sdk/adapters/sqlite-framework/bridge.js` - Process pool communication with Python framework
-- **SKILL.md Files**: All 4 plugins exported to `.claude/skills/` for Claude Code compatibility
-
-**Architecture Stack**:
-
-```text
-LLM Agent (Claude/GPT)
-    ↓ retrieve_skill('sqlite-pattern-learner')
-Skills Layer (.claude/skills/*.md)
-    ↓ Instructions loaded
-Plugin Layer (plugins/sqlite-*.js)
-    ↓ sqlite.patterns.get({...})
-Service Layer (validation, caching, metrics)
-    ↓ JSON-RPC 2.0
-Bridge Layer (process pool, retry, circuit breaker)
-    ↓ Python subprocess
-SQLite Extensions Framework (Python)
-```
-
-**Available Plugins**:
-
-1. **sqlite-pattern-learner** (`plugins/sqlite-pattern-learner.js`)
-   - Hooks: `sqlite.patterns.get`, `sqlite.patterns.find_similar`, `sqlite.patterns.statistics`, `sqlite.patterns.record`
-   - Learn from proven database query patterns
-   - Get optimized recommendations based on domain and requirements
-   - Skill: `.claude/skills/sqlite-pattern-learner/SKILL.md`
-
-2. **sqlite-extension-generator** (`plugins/sqlite-extension-generator.js`)
-   - Hooks: `sqlite.extension.analyze`, `sqlite.extension.recommend_path`, `sqlite.extension.generate`, `sqlite.extension.quick_generate`
-   - Generate SQLite extensions in C, Rust, or Mojo
-   - Analyze requirements and recommend implementation approach
-   - Skill: `.claude/skills/sqlite-extension-generator/SKILL.md`
-
-3. **sqlite-agent-amplification** (`plugins/sqlite-agent-amplification.js`)
-   - Hooks: `sqlite.agent.create_tool`, `sqlite.agent.record_decision`, `sqlite.agent.consult_peers`, `sqlite.agent.track_evolution`
-   - Create dynamic tools on-the-fly
-   - Consult specialized peer agents
-   - Track capability evolution over time
-   - Skill: `.claude/skills/sqlite-agent-amplification/SKILL.md`
-
-4. **sqlite-agent-context** (`plugins/sqlite-agent-context.js`)
-   - Hooks: `sqlite.context.detect`, `sqlite.context.capabilities`, `sqlite.context.token_budget`, `sqlite.context.format_response`
-   - Auto-detect agent type and capabilities
-   - Calculate token budgets
-   - Format responses for specific agents
-   - Skill: `.claude/skills/sqlite-agent-context/SKILL.md`
-
-**Usage**:
-
-Setup with SQLite plugins:
-```javascript
-import { createFixiplug } from './builder/fixiplug-factory.js';
-import introspectionPlugin from './plugins/introspection.js';
-import skillMdLoader from './plugins/skill-md-loader.js';
-import sqlitePatternLearner from './plugins/sqlite-pattern-learner.js';
-import sqliteExtensionGenerator from './plugins/sqlite-extension-generator.js';
-import sqliteAgentAmplification from './plugins/sqlite-agent-amplification.js';
-import sqliteAgentContext from './plugins/sqlite-agent-context.js';
-
-// Set framework path
-process.env.SQLITE_FRAMEWORK_PATH = '/path/to/sqlite-extensions-framework';
-
-// Create fixiplug instance
-const fixiplug = createFixiplug({ features: [] });
-fixiplug.use(introspectionPlugin);
-fixiplug.use(skillMdLoader);
-fixiplug.use(sqlitePatternLearner);
-fixiplug.use(sqliteExtensionGenerator);
-fixiplug.use(sqliteAgentAmplification);
-fixiplug.use(sqliteAgentContext);
-```
-
-Pattern Learning Example:
-```javascript
-// Get pattern recommendations
-const patterns = await fixiplug.dispatch('sqlite.patterns.get', {
-  domain: 'finance',
-  description: 'Calculate portfolio value at risk',
-  minConfidence: 0.8,
-  maxResults: 3
-});
-
-console.log(patterns.recommendations);
-// [
-//   {
-//     pattern: 'finance_var_calculation',
-//     confidence: 0.95,
-//     successRate: 0.92,
-//     avgPerformance: 150  // ms
-//   }
-// ]
-
-// Record successful pattern
-await fixiplug.dispatch('sqlite.patterns.record', {
-  patternName: 'custom_risk_metric',
-  domain: 'finance',
-  description: 'Custom risk metric for derivatives',
-  successRate: 0.94,
-  performance: 180
-});
-```
-
-Extension Generation Example:
-```javascript
-// Analyze requirements
-const analysis = await fixiplug.dispatch('sqlite.extension.analyze', {
-  description: 'Real-time streaming aggregation',
-  domain: 'analytics',
-  performanceRequirements: {
-    maxLatency: 1,      // 1ms
-    throughput: 10000   // 10k ops/sec
-  }
-});
-
-console.log(analysis.recommendations);
-// [
-//   { backend: 'mojo', confidence: 0.95, reasoning: 'Best for sub-ms latency' },
-//   { backend: 'rust', confidence: 0.88, reasoning: 'Excellent safety + performance' }
-// ]
-
-// Generate extension
-const extension = await fixiplug.dispatch('sqlite.extension.generate', {
-  description: 'Customer lifetime value calculation',
-  backend: 'rust',
-  performanceLevel: 'speed',
-  includeTests: true
-});
-
-console.log(extension.code);        // Rust source code
-console.log(extension.tests);       // Test suite
-console.log(extension.buildInstructions);  // How to build
-```
-
-Agent Amplification Example:
-```javascript
-// Create dynamic tool
-const tool = await fixiplug.dispatch('sqlite.agent.create_tool', {
-  name: 'portfolio_rebalancer',
-  description: 'Rebalance investment portfolio',
-  parameters: {
-    type: 'object',
-    properties: {
-      currentHoldings: { type: 'object' },
-      targetAllocation: { type: 'object' }
-    }
-  },
-  implementation: 'python',
-  code: 'def rebalance(...):\n    # implementation'
-});
-
-// Tool is now available as hook
-await fixiplug.dispatch(tool.hookName, {
-  currentHoldings: { 'AAPL': 5000 },
-  targetAllocation: { 'AAPL': 0.6 }
-});
-
-// Consult peer agents
-const advice = await fixiplug.dispatch('sqlite.agent.consult_peers', {
-  question: 'Best approach for real-time fraud detection?',
-  domain: 'security',
-  context: { transactionVolume: 10000 }
-});
-
-console.log(advice.consensus);  // Consensus recommendation from peers
-```
-
-Agent Context Example:
-```javascript
-// Detect current agent
-const agent = await fixiplug.dispatch('sqlite.context.detect');
-console.log(agent.type);  // 'claude-code', 'gpt-4', etc.
-console.log(agent.capabilities);  // ['tool-use', 'vision', ...]
-
-// Get detailed capabilities
-const caps = await fixiplug.dispatch('sqlite.context.capabilities', {
-  agentType: 'claude-3-5-sonnet'
-});
-console.log(caps.maxTokens);  // 200000
-console.log(caps.toolUseSupport);  // true
-
-// Calculate token budget
-const budget = await fixiplug.dispatch('sqlite.context.token_budget', {
-  conversation: [
-    { role: 'user', content: 'Hello' },
-    { role: 'assistant', content: 'Hi there!' }
-  ]
-});
-console.log(`Used: ${budget.totalTokens} / ${budget.maxTokens}`);
-console.log(`Remaining: ${budget.remainingTokens} tokens`);
-```
-
-LLM Integration Example:
-```javascript
-import { FixiPlugAgent } from './sdk/agent-client.js';
-import { AnthropicAdapter } from './sdk/adapters/anthropic-adapter.js';
-
-const agent = new FixiPlugAgent(fixiplug, { skillStrategy: 'dynamic' });
-const adapter = new AnthropicAdapter(agent);
-
-// LLM workflow:
-// 1. LLM calls retrieve_skill('sqlite-pattern-learner')
-// 2. LLM reads instructions on pattern learning
-// 3. LLM calls sqlite.patterns.get({ domain: 'finance', ... })
-// 4. LLM applies proven patterns to generate optimal code
-
-const tools = await adapter.getToolDefinitions();
-// Includes: retrieve_skill, dispatch_hook (for calling sqlite.* hooks)
-```
-
-**Context Efficiency**:
-
-| Approach | Initial Context | On-Demand | Total (1 skill) | Savings |
-|----------|----------------|-----------|-----------------|---------|
-| Static (all skills) | 162KB | 0KB | 162KB | 0% |
-| Dynamic (this approach) | 0KB | ~35KB | 35KB | **78%** |
-
-**Performance Characteristics**:
-
-- **Skill Retrieval**: <1ms (cached)
-- **Pattern Learning**: 50-200ms typical
-- **Extension Generation**: 2-10 seconds
-- **Dynamic Tool Creation**: 1-3 seconds
-- **Agent Detection**: 50-100ms (cache recommended)
-
-**Environment Setup**:
-
-```bash
-# Required: Set framework path
-export SQLITE_FRAMEWORK_PATH=/path/to/sqlite-extensions-framework
-
-# Optional: Configure service
-export SQLITE_MAX_PROCESSES=4              # Process pool size (default: 4)
-export SQLITE_REQUEST_TIMEOUT=30000        # Request timeout ms (default: 30000)
-export SQLITE_CACHE_ENABLED=true           # Enable caching (default: true)
-```
-
-**Prerequisites**:
-
-- SQLite Extensions Framework installed (Python)
-- Python 3.8+ with framework dependencies
-- Environment variable `SQLITE_FRAMEWORK_PATH` set
-
-**Available Skills** (`.claude/skills/`):
-
-- **sqlite-pattern-learner** (~35KB): Pattern learning and recommendations
-- **sqlite-extension-generator** (~38KB): SQLite extension code generation
-- **sqlite-agent-amplification** (~40KB): Dynamic tool creation and peer consultation
-- **sqlite-agent-context** (~37KB): Agent detection and context management
-
-**Tests**:
-
-- `test/sqlite-skills-integration.test.js` - Full stack integration tests
-- Skills can be retrieved via `api:getSkill`
-- Plugin hooks registered and callable
-- LLM integration works via `retrieve_skill` tool
-- End-to-end workflow tested
-
-**Examples**:
-
-- `examples/sqlite-skills-example.js` - Complete usage demonstration
-
-**Documentation**:
-
-- `sdk/adapters/sqlite-framework/README.md` - Bridge and service layer docs
-- `docs/SQLITE_FRAMEWORK_INTEGRATION.md` - Phase 1-2 implementation summary
-- `roadmap/SQLITE_SKILLS_INTEGRATION_ASSESSMENT.md` - Architecture and integration guide
-
----
-
-## Recent Major Changes
-
-Recent significant commits:
-- 2181598: feat: add Agent Playground frontend with real-time chat UI (Session 6)
-- 0efa7ee: feat: add Agent Playground backend with multi-LLM support (Session 5)
-- 080b610: feat: add Anthropic adapter for Claude tool use integration (Session 4)
-- 99fa4c2: feat: add OpenAI adapter for function calling integration (Session 3)
-- Earlier: Agent SDK foundation and advanced features (Sessions 1-2)
-
-## Documentation
-
-- **README.md**: Project overview and quick start
-- **sdk/README.md**: Agent SDK documentation
-- **sdk/adapters/README.md**: Adapter documentation
-- **playground/README.md**: Playground backend documentation
-- **playground/frontend/README.md**: Playground frontend documentation
-- **docs/SESSION_*_SUMMARY.md**: Detailed session summaries
-
-## Known Issues
-
-- TypeScript warnings in examples (expected, non-blocking)
-- Optional dependencies (openai, @anthropic-ai/sdk) needed for full functionality
-- Conversations stored in memory (backend restart clears)
-- No authentication in playground (development only)
-
-## Browser Compatibility
-
-- Chrome 90+
-- Firefox 88+
-- Safari 14+
-- Edge 90+
-
-Requires:
-- ES6 Modules
-- Fetch API
-- WebSocket API
-- CSS Grid (for UI)
-- CSS Custom Properties
-
-      IMPORTANT: this context may or may not be relevant to your tasks. You should not respond to this context unless it is highly relevant to your task.
+Depends on `@fixiplug/core` and `yaml`. Provides LLM agent integration.
+Built from `sdk/` into `packages/agent-sdk/`.

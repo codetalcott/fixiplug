@@ -12,7 +12,8 @@
     "./dom": {
       "import": "./dom.js",
       "types": "./types.d.ts"
-    }
+    },
+    "./plugins/*": "./plugins/*.js"
   },
   "files": [
     "index.js",
@@ -21,7 +22,8 @@
     "fixi-core.js",
     "fixi-dom.js",
     "fixiplug-factory.js",
-    "types.d.ts"
+    "types.d.ts",
+    "plugins/"
   ],
   "keywords": [
     "plugin",

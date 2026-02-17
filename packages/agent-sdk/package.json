@@ -1,0 +1,54 @@
+{
+  "name": "@fixiplug/agent-sdk",
+  "version": "0.1.0",
+  "description": "LLM agent integration for FixiPlug - OpenAI and Anthropic adapters",
+  "type": "module",
+  "main": "./index.js",
+  "exports": {
+    ".": {
+      "import": "./index.js",
+      "types": "./types.d.ts"
+    },
+    "./adapters/openai": {
+      "import": "./adapters/openai-adapter.js"
+    },
+    "./adapters/anthropic": {
+      "import": "./adapters/anthropic-adapter.js"
+    }
+  },
+  "files": [
+    "*.js",
+    "*.d.ts",
+    "adapters/"
+  ],
+  "keywords": [
+    "fixiplug",
+    "agent",
+    "llm",
+    "openai",
+    "anthropic",
+    "claude",
+    "function-calling",
+    "tool-use"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@fixiplug/core": "workspace:*",
+    "yaml": "^2.3.4"
+  },
+  "peerDependencies": {
+    "openai": "^4.0.0",
+    "@anthropic-ai/sdk": "^0.50.0"
+  },
+  "peerDependenciesMeta": {
+    "openai": {
+      "optional": true
+    },
+    "@anthropic-ai/sdk": {
+      "optional": true
+    }
+  }
+}
