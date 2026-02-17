@@ -146,7 +146,15 @@ export class OpenAIAdapter extends BaseAdapter {
    * });
    */
   async executeFunctionCall(functionCall) {
+    if (!functionCall || typeof functionCall !== 'object') {
+      throw new Error('executeFunctionCall() requires a function call object');
+    }
+
     const { name, arguments: argsStr } = functionCall;
+
+    if (!name) {
+      throw new Error('Function call object must have a name');
+    }
 
     // Parse arguments
     let args;
@@ -191,6 +199,10 @@ export class OpenAIAdapter extends BaseAdapter {
    * const result = await adapter.executeToolCall(toolCall);
    */
   async executeToolCall(toolCall) {
+    if (!toolCall?.function?.name) {
+      throw new Error('executeToolCall() requires a tool call object with function.name');
+    }
+
     return await this.executeFunctionCall({
       name: toolCall.function.name,
       arguments: toolCall.function.arguments

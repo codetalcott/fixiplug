@@ -386,7 +386,7 @@ Actual: ${actual}`
         }
 
         assert(error, 'Should throw error');
-        assert(error.message.includes('Unknown function'), 'Should have error message');
+        assert(error.message.includes('Unknown function/tool'), 'Should have error message');
       });
 
       await test('executeToolCall() works with tool format', async () => {

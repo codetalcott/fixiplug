@@ -237,10 +237,11 @@ export class FixiPlugAgent {
     });
 
     if (result.error) {
-      if (result.error.includes('timeout')) {
+      const errorMsg = typeof result.error === 'string' ? result.error : String(result.error);
+      if (errorMsg.includes('timeout') || errorMsg.includes('Timeout')) {
         throw new Error(`Timeout waiting for state "${state}" after ${timeout}ms`);
       }
-      throw new Error(`Failed to wait for state: ${result.error}`);
+      throw new Error(`Failed to wait for state: ${errorMsg}`);
     }
 
     return result;
@@ -324,6 +325,14 @@ export class FixiPlugAgent {
    * ]);
    */
   async executeWorkflow(steps, options = {}) {
+    if (!Array.isArray(steps)) {
+      throw new Error('executeWorkflow() requires an array of steps');
+    }
+
+    if (steps.length === 0) {
+      return { success: true, completed: [], results: {}, errors: [] };
+    }
+
     const {
       stopOnError = true
     } = options;
@@ -413,8 +422,10 @@ export class FixiPlugAgent {
       totalTime: this.stats.totalTime,
       averageTime: this.stats.apiCalls > 0
         ? (this.stats.totalTime / this.stats.apiCalls).toFixed(2)
-        : 0,
+        : '0.00',
       retries: this.stats.retries,
+      cacheHits: this.stats.cacheHits,
+      cacheMisses: this.stats.cacheMisses,
       calls: this.stats.calls
     };
   }
@@ -571,17 +582,6 @@ export class FixiPlugAgent {
     }
 
     throw lastError;
-  }
-
-  /**
-   * Sleep utility for retry delays
-   *
-   * @private
-   * @param {number} ms - Milliseconds to sleep
-   * @returns {Promise<void>}
-   */
-  _sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
   }
 }
 

@@ -103,6 +103,10 @@ export class WorkflowBuilder {
       throw new Error('params() must be called after step()');
     }
 
+    if (params !== null && typeof params !== 'object' && typeof params !== 'function') {
+      throw new Error('params() requires an object or function parameter');
+    }
+
     this.currentStep.params = params;
     return this;
   }
@@ -323,8 +327,8 @@ export class WorkflowBuilder {
               ? step.params(context)
               : step.params || {};
 
-            // Execute step with retry option
-            const result = await agent.fixi.dispatch(step.hook, params);
+            // Execute step through agent dispatch (includes retry + perf tracking)
+            const result = await agent._dispatch(step.hook, params, { retry: step.retry });
 
             if (result.error) {
               throw new Error(result.error);

@@ -32,6 +32,8 @@ export class BaseAdapter {
    * @param {boolean} [options.includePluginHooks=false] - Include discovered plugin hooks
    * @param {boolean} [options.includeSkills=false] - Include skills in context (deprecated)
    * @param {string} [options.skillStrategy='dynamic'] - Skill loading strategy
+   * @param {number} [options.skillCacheTTL=600000] - Skill cache TTL in ms (default: 10 minutes)
+   * @param {number} [options.skillCacheMaxSize=50] - Maximum number of cached skills
    */
   constructor(agent, options = {}) {
     if (!agent) {
@@ -41,8 +43,9 @@ export class BaseAdapter {
     this.agent = agent;
     this.options = this._normalizeOptions(options);
 
-    // Skill retrieval cache (per-conversation)
+    // Skill retrieval cache (per-conversation) with TTL support
     this._skillCache = new Map();
+    this._skillCacheTimestamps = new Map();
 
     // History tracking (subclasses may use callHistory or useHistory)
     this._history = [];
@@ -61,7 +64,9 @@ export class BaseAdapter {
       includeCacheTools: options.includeCacheTools !== false,
       includePluginHooks: options.includePluginHooks || false,
       includeSkills: options.includeSkills || false,
-      skillStrategy: options.skillStrategy || 'dynamic'
+      skillStrategy: options.skillStrategy || 'dynamic',
+      skillCacheTTL: options.skillCacheTTL || 600000,    // 10 minutes
+      skillCacheMaxSize: options.skillCacheMaxSize || 50
     };
   }
 
@@ -302,10 +307,16 @@ export class BaseAdapter {
       };
     }
 
-    // Check cache first
+    // Check cache first (with TTL)
     const cacheKey = `skill:${skill_name}`;
     if (this._skillCache.has(cacheKey)) {
-      return this._skillCache.get(cacheKey);
+      const cachedAt = this._skillCacheTimestamps.get(cacheKey) || 0;
+      if (Date.now() - cachedAt < this.options.skillCacheTTL) {
+        return this._skillCache.get(cacheKey);
+      }
+      // Expired - remove stale entry
+      this._skillCache.delete(cacheKey);
+      this._skillCacheTimestamps.delete(cacheKey);
     }
 
     try {
@@ -332,7 +343,15 @@ export class BaseAdapter {
         }
       };
 
+      // Evict oldest entry if cache is full
+      if (this._skillCache.size >= this.options.skillCacheMaxSize) {
+        const oldestKey = this._skillCache.keys().next().value;
+        this._skillCache.delete(oldestKey);
+        this._skillCacheTimestamps.delete(oldestKey);
+      }
+
       this._skillCache.set(cacheKey, response);
+      this._skillCacheTimestamps.set(cacheKey, Date.now());
       return response;
 
     } catch (error) {
@@ -400,7 +419,7 @@ export class BaseAdapter {
           return result;
         }
 
-        throw new Error(`Unknown tool: ${name}`);
+        throw new Error(`Unknown function/tool: ${name}`);
     }
   }
 
@@ -437,6 +456,7 @@ export class BaseAdapter {
    */
   clearSkillCache() {
     this._skillCache.clear();
+    this._skillCacheTimestamps.clear();
   }
 }
 
