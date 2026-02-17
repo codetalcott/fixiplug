@@ -148,8 +148,9 @@ export class BaseAdapter {
       }
 
       return manifest.skills
-        .map(s => s.skill?.name)
-        .filter(name => name);
+        .filter(s => s && s.skill)
+        .map(s => s.skill.name)
+        .filter(name => typeof name === 'string' && name.length > 0);
     } catch (error) {
       console.warn('Failed to get skill names:', error);
       return [];
@@ -226,11 +227,11 @@ export class BaseAdapter {
 
       // Filter skills if requested
       if (includeOnly && Array.isArray(includeOnly)) {
-        skills = skills.filter(s => includeOnly.includes(s.skill.name));
+        skills = skills.filter(s => s.skill?.name && includeOnly.includes(s.skill.name));
       }
 
       if (exclude && Array.isArray(exclude)) {
-        skills = skills.filter(s => !exclude.includes(s.skill.name));
+        skills = skills.filter(s => !s.skill?.name || !exclude.includes(s.skill.name));
       }
 
       if (skills.length === 0) {

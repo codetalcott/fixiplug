@@ -197,7 +197,7 @@ export async function dispatch(hookName, event = {}) {
   try {
     let result = event;
 
-    // Get all relevant handlers (specific + wildcard) in single pass
+    // Get all relevant handlers (specific + wildcard), merged by priority
     const allHandlers = [];
 
     // Add specific handlers
@@ -210,7 +210,12 @@ export async function dispatch(hookName, event = {}) {
       allHandlers.push(...hooks['*']);
     }
 
-    // Process all handlers in single pass
+    // Re-sort by priority after merging specific and wildcard handlers
+    if (allHandlers.length > 1) {
+      allHandlers.sort((a, b) => b.priority - a.priority);
+    }
+
+    // Process all handlers in priority order
     for (const { handler, plugin } of allHandlers) {
       // Skip handlers from disabled plugins
       if (disabledPlugins.has(plugin)) {
@@ -293,7 +298,22 @@ export function enablePlugin(pluginName) {
  * @param {Object} skillMetadata - The skill metadata object
  */
 export function registerSkill(pluginName, skillMetadata) {
-  if (skillMetadata && typeof skillMetadata === 'object') {
+  if (!pluginName || typeof pluginName !== 'string') {
+    console.warn('[FixiPlug] registerSkill: pluginName must be a non-empty string');
+    return;
+  }
+
+  if (!skillMetadata || typeof skillMetadata !== 'object') {
+    console.warn(`[FixiPlug] registerSkill: invalid skillMetadata for plugin "${pluginName}"`);
+    return;
+  }
+
+  if (!skillMetadata.name || typeof skillMetadata.name !== 'string') {
+    console.warn(`[FixiPlug] registerSkill: skill for plugin "${pluginName}" is missing required "name" field`);
+    return;
+  }
+
+  {
     const existing = skillRegistry.get(pluginName);
     const isUpdate = existing !== undefined;
 
@@ -308,6 +328,7 @@ export function registerSkill(pluginName, skillMetadata) {
     });
   }
 }
+
 
 /**
  * Unregister skill metadata for a plugin

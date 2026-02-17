@@ -535,8 +535,8 @@ export function createFixiplug(options = {}) {
 
   // Auto-load testing plugin if testing feature is enabled
   if (hasFeature(FEATURES.TESTING)) {
-    // We'll dynamically import the testing plugin in an async context
-    (async () => {
+    // Store the loading promise so callers can await readiness
+    fixiplug._testingReady = (async () => {
       try {
         const { default: testingPlugin } = await import('../plugins/testing.js');
         fixiplug.use(testingPlugin);
@@ -553,18 +553,32 @@ export function createFixiplug(options = {}) {
 
   // If DOM feature is requested, return a Promise that resolves when ready
   if (hasFeature(FEATURES.DOM) && typeof window !== 'undefined') {
+    const DOM_READY_TIMEOUT = advanced.domReadyTimeout || 10000;
+
     return import('../core/fixi-dom.js').then(() => {
       // Wait for fx:dom:ready event to ensure fixi-dom.js is fully initialized
-      return new Promise(resolve => {
+      return new Promise((resolve, reject) => {
         // @ts-ignore - Custom property for DOM readiness tracking
         if (document.__fixi_ready) {
           // Already ready
           resolve(fixiplug);
-        } else {
-          // Wait for ready event
-          document.addEventListener('fx:dom:ready', () => resolve(fixiplug), { once: true });
+          return;
         }
+
+        // Timeout to prevent hanging indefinitely
+        const timer = setTimeout(() => {
+          reject(new Error(`FixiPlug DOM initialization timed out after ${DOM_READY_TIMEOUT}ms`));
+        }, DOM_READY_TIMEOUT);
+
+        // Wait for ready event
+        document.addEventListener('fx:dom:ready', () => {
+          clearTimeout(timer);
+          resolve(fixiplug);
+        }, { once: true });
       });
+    }).catch(err => {
+      logger.error('Failed to initialize DOM feature:', err);
+      throw err;
     });
   }
 
