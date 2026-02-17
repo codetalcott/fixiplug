@@ -128,7 +128,7 @@ export interface HookMetadata {
     type: string;
     returns: string;
     description?: string;
-    parameters?: any;
+    parameters?: Record<string, any>;
   };
 }
 
@@ -261,7 +261,7 @@ export interface WorkflowStep {
   /**
    * Parameters to pass (can be function receiving context)
    */
-  params?: any | ((context: WorkflowContext) => any);
+  params?: Record<string, any> | ((context: WorkflowContext) => Record<string, any>);
 
   /**
    * Optional state to set before executing this step
@@ -291,6 +291,11 @@ export interface WorkflowContext {
    * Names of completed steps
    */
   completed: string[];
+
+  /**
+   * Names of skipped steps (when using WorkflowBuilder with conditions)
+   */
+  skipped?: string[];
 }
 
 /**
@@ -606,10 +611,10 @@ export class WorkflowBuilder {
 
   /**
    * Set parameters for the current step
-   * @param params - Parameters to pass
+   * @param params - Parameters object or function receiving context
    * @returns this for chaining
    */
-  params(params: any | ((context: WorkflowContext) => any)): this;
+  params(params: Record<string, any> | ((context: WorkflowContext) => Record<string, any>)): this;
 
   /**
    * Set state for the current step
@@ -674,9 +679,9 @@ export class WorkflowBuilder {
 }
 
 /**
- * OpenAI adapter options
+ * Shared adapter options
  */
-export interface OpenAIAdapterOptions {
+export interface AdapterOptions {
   /**
    * Include core Agent SDK tools
    * @default true
@@ -700,7 +705,36 @@ export interface OpenAIAdapterOptions {
    * @default false
    */
   includePluginHooks?: boolean;
+
+  /**
+   * Include skills in context generation (deprecated - use skillStrategy)
+   * @default false
+   */
+  includeSkills?: boolean;
+
+  /**
+   * Skill loading strategy
+   * @default 'dynamic'
+   */
+  skillStrategy?: 'dynamic' | 'static' | 'none';
+
+  /**
+   * Skill cache TTL in milliseconds
+   * @default 600000 (10 minutes)
+   */
+  skillCacheTTL?: number;
+
+  /**
+   * Maximum number of cached skills
+   * @default 50
+   */
+  skillCacheMaxSize?: number;
 }
+
+/**
+ * OpenAI adapter options
+ */
+export interface OpenAIAdapterOptions extends AdapterOptions {}
 
 /**
  * OpenAI tool definition (new format)
@@ -871,36 +905,36 @@ export class OpenAIAdapter {
    * @returns OpenAI-compatible function message
    */
   createFunctionMessage(functionName: string, result: any): OpenAIFunctionMessage;
+
+  /**
+   * Get formatted skills context for system messages
+   */
+  getSkillsContext(options?: {
+    format?: 'full' | 'summary' | 'metadata';
+    includeOnly?: string[] | null;
+    exclude?: string[];
+  }): Promise<string>;
+
+  /**
+   * Get execution history
+   */
+  getHistory(): FunctionCallRecord[];
+
+  /**
+   * Clear execution history
+   */
+  clearHistory(): void;
+
+  /**
+   * Clear the skill cache
+   */
+  clearSkillCache(): void;
 }
 
 /**
  * Anthropic adapter options
  */
-export interface AnthropicAdapterOptions {
-  /**
-   * Include core Agent SDK tools
-   * @default true
-   */
-  includeCoreTools?: boolean;
-
-  /**
-   * Include workflow tools
-   * @default true
-   */
-  includeWorkflowTools?: boolean;
-
-  /**
-   * Include cache management tools
-   * @default true
-   */
-  includeCacheTools?: boolean;
-
-  /**
-   * Include discovered plugin hooks as tools
-   * @default false
-   */
-  includePluginHooks?: boolean;
-}
+export interface AnthropicAdapterOptions extends AdapterOptions {}
 
 /**
  * Anthropic tool definition
@@ -1016,4 +1050,37 @@ export class AnthropicAdapter {
    * @returns Anthropic-compatible tool result content block
    */
   createToolResult(toolUseId: string, result: any, isError?: boolean): AnthropicToolResult;
+
+  /**
+   * Create a tool result message from an error
+   *
+   * @param toolUseId - The tool use ID
+   * @param error - The error
+   * @returns Anthropic-compatible error tool result
+   */
+  createErrorResult(toolUseId: string, error: Error | string): AnthropicToolResult;
+
+  /**
+   * Get formatted skills context for system messages
+   */
+  getSkillsContext(options?: {
+    format?: 'full' | 'summary' | 'metadata';
+    includeOnly?: string[] | null;
+    exclude?: string[];
+  }): Promise<string>;
+
+  /**
+   * Get execution history
+   */
+  getHistory(): ToolUseRecord[];
+
+  /**
+   * Clear execution history
+   */
+  clearHistory(): void;
+
+  /**
+   * Clear the skill cache
+   */
+  clearSkillCache(): void;
 }

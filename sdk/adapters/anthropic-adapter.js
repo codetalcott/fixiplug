@@ -120,7 +120,15 @@ export class AnthropicAdapter extends BaseAdapter {
    * const result = await adapter.executeToolUse(toolUse);
    */
   async executeToolUse(toolUse) {
+    if (!toolUse || typeof toolUse !== 'object') {
+      throw new Error('executeToolUse() requires a tool use object');
+    }
+
     const { id, name, input } = toolUse;
+
+    if (!name) {
+      throw new Error('Tool use object must have a name');
+    }
 
     // Record use
     const useRecord = {
